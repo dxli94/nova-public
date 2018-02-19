@@ -1,14 +1,9 @@
-#import plotly.plotly as py
-import plotly.offline as py
-import plotly.graph_objs as go
-from plotly.tools import FigureFactory as FF
-
 import numpy as np
-import pandas as pd
-import scipy
+import plotly.graph_objs as go
+import plotly.offline as py
 
 
-class PlottingHelper:
+class Plotter:
     images = []
 
     def __init__(self, images):
@@ -75,7 +70,7 @@ class PlottingHelper:
 
 if __name__ == '__main__':
     corners = [(0.0, 1.030454533953517), (0.0, 0.0), (2.060909067907034, 0.0), (2.060909067907034, 1.030454533953517)]
-    plHelper = PlottingHelper(corners)
+    plHelper = Plotter(corners)
     corners_sorted = plHelper.PolygonSort(corners)
     area = plHelper.PolygonArea(corners_sorted)
 
