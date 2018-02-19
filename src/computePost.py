@@ -1,26 +1,26 @@
 import numpy as np
 
-import Utils
+import SuppFuncUtils
 from ConvexSet.Polyhedron import Polyhedron
 from Plotter import Plotter
 
 
 def compute_initial_sf(poly, l, time_interval):
-    initial_sf = poly.compute_support_function(l, poly.A, poly.b)[1]
-    delta_tp = np.transpose(Utils.mat_exp(A, 1 * time_interval))
-    first_sf = poly.compute_support_function(np.matmul(delta_tp, l), poly.A, poly.b)[1]
+    initial_sf = poly.compute_support_function(l)[1]
+    delta_tp = np.transpose(SuppFuncUtils.mat_exp(A, 1 * time_interval))
+    first_sf = poly.compute_support_function(np.matmul(delta_tp, l))[1]
     return max(initial_sf, first_sf)
 
 
 def compute_next_sf(poly, l):
-    return poly.compute_support_function(l, poly.A, poly.b)[1]
+    return poly.compute_support_function(l)[1]
 
 
 def compute_post(poly, time_interval):
 
     ret = []
 
-    delta_tp = np.transpose(Utils.mat_exp(A, time_interval))
+    delta_tp = np.transpose(SuppFuncUtils.mat_exp(A, time_interval))
     for idx in range(len(directions)):
         for n in time_frames:
             # delta_tp = np.transpose(mat_exp(A, n * time_interval))

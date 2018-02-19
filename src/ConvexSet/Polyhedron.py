@@ -24,10 +24,10 @@ class Polyhedron:
             % (coeff_matrix.shape, col_vec.shape)
 
         if coeff_matrix.size > 0:
-            self.A = coeff_matrix
-            self.b = col_vec
+            self.coeff_matrix = coeff_matrix
+            self.vec_col = col_vec
             # cdd requires b-Ax <= 0 as inputs
-            self.mat_poly = cdd.Matrix(np.hstack((self.b, -self.A)).tolist())
+            self.mat_poly = cdd.Matrix(np.hstack((self.vec_col, -self.coeff_matrix)).tolist())
             self.mat_poly.rep_type = cdd.RepType.INEQUALITY
 
             self.poly = self._gen_poly()
@@ -42,7 +42,7 @@ class Polyhedron:
     def __str__(self):
         str_repr = 'H-representative\n' + \
                    'Ax <= b \n'
-        for row in np.hstack((self.A, self.b)):
+        for row in np.hstack((self.coeff_matrix, self.vec_col)):
             str_repr += ' '.join(str(item) for item in row) + '\n'
 
         return str_repr
@@ -63,7 +63,7 @@ class Polyhedron:
         self.isUniverse = False
 
     def get_inequalities(self):
-        return np.hstack((self.A, self.b))
+        return np.hstack((self.coeff_matrix, self.vec_col))
 
     def is_empty(self):
         return self.isEmpty
@@ -71,7 +71,7 @@ class Polyhedron:
     def is_universe(self):
         return self.isUniverse
 
-    def compute_support_function(self, direction, coeff_matrix, col_vec):
+    def compute_support_function(self, direction):
         if self.is_empty():
             raise RuntimeError("\n Compute Support Function called for an Empty Set.")
         elif self.is_universe():
@@ -81,12 +81,32 @@ class Polyhedron:
             # otherwise (0, +inf) by default.
             # Besides, Scipy only deals with min(). Here we need max(). max(f(x)) = -min(-f(x))
             sf = linprog(c=-direction,
-                         A_ub=coeff_matrix, b_ub=col_vec,
+                         A_ub=self.coeff_matrix, b_ub=self.vec_col,
                          bounds=(None, None))
             if sf.success:
-                return sf.x, -sf.fun
+                return -sf.fun
             else:
                 raise RuntimeError(sf.message)
+
+    def compute_max_norm(self):
+        coeff_matrix = np.matrix(self.coeff_matrix)
+        dim_for_max_norm = coeff_matrix.shape[1]
+
+        if self.isEmpty:
+            return 0
+        elif self.isUniverse:
+            raise RuntimeError("Universe Unbounded Polytope!!!")
+        else:
+            generator_directions = []
+            direction = np.zeros(dim_for_max_norm)
+            for i in range(0, dim_for_max_norm):
+                direction[i] = 1
+                generator_directions.append(direction.copy())
+
+                direction[i] = -1
+                generator_directions.append(direction.copy())
+
+            return max([self.compute_support_function(d) for d in generator_directions])
 
     def is_intersect_with(self, pl_2):
         """
@@ -97,7 +117,6 @@ class Polyhedron:
 
 if __name__ == '__main__':
     # test creation
-    # mat = np.array([[1, 1, 2], [-1, 0, 0], [0, -1, 0]])
     coeff_matrix = [[1, 1], [-1, 0], [0, -1]]
     col_vec = [[2], [0], [0]]
     poly = Polyhedron(coeff_matrix, col_vec)
@@ -111,3 +130,6 @@ if __name__ == '__main__':
 
     # test get_inequalities()
     assert poly.get_inequalities().all() == np.matrix([[1, 1, 2], [-1, 0, 0], [0, -1, 0]]).all()
+
+    # test compute_max_norm()
+    assert poly.compute_max_norm() == 2
