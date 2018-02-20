@@ -78,8 +78,8 @@ def main():
 
 
 if __name__ == '__main__':
-    TIME_EPLASE = 1.5
-    TIME_INTERVAL = 0.3
+    TIME_HORIZON = 1.2
+    SAMP_FREQ = 0.3
     
 
     main()
@@ -125,10 +125,10 @@ if __name__ == '__main__':
                                dynamics_coeff_matrix_U=dynamics_coeff_matrix_U,
                                dynamics_col_vec_U=dynamics_col_vec_U)
 
-    time_frames = range(int(np.ceil(TIME_EPLASE / TIME_INTERVAL)) + 1)
+    time_frames = range(int(np.ceil(TIME_HORIZON / SAMP_FREQ)) + 1)
 
     # sfp = SupportFunctionProvider(poly)
-    sf_mat = compute_post(sys_dynamics, tau=TIME_INTERVAL)
+    sf_mat = compute_post(sys_dynamics, tau=SAMP_FREQ)
     # print(sf_mat)
     images_by_time = get_images(sf_mat, directions)
     for image in images_by_time:
