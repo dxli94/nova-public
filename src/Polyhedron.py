@@ -15,19 +15,25 @@ class Polyhedron:
             b: m-dimension column vector
     """
 
-    def __init__(self, coeff_matrix, col_vec):
+    def __init__(self, coeff_matrix, vec_col=None):
         coeff_matrix = np.matrix(coeff_matrix)
-        col_vec = np.matrix(col_vec)
 
-        assert coeff_matrix.shape[0] == col_vec.shape[0], \
-            "Shapes of coefficient matrix %r and column vector %r do not match!" \
-            % (coeff_matrix.shape, col_vec.shape)
+        if vec_col is not None:
+            vec_col = np.matrix(vec_col)
+            assert coeff_matrix.shape[0] == vec_col.shape[0], \
+                "Shapes of coefficient matrix %r and column vector %r do not match!" \
+                % (coeff_matrix.shape, vec_col.shape)
+        else:
+            vec_col = np.zeros(shape=(coeff_matrix.shape[0], 1))
 
         if coeff_matrix.size > 0:
             self.coeff_matrix = coeff_matrix
-            self.vec_col = col_vec
+            self.vec_col = vec_col
             # cdd requires b-Ax <= 0 as inputs
-            self.mat_poly = cdd.Matrix(np.hstack((self.vec_col, -self.coeff_matrix)).tolist())
+
+            interm = np.hstack((self.vec_col, -self.coeff_matrix))
+
+            self.mat_poly = cdd.Matrix(interm.tolist())
             self.mat_poly.rep_type = cdd.RepType.INEQUALITY
 
             self.poly = self._gen_poly()
@@ -42,8 +48,13 @@ class Polyhedron:
     def __str__(self):
         str_repr = 'H-representative\n' + \
                    'Ax <= b \n'
-        for row in np.hstack((self.coeff_matrix, self.vec_col)):
-            str_repr += ' '.join(str(item) for item in row) + '\n'
+
+        if self.vec_col is not None:
+            for row in np.hstack((self.coeff_matrix, self.vec_col)):
+                str_repr += ' '.join(str(item) for item in row) + '\n'
+        else:
+            for row in self.coeff_matrix:
+                str_repr += ' '.join(str(item) for item in row) + '\n'
 
         return str_repr
 
@@ -80,6 +91,9 @@ class Polyhedron:
             # Note that these bounds have to be set to (None, None) to allow (-inf, +inf),
             # otherwise (0, +inf) by default.
             # Besides, Scipy only deals with min(). Here we need max(). max(f(x)) = -min(-f(x))
+
+            # A_ub * x <= b_ub
+
             sf = linprog(c=-direction,
                          A_ub=self.coeff_matrix, b_ub=self.vec_col,
                          bounds=(None, None))

@@ -1,38 +1,61 @@
 import numpy as np
 
 import SuppFuncUtils
-from ConvexSet.Polyhedron import Polyhedron
 from Plotter import Plotter
+from Polyhedron import Polyhedron
+from SysDynamics import SysDynamics
 
 
-def compute_initial_sf(poly, l, time_interval):
-    initial_sf = poly.compute_support_function(l)[1]
-    delta_tp = np.transpose(SuppFuncUtils.mat_exp(A, 1 * time_interval))
-    first_sf = poly.compute_support_function(np.matmul(delta_tp, l))[1]
-    return max(initial_sf, first_sf)
+def compute_initial_sf(init_poly, l, sys_dynamics, tau):
+    delta_tp = np.transpose(SuppFuncUtils.mat_exp(dynamics_matrix_A, 1 * tau))
+    v_matrix = np.matmul(sys_dynamics.get_dyn_matrix_b(), sys_dynamics.get_dyn_input_matrix())
+    v_poly = Polyhedron(v_matrix.tolist())
+
+    sf_X0 = init_poly.compute_support_function(np.matmul(delta_tp, l))
+
+    sf_V = tau * v_poly.compute_support_function(l)
+    alpha = SuppFuncUtils.compute_alpha(sys_dynamics, tau)
+    sf_ball = SuppFuncUtils.support_unitball_infnorm(l)
+
+    sf_omega0 = max(sf_X0, sf_X0 + sf_V + alpha * sf_ball)
+
+    return sf_omega0
 
 
-def compute_next_sf(poly, l):
-    return poly.compute_support_function(l)[1]
+def compute_sf_w(l, tau):
+    v_matrix = np.matmul(sys_dynamics.get_dyn_matrix_b(), sys_dynamics.get_dyn_input_matrix())
+    v_poly = Polyhedron(v_matrix)
+    sf_V = tau * v_poly.compute_support_function(l)
+    beta = SuppFuncUtils.compute_beta(sys_dynamics, tau)
+    sf_ball = SuppFuncUtils.support_unitball_infnorm(l)
+
+    sf_omega = tau * sf_V + beta * sf_ball
+    return sf_omega
 
 
-def compute_post(poly, time_interval):
-
+def compute_post(sys_dynamics, tau):
     ret = []
+    init = sys_dynamics.get_dyn_init()
+    init_poly = Polyhedron(init[0], init[1])
 
-    delta_tp = np.transpose(SuppFuncUtils.mat_exp(A, time_interval))
+    delta_tp = np.transpose(SuppFuncUtils.mat_exp(dynamics_matrix_A, tau))
+
     for idx in range(len(directions)):
         for n in time_frames:
             # delta_tp = np.transpose(mat_exp(A, n * time_interval))
             if n == 0:
                 prev_r = directions[idx]
-                prev_sf = compute_initial_sf(poly, directions[idx], time_interval)
-                ret.append([prev_sf])
+                prev_s = compute_initial_sf(init_poly, directions[idx], sys_dynamics, tau)
+                ret.append([prev_s])
             else:
                 r = np.matmul(delta_tp, prev_r)
-                sf = compute_next_sf(poly, r)
+                s = prev_s + compute_sf_w(r, tau)
+                sf = init_poly.compute_support_function(r) + s
+
                 ret[-1].append(sf)
+
                 prev_r = r
+                prev_s = s
 
     return np.matrix(ret)
 
@@ -50,9 +73,11 @@ def get_images(sf_mat, directions):
 def main():
     pass
 
+
 if __name__ == '__main__':
-    TIME_EPLASE = 20
-    TIME_INTERVAL = 1
+    TIME_EPLASE = 1
+    TIME_INTERVAL = 0.5
+    
 
     main()
 
@@ -66,21 +91,33 @@ if __name__ == '__main__':
         np.array([-1, -1]),
         np.array([-1, 1]),
     ]
-    # here comes a rectangle
-    constr_A = [[-1, 0],  # -x1 <= 1
-              [1, 0],   # x1 <= 2
-              [0, -1],  # -x2 <= 0.5
-              [0, 1]  # x2 <= 1
-              ]
-    constr_b = [[0], [2], [0.5], [0]]
-    A = [[0, 1],
-         [-2, 0]
-         ]
-    poly = Polyhedron(constr_A, constr_b)
-    time_frames = range(int(np.ceil(TIME_EPLASE / TIME_INTERVAL)))
+    coeff_matrix = [[-1, 0],  # -x1 <= 1
+                    [1, 0],  # x1 <= 2
+                    [0, -1],  # -x2 <= 0.5
+                    [0, 1]  # x2 <= 1
+                    ]
+    col_vec = [[0], [2], [0.5], [0]]
+    dynamics_matrix_A = [[0, 1],
+                         [-2, 0]]
+    dynamics_matrix_B = np.identity(4)
+    dynamics_matrix_input = [[1, 0],
+                             [0, 1],
+                             [0, -1],
+                             [-1, 0]]
+
+    # print(np.matmul(dynamics_matrix_B, dynamics_matrix_input))
+    # exit()
+
+    sys_dynamics = SysDynamics(matrix_a=dynamics_matrix_A,
+                               matrix_init_coeff=coeff_matrix,
+                               matrix_init_col=col_vec,
+                               matrix_b=dynamics_matrix_B,
+                               matrix_input=dynamics_matrix_input)
+
+    time_frames = range(int(np.ceil(TIME_EPLASE / TIME_INTERVAL)) + 1)
 
     # sfp = SupportFunctionProvider(poly)
-    sf_mat = compute_post(poly, time_interval=TIME_INTERVAL)
+    sf_mat = compute_post(sys_dynamics, tau=TIME_INTERVAL)
     # print(sf_mat)
     images_by_time = get_images(sf_mat, directions)
     for image in images_by_time:
