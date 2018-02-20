@@ -15,25 +15,23 @@ class Polyhedron:
             b: m-dimension column vector
     """
 
-    def __init__(self, coeff_matrix, vec_col=None):
+    def __init__(self, coeff_matrix, col_vec=None):
         coeff_matrix = np.matrix(coeff_matrix)
 
-        if vec_col is not None:
-            vec_col = np.matrix(vec_col)
-            assert coeff_matrix.shape[0] == vec_col.shape[0], \
+        if col_vec is not None:
+            col_vec = np.matrix(col_vec)
+            assert coeff_matrix.shape[0] == col_vec.shape[0], \
                 "Shapes of coefficient matrix %r and column vector %r do not match!" \
-                % (coeff_matrix.shape, vec_col.shape)
+                % (coeff_matrix.shape, col_vec.shape)
         else:
-            vec_col = np.zeros(shape=(coeff_matrix.shape[0], 1))
+            col_vec = np.zeros(shape=(coeff_matrix.shape[0], 1))
 
         if coeff_matrix.size > 0:
             self.coeff_matrix = coeff_matrix
-            self.vec_col = vec_col
+            self.col_vec = col_vec
             # cdd requires b-Ax <= 0 as inputs
 
-            interm = np.hstack((self.vec_col, -self.coeff_matrix))
-
-            self.mat_poly = cdd.Matrix(interm.tolist())
+            self.mat_poly = cdd.Matrix(np.hstack((self.col_vec, -self.coeff_matrix)).tolist())
             self.mat_poly.rep_type = cdd.RepType.INEQUALITY
 
             self.poly = self._gen_poly()
@@ -49,8 +47,8 @@ class Polyhedron:
         str_repr = 'H-representative\n' + \
                    'Ax <= b \n'
 
-        if self.vec_col is not None:
-            for row in np.hstack((self.coeff_matrix, self.vec_col)):
+        if self.col_vec is not None:
+            for row in np.hstack((self.coeff_matrix, self.col_vec)):
                 str_repr += ' '.join(str(item) for item in row) + '\n'
         else:
             for row in self.coeff_matrix:
@@ -74,7 +72,7 @@ class Polyhedron:
         self.isUniverse = False
 
     def get_inequalities(self):
-        return np.hstack((self.coeff_matrix, self.vec_col))
+        return np.hstack((self.coeff_matrix, self.col_vec))
 
     def is_empty(self):
         return self.isEmpty
@@ -93,9 +91,8 @@ class Polyhedron:
             # Besides, Scipy only deals with min(). Here we need max(). max(f(x)) = -min(-f(x))
 
             # A_ub * x <= b_ub
-
             sf = linprog(c=-direction,
-                         A_ub=self.coeff_matrix, b_ub=self.vec_col,
+                         A_ub=self.coeff_matrix, b_ub=self.col_vec,
                          bounds=(None, None))
             if sf.success:
                 return -sf.fun
@@ -122,12 +119,12 @@ class Polyhedron:
 
             return max([self.compute_support_function(d) for d in generator_directions])
 
-    def is_intersect_with(self, pl_2):
-        """
-        Process: Add all constraints of P1(the calling polyhedron) and P2 to form new constraints;
-        then run lp_solver to test if the constraints have no feasible solution.
-        """
-        raise NotImplementedError
+    # def is_intersect_with(self, pl_2):
+    #     """
+    #     Process: Add all constraints of P1(the calling polyhedron) and P2 to form new constraints;
+    #     then run lp_solver to test if the constraints have no feasible solution.
+    #     """
+    #     raise NotImplementedError
 
 if __name__ == '__main__':
     # test creation

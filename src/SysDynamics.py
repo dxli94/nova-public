@@ -1,21 +1,28 @@
 class SysDynamics:
-    def __init__(self, matrix_a, matrix_init_coeff, matrix_init_col, matrix_b=None, matrix_input=None):
+    def __init__(self, dynamics_matrix_A,
+                 init_coeff_matrix_X0, init_col_vec_X0,
+                 dynamics_matrix_B=None,
+                 dynamics_coeff_matrix_U=None, dynamics_col_vec_U=None):
         # x' = Ax(t) + Bu(t)
-        self.matrix_a = matrix_a  # A (2*2) . x(t) (2*1) = Ax(t) (2*1)
-        self.matrix_b = matrix_b  # B (2*m) . u(t) (m*1) = Bu(t) (2*1)
-        self.matrix_input = matrix_input  # u(t)
+        self.matrix_A = dynamics_matrix_A  # A (2*2) . x(t) (2*1) = Ax(t) (2*1)
+        self.matrix_B = dynamics_matrix_B  # B (2*m) . u(t) (m*1) = Bu(t) (2*1)
+        self.coeff_matrix_U = dynamics_coeff_matrix_U  # u(t) coeff matrix
+        self.col_vec_U = dynamics_col_vec_U  # u(t) col vec
 
-        self.matrix_init_coeff = matrix_init_coeff
-        self.matrix_init_col = matrix_init_col
+        self.init_coeff_matrix = init_coeff_matrix_X0
+        self.init_col_vec = init_col_vec_X0
 
-    def get_dyn_matrix_a(self):
-        return self.matrix_a
+    def get_dyn_coeff_matrix_A(self):
+        return self.matrix_A
 
-    def get_dyn_matrix_b(self):
-        return self.matrix_b
+    def get_dyn_matrix_B(self):
+        return self.matrix_B
 
-    def get_dyn_input_matrix(self):
-        return self.matrix_input
+    def get_dyn_coeff_matrix_U(self):
+        return self.coeff_matrix_U
 
-    def get_dyn_init(self):
-        return self.matrix_init_coeff, self.matrix_init_col
+    def get_dyn_col_vec_U(self):
+        return self.col_vec_U
+
+    def get_dyn_init_X0(self):
+        return self.init_coeff_matrix, self.init_col_vec

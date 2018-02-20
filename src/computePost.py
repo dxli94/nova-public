@@ -1,19 +1,17 @@
 import numpy as np
 
 import SuppFuncUtils
+from ConvexSet.Polyhedron import Polyhedron
+from ConvexSet.TransPoly import TransPoly
 from Plotter import Plotter
-from Polyhedron import Polyhedron
 from SysDynamics import SysDynamics
 
 
-def compute_initial_sf(init_poly, l, sys_dynamics, tau):
+def compute_initial_sf(poly_init, trans_poly_U, l, sys_dynamics, tau):
     delta_tp = np.transpose(SuppFuncUtils.mat_exp(dynamics_matrix_A, 1 * tau))
-    v_matrix = np.matmul(sys_dynamics.get_dyn_matrix_b(), sys_dynamics.get_dyn_input_matrix())
-    v_poly = Polyhedron(v_matrix.tolist())
+    sf_X0 = poly_init.compute_support_function(np.matmul(delta_tp, l))
 
-    sf_X0 = init_poly.compute_support_function(np.matmul(delta_tp, l))
-
-    sf_V = tau * v_poly.compute_support_function(l)
+    sf_V = tau * trans_poly_U.compute_support_function(l)
     alpha = SuppFuncUtils.compute_alpha(sys_dynamics, tau)
     sf_ball = SuppFuncUtils.support_unitball_infnorm(l)
 
@@ -22,10 +20,8 @@ def compute_initial_sf(init_poly, l, sys_dynamics, tau):
     return sf_omega0
 
 
-def compute_sf_w(l, tau):
-    v_matrix = np.matmul(sys_dynamics.get_dyn_matrix_b(), sys_dynamics.get_dyn_input_matrix())
-    v_poly = Polyhedron(v_matrix)
-    sf_V = tau * v_poly.compute_support_function(l)
+def compute_sf_w(l, trans_poly_U, tau):
+    sf_V = tau * trans_poly_U.compute_support_function(l)
     beta = SuppFuncUtils.compute_beta(sys_dynamics, tau)
     sf_ball = SuppFuncUtils.support_unitball_infnorm(l)
 
@@ -35,8 +31,15 @@ def compute_sf_w(l, tau):
 
 def compute_post(sys_dynamics, tau):
     ret = []
-    init = sys_dynamics.get_dyn_init()
-    init_poly = Polyhedron(init[0], init[1])
+    init = sys_dynamics.get_dyn_init_X0()
+    poly_init = Polyhedron(init[0], init[1])
+
+    dyn_matrix_B = np.matrix(sys_dynamics.get_dyn_matrix_B())
+    dyn_coeff_matrix_U = np.matrix(sys_dynamics.get_dyn_coeff_matrix_U())
+    dyn_col_vec_U = np.matrix(sys_dynamics.get_dyn_col_vec_U())
+    trans_poly_U = TransPoly(trans_matrix_B=dyn_matrix_B,
+                             coeff_matrix=dyn_coeff_matrix_U,
+                             col_vec_U=dyn_col_vec_U)
 
     delta_tp = np.transpose(SuppFuncUtils.mat_exp(dynamics_matrix_A, tau))
 
@@ -45,12 +48,12 @@ def compute_post(sys_dynamics, tau):
             # delta_tp = np.transpose(mat_exp(A, n * time_interval))
             if n == 0:
                 prev_r = directions[idx]
-                prev_s = compute_initial_sf(init_poly, directions[idx], sys_dynamics, tau)
+                prev_s = compute_initial_sf(poly_init, trans_poly_U, directions[idx], sys_dynamics, tau)
                 ret.append([prev_s])
             else:
                 r = np.matmul(delta_tp, prev_r)
-                s = prev_s + compute_sf_w(r, tau)
-                sf = init_poly.compute_support_function(r) + s
+                s = prev_s + compute_sf_w(r, trans_poly_U, tau)
+                sf = poly_init.compute_support_function(r) + s
 
                 ret[-1].append(sf)
 
@@ -75,8 +78,8 @@ def main():
 
 
 if __name__ == '__main__':
-    TIME_EPLASE = 1
-    TIME_INTERVAL = 0.5
+    TIME_EPLASE = 1.5
+    TIME_INTERVAL = 0.3
     
 
     main()
@@ -91,28 +94,36 @@ if __name__ == '__main__':
         np.array([-1, -1]),
         np.array([-1, 1]),
     ]
-    coeff_matrix = [[-1, 0],  # -x1 <= 1
+    init_coeff_matrix_X0 = [[-1, 0],  # -x1 <= 0
                     [1, 0],  # x1 <= 2
                     [0, -1],  # -x2 <= 0.5
-                    [0, 1]  # x2 <= 1
-                    ]
-    col_vec = [[0], [2], [0.5], [0]]
+                    [0, 1]]  # x2 <= 1
+
+    init_col_vec_X0 = [[0],
+                       [2],
+                       [0.5],
+                       [0]]
+
     dynamics_matrix_A = [[0, 1],
                          [-2, 0]]
-    dynamics_matrix_B = np.identity(4)
-    dynamics_matrix_input = [[1, 0],
-                             [0, 1],
-                             [0, -1],
-                             [-1, 0]]
+    dynamics_matrix_B = np.identity(2)
 
-    # print(np.matmul(dynamics_matrix_B, dynamics_matrix_input))
-    # exit()
+    # U is a square with inf_norm = 2
+    dynamics_coeff_matrix_U = [[-1, 0],  # u1 >= 0
+                               [1, 0],   # u1 <= 1
+                               [0, -1],  # u2 >= 0
+                               [0, 1]]   # u2 <= 1
+    dynamics_col_vec_U = [[0],
+                          [1],
+                          [0],
+                          [1]]
 
-    sys_dynamics = SysDynamics(matrix_a=dynamics_matrix_A,
-                               matrix_init_coeff=coeff_matrix,
-                               matrix_init_col=col_vec,
-                               matrix_b=dynamics_matrix_B,
-                               matrix_input=dynamics_matrix_input)
+    sys_dynamics = SysDynamics(dynamics_matrix_A=dynamics_matrix_A,
+                               init_coeff_matrix_X0=init_coeff_matrix_X0,
+                               init_col_vec_X0=init_col_vec_X0,
+                               dynamics_matrix_B=dynamics_matrix_B,
+                               dynamics_coeff_matrix_U=dynamics_coeff_matrix_U,
+                               dynamics_col_vec_U=dynamics_col_vec_U)
 
     time_frames = range(int(np.ceil(TIME_EPLASE / TIME_INTERVAL)) + 1)
 
