@@ -20,7 +20,9 @@ def compute_alpha(sys_dynamics, tau):
     dyn_col_vec_U = np.matrix(sys_dynamics.get_dyn_col_vec_U())
     dyn_matrix_init = sys_dynamics.get_dyn_init_X0()
 
-    norm_a = np.linalg.norm(dyn_matrix_A, np.inf)
+    # norm_a = np.linalg.norm(dyn_matrix_A, np.inf)
+    norm_a = np.linalg.norm(dyn_matrix_A, 1)
+
     tt1 = np.exp(tau * norm_a)
 
     I_max_norm = Polyhedron(coeff_matrix=dyn_matrix_init[0],

@@ -1,13 +1,16 @@
 import numpy as np
 
 import SuppFuncUtils
+import DataReader
+
 from ConvexSet.Polyhedron import Polyhedron
 from ConvexSet.TransPoly import TransPoly
 from Plotter import Plotter
-from SysDynamics import SysDynamics
 
 
 def compute_initial_sf(poly_init, trans_poly_U, l, sys_dynamics, tau):
+    dynamics_matrix_A = np.matrix(sys_dynamics.get_dyn_coeff_matrix_A())
+
     delta_tp = np.transpose(SuppFuncUtils.mat_exp(dynamics_matrix_A, 1 * tau))
     sf_X0 = poly_init.compute_support_function(np.matmul(delta_tp, l))
 
@@ -37,6 +40,7 @@ def compute_post(sys_dynamics, tau):
     dyn_matrix_B = np.matrix(sys_dynamics.get_dyn_matrix_B())
     dyn_coeff_matrix_U = np.matrix(sys_dynamics.get_dyn_coeff_matrix_U())
     dyn_col_vec_U = np.matrix(sys_dynamics.get_dyn_col_vec_U())
+    dynamics_matrix_A = np.matrix(sys_dynamics.get_dyn_coeff_matrix_A())
     trans_poly_U = TransPoly(trans_matrix_B=dyn_matrix_B,
                              coeff_matrix=dyn_coeff_matrix_U,
                              col_vec_U=dyn_col_vec_U)
@@ -74,60 +78,8 @@ def get_images(sf_mat, directions):
 
 
 def main():
-    pass
+    directions, sys_dynamics = DataReader.read_data()
 
-
-if __name__ == '__main__':
-    TIME_HORIZON = 1.2
-    SAMP_FREQ = 0.3
-    
-
-    main()
-
-    directions = [
-        np.array([-1, 0]),
-        np.array([0, -1]),
-        np.array([1, 0]),
-        np.array([0, 1]),
-        np.array([1, 1]),
-        np.array([1, -1]),
-        np.array([-1, -1]),
-        np.array([-1, 1]),
-    ]
-    init_coeff_matrix_X0 = [[-1, 0],  # -x1 <= 0
-                    [1, 0],  # x1 <= 2
-                    [0, -1],  # -x2 <= 0.5
-                    [0, 1]]  # x2 <= 1
-
-    init_col_vec_X0 = [[0],
-                       [2],
-                       [0.5],
-                       [0]]
-
-    dynamics_matrix_A = [[0, 1],
-                         [-2, 0]]
-    dynamics_matrix_B = np.identity(2)
-
-    # U is a square with inf_norm = 2
-    dynamics_coeff_matrix_U = [[-1, 0],  # u1 >= 0
-                               [1, 0],   # u1 <= 1
-                               [0, -1],  # u2 >= 0
-                               [0, 1]]   # u2 <= 1
-    dynamics_col_vec_U = [[0],
-                          [1],
-                          [0],
-                          [1]]
-
-    sys_dynamics = SysDynamics(dynamics_matrix_A=dynamics_matrix_A,
-                               init_coeff_matrix_X0=init_coeff_matrix_X0,
-                               init_col_vec_X0=init_col_vec_X0,
-                               dynamics_matrix_B=dynamics_matrix_B,
-                               dynamics_coeff_matrix_U=dynamics_coeff_matrix_U,
-                               dynamics_col_vec_U=dynamics_col_vec_U)
-
-    time_frames = range(int(np.ceil(TIME_HORIZON / SAMP_FREQ)) + 1)
-
-    # sfp = SupportFunctionProvider(poly)
     sf_mat = compute_post(sys_dynamics, tau=SAMP_FREQ)
     # print(sf_mat)
     images_by_time = get_images(sf_mat, directions)
@@ -136,3 +88,12 @@ if __name__ == '__main__':
     # polygon_plotter(images_by_time)
     plHelper = Plotter(images_by_time)
     plHelper.Print()
+
+
+if __name__ == '__main__':
+    TIME_HORIZON = 0.3
+    SAMP_FREQ = 0.3
+    time_frames = range(int(np.floor(TIME_HORIZON / SAMP_FREQ)))
+
+    main()
+
