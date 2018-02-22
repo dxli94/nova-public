@@ -1,5 +1,5 @@
 from scipy.optimize import linprog
-from ConvexSet.Polyhedron import Polyhedron
+from src.ConvexSet.Polyhedron import Polyhedron
 
 import numpy as np
 import cdd
@@ -11,22 +11,22 @@ class TransPoly(Polyhedron):
     V = B. U
     """
 
-    def __init__(self, trans_matrix_B, coeff_matrix, col_vec_U=None):
+    def __init__(self, trans_matrix_B, coeff_matrix_U, col_vec_U=None):
         self.trans_matrix_B = np.matrix(trans_matrix_B)
-        self.coeff_matrix = np.matrix(coeff_matrix)
+        self.coeff_matrix_U = np.matrix(coeff_matrix_U)
 
         if col_vec_U is not None:
-            col_vec_U = np.matrix(col_vec_U)
-            assert coeff_matrix.shape[0] == col_vec_U.shape[0], \
+            self.col_vec_U = np.matrix(col_vec_U)
+            assert self.coeff_matrix_U.shape[0] == self.col_vec_U.shape[0], \
                 "Shapes of coefficient matrix %r and column vector %r do not match!" \
-                % (coeff_matrix.shape, col_vec_U.shape)
+                % (self.coeff_matrix_U.shape, self.col_vec_U.shape)
         else:
-            col_vec_U = np.zeros(shape=(coeff_matrix.shape[0], 1))
+            col_vec_U = np.zeros(shape=(coeff_matrix_U.shape[0], 1))
 
         self.col_vec = col_vec_U
 
-        if coeff_matrix.size > 0:
-            self.mat_poly = cdd.Matrix(np.hstack((self.col_vec, -self.coeff_matrix)).tolist())
+        if self.coeff_matrix_U.size > 0:
+            self.mat_poly = cdd.Matrix(np.hstack((self.col_vec, -self.coeff_matrix_U)).tolist())
             self.mat_poly.rep_type = cdd.RepType.INEQUALITY
 
             self.poly = self._gen_poly()
@@ -42,7 +42,7 @@ class TransPoly(Polyhedron):
         str_repr = 'H-representative\n' + \
                    'Ax <= b \n'
 
-        for row in zip(self.coeff_matrix, self.col_vec):
+        for row in zip(self.coeff_matrix_U, self.col_vec):
             str_repr += ' '.join(str(item) for item in row) + '\n'
 
         return str_repr
@@ -53,10 +53,13 @@ class TransPoly(Polyhedron):
         elif self.is_universe():
             raise RuntimeError("\n Cannot Compute Support Function of a Universe Polytope.\n")
         else:
-            direction = np.squeeze(np.asarray(-np.matmul(np.transpose(self.trans_matrix_B), direction)))
+            # matrix_direction = -np.matmul(np.transpose(self.trans_matrix_B), np.reshape(np.matrix(direction), (2, 1)))
+            # direction = list(matrix_direction)
+            # direction = direction[0]
 
+            direction = (-np.matmul(np.transpose(self.trans_matrix_B), direction)).tolist()[0]
             sf = linprog(c=direction,
-                         A_ub=self.coeff_matrix, b_ub=self.col_vec,
+                         A_ub=self.coeff_matrix_U, b_ub=self.col_vec,
                          bounds=(None, None))
 
             if sf.success:

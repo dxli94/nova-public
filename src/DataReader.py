@@ -1,6 +1,6 @@
 import numpy as np
 
-from SysDynamics import SysDynamics
+from src.SysDynamics import SysDynamics
 
 
 def read_data():

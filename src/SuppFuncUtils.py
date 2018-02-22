@@ -28,7 +28,7 @@ def compute_alpha(sys_dynamics, tau):
     I_max_norm = Polyhedron(coeff_matrix=dyn_matrix_init[0],
                             col_vec=dyn_matrix_init[1]).compute_max_norm()
     poly_U = TransPoly(trans_matrix_B=dyn_matrix_B,
-                       coeff_matrix=dyn_coeff_matrix_U,
+                       coeff_matrix_U=dyn_coeff_matrix_U,
                        col_vec_U=dyn_col_vec_U)
 
     v_max_norm = poly_U.compute_max_norm()
@@ -46,7 +46,7 @@ def compute_beta(sys_dynamics, tau):
     tt1 = np.exp(tau * norm_a)
 
     poly_U = TransPoly(trans_matrix_B=dyn_matrix_B,
-                       coeff_matrix=dyn_coeff_matrix_U,
+                       coeff_matrix_U=dyn_coeff_matrix_U,
                        col_vec_U=dyn_col_vec_U)
 
     v_max_norm = poly_U.compute_max_norm()

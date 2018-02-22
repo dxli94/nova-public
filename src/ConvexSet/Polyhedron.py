@@ -27,11 +27,11 @@ class Polyhedron:
             col_vec = np.zeros(shape=(coeff_matrix.shape[0], 1))
 
         if coeff_matrix.size > 0:
-            self.coeff_matrix = coeff_matrix
+            self.coeff_matrix_U = coeff_matrix
             self.col_vec = col_vec
             # cdd requires b-Ax <= 0 as inputs
 
-            self.mat_poly = cdd.Matrix(np.hstack((self.col_vec, -self.coeff_matrix)).tolist())
+            self.mat_poly = cdd.Matrix(np.hstack((self.col_vec, -self.coeff_matrix_U)).tolist())
             self.mat_poly.rep_type = cdd.RepType.INEQUALITY
 
             self.poly = self._gen_poly()
@@ -48,10 +48,10 @@ class Polyhedron:
                    'Ax <= b \n'
 
         if self.col_vec is not None:
-            for row in np.hstack((self.coeff_matrix, self.col_vec)):
+            for row in np.hstack((self.coeff_matrix_U, self.col_vec)):
                 str_repr += ' '.join(str(item) for item in row) + '\n'
         else:
-            for row in self.coeff_matrix:
+            for row in self.coeff_matrix_U:
                 str_repr += ' '.join(str(item) for item in row) + '\n'
 
         return str_repr
@@ -72,7 +72,7 @@ class Polyhedron:
         self.isUniverse = False
 
     def get_inequalities(self):
-        return np.hstack((self.coeff_matrix, self.col_vec))
+        return np.hstack((self.coeff_matrix_U, self.col_vec))
 
     def is_empty(self):
         return self.isEmpty
@@ -91,8 +91,8 @@ class Polyhedron:
             # Besides, Scipy only deals with min(). Here we need max(). max(f(x)) = -min(-f(x))
 
             # A_ub * x <= b_ub
-            sf = linprog(c=-direction,
-                         A_ub=self.coeff_matrix, b_ub=self.col_vec,
+            sf = linprog(c=-np.array(direction),
+                         A_ub=self.coeff_matrix_U, b_ub=self.col_vec,
                          bounds=(None, None))
             if sf.success:
                 return -sf.fun
@@ -100,7 +100,7 @@ class Polyhedron:
                 raise RuntimeError(sf.message)
 
     def compute_max_norm(self):
-        coeff_matrix = np.matrix(self.coeff_matrix)
+        coeff_matrix = np.matrix(self.coeff_matrix_U)
         dim_for_max_norm = coeff_matrix.shape[1]
 
         if self.isEmpty:
@@ -125,22 +125,3 @@ class Polyhedron:
     #     then run lp_solver to test if the constraints have no feasible solution.
     #     """
     #     raise NotImplementedError
-
-if __name__ == '__main__':
-    # test creation
-    coeff_matrix = [[1, 1], [-1, 0], [0, -1]]
-    col_vec = [[2], [0], [0]]
-    poly = Polyhedron(coeff_matrix, col_vec)
-    test_1 = [(0.0, 0.0), (2.0, 0.0), (0.0, 2.0)]
-    assert all(item in poly.vertices for item in test_1) and all(item in test_1 for item in poly.vertices)
-
-    # test add_constraint()
-    poly.add_constraint([1, -1], [0])
-    test_2 = [(0.0, 0.0), (1.0, 1.0), (0.0, 2.0)]
-    assert all(item in poly.vertices for item in test_2) and all(item in test_2 for item in poly.vertices)
-
-    # test get_inequalities()
-    assert poly.get_inequalities().all() == np.matrix([[1, 1, 2], [-1, 0, 0], [0, -1, 0]]).all()
-
-    # test compute_max_norm()
-    assert poly.compute_max_norm() == 2
