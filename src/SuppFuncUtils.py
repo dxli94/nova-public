@@ -21,7 +21,7 @@ def compute_alpha(sys_dynamics, tau):
     dyn_matrix_init = sys_dynamics.get_dyn_init_X0()
 
     # norm_a = np.linalg.norm(dyn_matrix_A, np.inf)
-    norm_a = np.linalg.norm(dyn_matrix_A, 1)
+    norm_a = np.linalg.norm(dyn_matrix_A, np.inf)
 
     tt1 = np.exp(tau * norm_a)
 

@@ -41,6 +41,7 @@ def compute_post(sys_dynamics, directions, tau):
     dyn_coeff_matrix_U = np.matrix(sys_dynamics.get_dyn_coeff_matrix_U())
     dyn_col_vec_U = np.matrix(sys_dynamics.get_dyn_col_vec_U())
     dynamics_matrix_A = np.matrix(sys_dynamics.get_dyn_coeff_matrix_A())
+
     trans_poly_U = TransPoly(trans_matrix_B=dyn_matrix_B,
                              coeff_matrix_U=dyn_coeff_matrix_U,
                              col_vec_U=dyn_col_vec_U)
@@ -91,7 +92,7 @@ def main():
 
 
 if __name__ == '__main__':
-    TIME_HORIZON = 1.0
+    TIME_HORIZON = 3
     SAMP_FREQ = 0.3
     time_frames = range(int(np.floor(TIME_HORIZON / SAMP_FREQ)))
 

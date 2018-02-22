@@ -26,7 +26,10 @@ class TransPoly(Polyhedron):
         self.col_vec = col_vec_U
 
         if self.coeff_matrix_U.size > 0:
-            self.mat_poly = cdd.Matrix(np.hstack((self.col_vec, -self.coeff_matrix_U)).tolist())
+            if self.coeff_matrix_U is not None:
+                self.mat_poly = cdd.Matrix(np.hstack((self.col_vec, -self.coeff_matrix_U)).tolist())
+            else:
+                self.mat_poly = cdd.Matrix()
             self.mat_poly.rep_type = cdd.RepType.INEQUALITY
 
             self.poly = self._gen_poly()
@@ -53,12 +56,10 @@ class TransPoly(Polyhedron):
         elif self.is_universe():
             raise RuntimeError("\n Cannot Compute Support Function of a Universe Polytope.\n")
         else:
-            # matrix_direction = -np.matmul(np.transpose(self.trans_matrix_B), np.reshape(np.matrix(direction), (2, 1)))
-            # direction = list(matrix_direction)
-            # direction = direction[0]
+            direction = np.matmul(np.transpose(self.trans_matrix_B), np.array(direction))
+            direction = np.squeeze(np.asarray(direction))
 
-            direction = (-np.matmul(np.transpose(self.trans_matrix_B), direction)).tolist()[0]
-            sf = linprog(c=direction,
+            sf = linprog(c=-direction,
                          A_ub=self.coeff_matrix_U, b_ub=self.col_vec,
                          bounds=(None, None))
 

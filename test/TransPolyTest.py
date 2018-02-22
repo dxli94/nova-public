@@ -29,7 +29,7 @@ class TestTransPolyMethods(unittest.TestCase):
         # test
 
     def test_shear(self):
-        dynamics_matrix_B = [[1, 1], [0, 1]]
+        dynamics_matrix_B = np.matrix([[1, 0], [0, 1]])
 
         # U is a square with inf_norm = 2
         dynamics_coeff_matrix_U = [[-1, 0],  # u1 >= 0

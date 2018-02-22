@@ -12,12 +12,12 @@ def read_data():
         # np.array([1, 1]),
         # np.array([1, -1]),
         # np.array([-1, -1]),
-        # np.array([-1, 1]),
+        # np.array([-1, 1])
     ]
     init_coeff_matrix_X0 = [[-1, 0],  # -x1 <= 0
                             [1, 0],  # x1 <= 2
                             [0, -1],  # -x2 <= 0.5
-                            [0, 1]]  # x2 <= 1
+                            [0, 1]]  # x2 <= 0
 
     init_col_vec_X0 = [[0],
                        [2],
@@ -26,6 +26,11 @@ def read_data():
 
     dynamics_matrix_A = [[0, 1],
                          [-2, 0]]
+
+    # dynamics_matrix_A = [[0, 0],
+    #                      [0, 0]]
+
+
     dynamics_matrix_B = np.identity(2)
 
     # U is a square with inf_norm = 2
