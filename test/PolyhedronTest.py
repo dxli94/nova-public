@@ -15,7 +15,7 @@ class TestPolyhedronMethods(unittest.TestCase):
         self.assertEqual(set(self.poly.vertices), set(test_2))
 
     def test_get_inequalities(self):
-        self.assertEqual(self.poly.get_inequalities().all(), np.matrix([[1, 1, 2], [-1, 0, 0], [0, -1, 0]]).all())
+        self.assertEqual(self.poly.get_inequalities().all(), np.array([[1, 1, 2], [-1, 0, 0], [0, -1, 0]]).all())
 
     def test_compute_max_norm(self):
         self.assertEqual(self.poly.compute_max_norm(), 2)

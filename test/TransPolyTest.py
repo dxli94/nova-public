@@ -29,7 +29,7 @@ class TestTransPolyMethods(unittest.TestCase):
         # test
 
     def test_shear(self):
-        dynamics_matrix_B = np.matrix([[1, 0], [0, 1]])
+        dynamics_matrix_B = np.array([[1, 1], [0, 1]])
 
         # U is a square with inf_norm = 2
         dynamics_coeff_matrix_U = [[-1, 0],  # u1 >= 0
@@ -39,12 +39,16 @@ class TestTransPolyMethods(unittest.TestCase):
         dynamics_col_vec_U = [[0], [1], [0], [1]]
         transPoly = TransPoly(dynamics_matrix_B, dynamics_coeff_matrix_U, dynamics_col_vec_U)
 
-        directions = [[1, 0], [2, 0],
-                      [-1, 0], [-2, 0],
+        # BU a diamond defined by: (0,0), (1,1), (2,1), (1,0)
+
+        directions = [[1, 0],
+                      [2, 0],
+                      [-1, 0],
+                      [-2, 0],
                       [1, 1]
                       ]
         sf = [transPoly.compute_support_function(l) for l in directions]
-        correct_sf = [1, 2, 0, 0, 2]
+        correct_sf = [2, 4, 0, 0, 3]
         self.assertEqual(sf, correct_sf)
 
 

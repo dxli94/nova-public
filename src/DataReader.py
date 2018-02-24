@@ -30,7 +30,6 @@ def read_data():
     # dynamics_matrix_A = [[0, 0],
     #                      [0, 0]]
 
-
     dynamics_matrix_B = np.identity(2)
 
     # U is a square with inf_norm = 2

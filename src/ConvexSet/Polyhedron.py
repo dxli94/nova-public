@@ -16,10 +16,10 @@ class Polyhedron:
     """
 
     def __init__(self, coeff_matrix, col_vec=None):
-        coeff_matrix = np.matrix(coeff_matrix)
+        coeff_matrix = np.array(coeff_matrix)
 
         if col_vec is not None:
-            col_vec = np.matrix(col_vec)
+            col_vec = np.array(col_vec)
             assert coeff_matrix.shape[0] == col_vec.shape[0], \
                 "Shapes of coefficient matrix %r and column vector %r do not match!" \
                 % (coeff_matrix.shape, col_vec.shape)
@@ -27,11 +27,14 @@ class Polyhedron:
             col_vec = np.zeros(shape=(coeff_matrix.shape[0], 1))
 
         if coeff_matrix.size > 0:
-            self.coeff_matrix_U = coeff_matrix
+            self.coeff_matrix = coeff_matrix
             self.col_vec = col_vec
             # cdd requires b-Ax <= 0 as inputs
 
-            self.mat_poly = cdd.Matrix(np.hstack((self.col_vec, -self.coeff_matrix_U)).tolist())
+            print(self.col_vec, self.coeff_matrix)
+            print('===')
+
+            self.mat_poly = cdd.Matrix(np.hstack((self.col_vec, -self.coeff_matrix)).tolist())
             self.mat_poly.rep_type = cdd.RepType.INEQUALITY
 
             self.poly = self._gen_poly()
@@ -48,10 +51,10 @@ class Polyhedron:
                    'Ax <= b \n'
 
         if self.col_vec is not None:
-            for row in np.hstack((self.coeff_matrix_U, self.col_vec)):
+            for row in np.hstack((self.coeff_matrix, self.col_vec)):
                 str_repr += ' '.join(str(item) for item in row) + '\n'
         else:
-            for row in self.coeff_matrix_U:
+            for row in self.coeff_matrix:
                 str_repr += ' '.join(str(item) for item in row) + '\n'
 
         return str_repr
@@ -64,7 +67,7 @@ class Polyhedron:
         return [gen[1:] for gen in self.poly.get_generators() if gen[0] == 1]
 
     def add_constraint(self, coeff_matrix, col_vec):
-        self.mat_poly.extend(np.matrix(np.hstack((np.matrix(col_vec), -np.matrix(coeff_matrix)))).tolist())
+        self.mat_poly.extend(np.array(np.hstack((np.array(col_vec), -np.array(coeff_matrix)))).tolist())
         self.poly = self._gen_poly()
         self.vertices = self._update_vertices()
 
@@ -72,7 +75,7 @@ class Polyhedron:
         self.isUniverse = False
 
     def get_inequalities(self):
-        return np.hstack((self.coeff_matrix_U, self.col_vec))
+        return np.hstack((self.coeff_matrix, self.col_vec))
 
     def is_empty(self):
         return self.isEmpty
@@ -92,7 +95,7 @@ class Polyhedron:
 
             # A_ub * x <= b_ub
             sf = linprog(c=-np.array(direction),
-                         A_ub=self.coeff_matrix_U, b_ub=self.col_vec,
+                         A_ub=self.coeff_matrix, b_ub=self.col_vec,
                          bounds=(None, None))
             if sf.success:
                 return -sf.fun
@@ -100,7 +103,7 @@ class Polyhedron:
                 raise RuntimeError(sf.message)
 
     def compute_max_norm(self):
-        coeff_matrix = np.matrix(self.coeff_matrix_U)
+        coeff_matrix = np.array(self.coeff_matrix)
         dim_for_max_norm = coeff_matrix.shape[1]
 
         if self.isEmpty:

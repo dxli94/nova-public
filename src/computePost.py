@@ -10,7 +10,6 @@ from Plotter import Plotter
 
 def compute_initial_sf(poly_init, trans_poly_U, l, sys_dynamics, tau):
     dynamics_matrix_A = np.matrix(sys_dynamics.get_dyn_coeff_matrix_A())
-
     delta_tp = np.transpose(SuppFuncUtils.mat_exp(dynamics_matrix_A, 1 * tau))
     sf_X0 = poly_init.compute_support_function(np.matmul(delta_tp, l))
 
@@ -65,16 +64,16 @@ def compute_post(sys_dynamics, directions, tau):
                 prev_r = r
                 prev_s = s
 
-    return np.matrix(ret)
+    return np.array(ret)
 
 
 def get_images(sf_mat, directions):
     ret = []
 
-    d_mat = np.matrix(directions)
-    sf_mat = np.transpose(np.matrix(sf_mat))
+    d_mat = np.array(directions)
+    sf_mat = np.transpose(np.array(sf_mat))
     for sf_row in sf_mat:
-        ret.append(Polyhedron(d_mat, np.transpose(sf_row)))
+        ret.append(Polyhedron(d_mat, np.reshape(sf_row, (len(sf_row), 1))))
     return ret
 
 
