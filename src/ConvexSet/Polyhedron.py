@@ -16,10 +16,9 @@ class Polyhedron:
     """
 
     def __init__(self, coeff_matrix, col_vec=None):
-        coeff_matrix = np.array(coeff_matrix)
+        coeff_matrix = coeff_matrix
 
         if col_vec is not None:
-            col_vec = np.array(col_vec)
             assert coeff_matrix.shape[0] == col_vec.shape[0], \
                 "Shapes of coefficient matrix %r and column vector %r do not match!" \
                 % (coeff_matrix.shape, col_vec.shape)
@@ -34,7 +33,7 @@ class Polyhedron:
             print(self.col_vec, self.coeff_matrix)
             print('===')
 
-            self.mat_poly = cdd.Matrix(np.hstack((self.col_vec, -self.coeff_matrix)).tolist())
+            self.mat_poly = cdd.Matrix(np.hstack((self.col_vec, -self.coeff_matrix)))
             self.mat_poly.rep_type = cdd.RepType.INEQUALITY
 
             self.poly = self._gen_poly()
@@ -67,7 +66,7 @@ class Polyhedron:
         return [gen[1:] for gen in self.poly.get_generators() if gen[0] == 1]
 
     def add_constraint(self, coeff_matrix, col_vec):
-        self.mat_poly.extend(np.array(np.hstack((np.array(col_vec), -np.array(coeff_matrix)))).tolist())
+        self.mat_poly.extend([np.hstack((col_vec, -coeff_matrix))])
         self.poly = self._gen_poly()
         self.vertices = self._update_vertices()
 
@@ -94,7 +93,7 @@ class Polyhedron:
             # Besides, Scipy only deals with min(). Here we need max(). max(f(x)) = -min(-f(x))
 
             # A_ub * x <= b_ub
-            sf = linprog(c=-np.array(direction),
+            sf = linprog(c=-direction,
                          A_ub=self.coeff_matrix, b_ub=self.col_vec,
                          bounds=(None, None))
             if sf.success:
@@ -103,7 +102,7 @@ class Polyhedron:
                 raise RuntimeError(sf.message)
 
     def compute_max_norm(self):
-        coeff_matrix = np.array(self.coeff_matrix)
+        coeff_matrix = self.coeff_matrix
         dim_for_max_norm = coeff_matrix.shape[1]
 
         if self.isEmpty:

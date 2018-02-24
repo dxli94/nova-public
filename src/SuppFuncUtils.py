@@ -14,10 +14,10 @@ def support_unitball_infnorm(direction):
 
 
 def compute_alpha(sys_dynamics, tau):
-    dyn_matrix_A = np.matrix(sys_dynamics.get_dyn_coeff_matrix_A())
-    dyn_matrix_B = np.matrix(sys_dynamics.get_dyn_matrix_B())
-    dyn_coeff_matrix_U = np.matrix(sys_dynamics.get_dyn_coeff_matrix_U())
-    dyn_col_vec_U = np.matrix(sys_dynamics.get_dyn_col_vec_U())
+    dyn_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
+    dyn_matrix_B = sys_dynamics.get_dyn_matrix_B()
+    dyn_coeff_matrix_U = sys_dynamics.get_dyn_coeff_matrix_U()
+    dyn_col_vec_U = sys_dynamics.get_dyn_col_vec_U()
     dyn_matrix_init = sys_dynamics.get_dyn_init_X0()
 
     # norm_a = np.linalg.norm(dyn_matrix_A, np.inf)
@@ -37,10 +37,10 @@ def compute_alpha(sys_dynamics, tau):
 
 
 def compute_beta(sys_dynamics, tau):
-    dyn_matrix_A = np.array(sys_dynamics.get_dyn_coeff_matrix_A())
-    dyn_matrix_B = np.array(sys_dynamics.get_dyn_matrix_B())
-    dyn_coeff_matrix_U = np.array(sys_dynamics.get_dyn_coeff_matrix_U())
-    dyn_col_vec_U = np.array(sys_dynamics.get_dyn_col_vec_U())
+    dyn_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
+    dyn_matrix_B = sys_dynamics.get_dyn_matrix_B()
+    dyn_coeff_matrix_U = sys_dynamics.get_dyn_coeff_matrix_U()
+    dyn_col_vec_U = sys_dynamics.get_dyn_col_vec_U()
 
     norm_a = np.linalg.norm(dyn_matrix_A, np.inf)
     tt1 = np.exp(tau * norm_a)

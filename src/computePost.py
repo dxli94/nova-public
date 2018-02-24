@@ -9,7 +9,7 @@ from Plotter import Plotter
 
 
 def compute_initial_sf(poly_init, trans_poly_U, l, sys_dynamics, tau):
-    dynamics_matrix_A = np.matrix(sys_dynamics.get_dyn_coeff_matrix_A())
+    dynamics_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
     delta_tp = np.transpose(SuppFuncUtils.mat_exp(dynamics_matrix_A, 1 * tau))
     sf_X0 = poly_init.compute_support_function(np.matmul(delta_tp, l))
 
@@ -36,10 +36,10 @@ def compute_post(sys_dynamics, directions, tau):
     init = sys_dynamics.get_dyn_init_X0()
     poly_init = Polyhedron(init[0], init[1])
 
-    dyn_matrix_B = np.matrix(sys_dynamics.get_dyn_matrix_B())
-    dyn_coeff_matrix_U = np.matrix(sys_dynamics.get_dyn_coeff_matrix_U())
-    dyn_col_vec_U = np.matrix(sys_dynamics.get_dyn_col_vec_U())
-    dynamics_matrix_A = np.matrix(sys_dynamics.get_dyn_coeff_matrix_A())
+    dyn_matrix_B = sys_dynamics.get_dyn_matrix_B()
+    dyn_coeff_matrix_U = sys_dynamics.get_dyn_coeff_matrix_U()
+    dyn_col_vec_U = sys_dynamics.get_dyn_col_vec_U()
+    dynamics_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
 
     trans_poly_U = TransPoly(trans_matrix_B=dyn_matrix_B,
                              coeff_matrix_U=dyn_coeff_matrix_U,
@@ -71,7 +71,7 @@ def get_images(sf_mat, directions):
     ret = []
 
     d_mat = np.array(directions)
-    sf_mat = np.transpose(np.array(sf_mat))
+    sf_mat = np.transpose(sf_mat)
     for sf_row in sf_mat:
         ret.append(Polyhedron(d_mat, np.reshape(sf_row, (len(sf_row), 1))))
     return ret

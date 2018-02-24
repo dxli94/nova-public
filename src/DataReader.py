@@ -42,11 +42,11 @@ def read_data():
                           [0],
                           [1]]
 
-    sys_dynamics = SysDynamics(dynamics_matrix_A=dynamics_matrix_A,
-                               init_coeff_matrix_X0=init_coeff_matrix_X0,
-                               init_col_vec_X0=init_col_vec_X0,
-                               dynamics_matrix_B=dynamics_matrix_B,
-                               dynamics_coeff_matrix_U=dynamics_coeff_matrix_U,
-                               dynamics_col_vec_U=dynamics_col_vec_U)
+    sys_dynamics = SysDynamics(dynamics_matrix_A=np.array(dynamics_matrix_A),
+                               init_coeff_matrix_X0=np.array(init_coeff_matrix_X0),
+                               init_col_vec_X0=np.array(init_col_vec_X0),
+                               dynamics_matrix_B=np.array(dynamics_matrix_B),
+                               dynamics_coeff_matrix_U=np.array(dynamics_coeff_matrix_U),
+                               dynamics_col_vec_U=np.array(dynamics_col_vec_U))
 
     return directions, sys_dynamics
