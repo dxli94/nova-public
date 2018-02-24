@@ -51,11 +51,13 @@ def compute_post(sys_dynamics, directions, tau):
             # delta_tp = np.transpose(mat_exp(A, n * time_interval))
             if n == 0:
                 prev_r = directions[idx]
-                prev_s = compute_initial_sf(poly_init, trans_poly_U, directions[idx], sys_dynamics, tau)
-                ret.append([prev_s])
+                s_0 = compute_initial_sf(poly_init, trans_poly_U, directions[idx], sys_dynamics, tau)
+                prev_s = 0
+                ret.append([s_0])
             else:
                 r = np.matmul(delta_tp, prev_r)
                 s = prev_s + compute_sf_w(sys_dynamics, r, trans_poly_U, tau)
+                print(n,s)
                 sf = poly_init.compute_support_function(r) + s
 
                 ret[-1].append(sf)
