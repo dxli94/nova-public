@@ -46,19 +46,21 @@ def compute_post(sys_dynamics, directions, tau):
 
     delta_tp = np.transpose(SuppFuncUtils.mat_exp(dyn_matrix_A, tau))
 
+    sf_0 = [compute_initial_sf(poly_init, trans_poly_U, l, sys_dynamics, tau) for l in directions]
+    poly_omega0 = Polyhedron(np.array(directions), np.reshape(sf_0, (len(sf_0), 1)))
+
     for idx in range(len(directions)):
+        ret.append([])
         for n in time_frames:
             # delta_tp = np.transpose(mat_exp(A, n * time_interval))
             if n == 0:
                 prev_r = directions[idx]
-                s_0 = compute_initial_sf(poly_init, trans_poly_U, directions[idx], sys_dynamics, tau)
                 prev_s = 0
-                ret.append([s_0])
+                ret[-1].append(sf_0[idx])
             else:
                 r = np.matmul(delta_tp, prev_r)
                 s = prev_s + compute_sf_w(sys_dynamics, r, trans_poly_U, tau)
-                print(n,s)
-                sf = poly_init.compute_support_function(r) + s
+                sf = poly_omega0.compute_support_function(r) + s
 
                 ret[-1].append(sf)
 
