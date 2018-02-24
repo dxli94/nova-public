@@ -15,6 +15,11 @@ def support_unitball_infnorm(direction):
 
 def compute_alpha(sys_dynamics, tau):
     dyn_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
+
+    # if dyn_matrix_A is a zero-matrix, no need to perform bloating
+    if not np.any(dyn_matrix_A):
+        return 0
+
     dyn_matrix_B = sys_dynamics.get_dyn_matrix_B()
     dyn_coeff_matrix_U = sys_dynamics.get_dyn_coeff_matrix_U()
     dyn_col_vec_U = sys_dynamics.get_dyn_col_vec_U()
@@ -38,6 +43,11 @@ def compute_alpha(sys_dynamics, tau):
 
 def compute_beta(sys_dynamics, tau):
     dyn_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
+
+    # if dyn_matrix_A is a zero-matrix, no need to perform bloating
+    if not np.any(dyn_matrix_A):
+        return 0
+
     dyn_matrix_B = sys_dynamics.get_dyn_matrix_B()
     dyn_coeff_matrix_U = sys_dynamics.get_dyn_coeff_matrix_U()
     dyn_col_vec_U = sys_dynamics.get_dyn_col_vec_U()

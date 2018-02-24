@@ -24,11 +24,11 @@ def read_data():
                        [0.5],
                        [0]]
 
-    dynamics_matrix_A = [[0, 1],
-                         [-2, 0]]
+    # dynamics_matrix_A = [[0, 1],
+    #                      [-2, 0]]
 
-    # dynamics_matrix_A = [[0, 0],
-    #                      [0, 0]]
+    dynamics_matrix_A = [[0, 0],
+                         [0, 0]]
 
     dynamics_matrix_B = np.identity(2)
 
@@ -37,14 +37,14 @@ def read_data():
                                [1, 0],  # u1 <= 1
                                [0, -1],  # u2 >= 0
                                [0, 1]]  # u2 <= 1
-    dynamics_col_vec_U = [[0],
+    dynamics_col_vec_U = [[-1],
                           [1],
-                          [0],
+                          [-1],
                           [1]]
 
-    sys_dynamics = SysDynamics(dynamics_matrix_A=np.array(dynamics_matrix_A),
-                               init_coeff_matrix_X0=np.array(init_coeff_matrix_X0),
+    sys_dynamics = SysDynamics(init_coeff_matrix_X0=np.array(init_coeff_matrix_X0),
                                init_col_vec_X0=np.array(init_col_vec_X0),
+                               dynamics_matrix_A=np.array(dynamics_matrix_A),
                                dynamics_matrix_B=np.array(dynamics_matrix_B),
                                dynamics_coeff_matrix_U=np.array(dynamics_coeff_matrix_U),
                                dynamics_col_vec_U=np.array(dynamics_col_vec_U))

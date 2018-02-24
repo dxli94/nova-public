@@ -9,8 +9,8 @@ from Plotter import Plotter
 
 
 def compute_initial_sf(poly_init, trans_poly_U, l, sys_dynamics, tau):
-    dynamics_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
-    delta_tp = np.transpose(SuppFuncUtils.mat_exp(dynamics_matrix_A, 1 * tau))
+    dyn_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
+    delta_tp = np.transpose(SuppFuncUtils.mat_exp(dyn_matrix_A, 1 * tau))
     sf_X0 = poly_init.compute_support_function(np.matmul(delta_tp, l))
 
     sf_V = tau * trans_poly_U.compute_support_function(l)
@@ -38,13 +38,13 @@ def compute_post(sys_dynamics, directions, tau):
     dyn_matrix_B = sys_dynamics.get_dyn_matrix_B()
     dyn_coeff_matrix_U = sys_dynamics.get_dyn_coeff_matrix_U()
     dyn_col_vec_U = sys_dynamics.get_dyn_col_vec_U()
-    dynamics_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
+    dyn_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
 
     trans_poly_U = TransPoly(trans_matrix_B=dyn_matrix_B,
                              coeff_matrix_U=dyn_coeff_matrix_U,
                              col_vec_U=dyn_col_vec_U)
 
-    delta_tp = np.transpose(SuppFuncUtils.mat_exp(dynamics_matrix_A, tau))
+    delta_tp = np.transpose(SuppFuncUtils.mat_exp(dyn_matrix_A, tau))
 
     for idx in range(len(directions)):
         for n in time_frames:
@@ -90,8 +90,8 @@ def main():
 
 
 if __name__ == '__main__':
-    TIME_HORIZON = 3
-    SAMP_FREQ = 0.3
+    TIME_HORIZON = 10
+    SAMP_FREQ = 1
     time_frames = range(int(np.floor(TIME_HORIZON / SAMP_FREQ)))
 
     main()

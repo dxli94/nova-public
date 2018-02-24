@@ -1,7 +1,5 @@
 class SysDynamics:
-    def __init__(self, dynamics_matrix_A,
-                 init_coeff_matrix_X0, init_col_vec_X0,
-                 dynamics_matrix_B=None,
+    def __init__(self, init_coeff_matrix_X0, init_col_vec_X0, dynamics_matrix_A=None, dynamics_matrix_B=None,
                  dynamics_coeff_matrix_U=None, dynamics_col_vec_U=None):
         # x' = Ax(t) + Bu(t)
         self.matrix_A = dynamics_matrix_A  # A (2*2) . x(t) (2*1) = Ax(t) (2*1)
