@@ -30,9 +30,6 @@ class Polyhedron:
             self.col_vec = col_vec
             # cdd requires b-Ax <= 0 as inputs
 
-            print(self.col_vec, self.coeff_matrix)
-            print('===')
-
             self.mat_poly = cdd.Matrix(np.hstack((self.col_vec, -self.coeff_matrix)))
             self.mat_poly.rep_type = cdd.RepType.INEQUALITY
 
@@ -91,7 +88,6 @@ class Polyhedron:
             # Note that these bounds have to be set to (None, None) to allow (-inf, +inf),
             # otherwise (0, +inf) by default.
             # Besides, Scipy only deals with min(). Here we need max(). max(f(x)) = -min(-f(x))
-
             # A_ub * x <= b_ub
             sf = linprog(c=-direction,
                          A_ub=self.coeff_matrix, b_ub=self.col_vec,

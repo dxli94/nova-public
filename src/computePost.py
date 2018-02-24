@@ -18,7 +18,6 @@ def compute_initial_sf(poly_init, trans_poly_U, l, sys_dynamics, tau):
     sf_ball = SuppFuncUtils.support_unitball_infnorm(l)
 
     sf_omega0 = max(sf_X0, sf_X0 + sf_V + alpha * sf_ball)
-
     return sf_omega0
 
 
