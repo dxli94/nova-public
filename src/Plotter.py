@@ -30,7 +30,7 @@ class Plotter:
         area = abs(area) / 2.0
         return area
 
-    def Print(self):
+    def plot(self):
         trace_data = []
         for image in self.images:
             corners_sorted = self.PolygonSort(image.vertices)

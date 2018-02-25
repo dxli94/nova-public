@@ -62,3 +62,44 @@ def compute_beta(sys_dynamics, tau):
     v_max_norm = poly_U.compute_max_norm()
 
     return (tt1 - 1 - tau * norm_a) * (v_max_norm / norm_a)
+
+
+def generate_directions(direction_type, dim):
+    direction_generator = []
+
+    if direction_type == 0:  # box
+        for i in range(dim):
+            direction = np.zeros(dim)
+            direction[i] = 1
+            direction_generator.append(direction)
+
+            direction = np.zeros(dim)
+            direction[i] = -1
+            direction_generator.append(direction)
+
+    elif direction_type == 1:  # octagonal
+        for i in range(dim):
+            direction = np.zeros(dim)
+            direction[i] = 1
+            direction_generator.append(direction)
+
+            direction = np.zeros(dim)
+            direction[i] = -1
+            direction_generator.append(direction)
+
+        oct_directions = []
+        for i in range(len(direction_generator)):
+            for j in range(i+1, len(direction_generator)):
+                direction = (direction_generator[i] + direction_generator[j]) / 2
+                if direction.any():
+                    oct_directions.append(direction)
+
+        direction_generator.extend(oct_directions)
+    return direction_generator
+
+
+if __name__ == '__main__':
+    direction_type = 1
+    dim = 3
+
+    print(len(generate_directions(direction_type, dim)))

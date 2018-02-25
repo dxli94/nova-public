@@ -1,5 +1,5 @@
 from scipy.optimize import linprog
-from src.ConvexSet.Polyhedron import Polyhedron
+from ConvexSet.Polyhedron import Polyhedron
 
 import numpy as np
 import cdd
