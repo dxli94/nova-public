@@ -10,6 +10,7 @@ def mat_exp(A, tau):
 
 
 def support_unitball_infnorm(direction):
+    # unit ball for f
     return sum([abs(elem) for elem in direction])
 
 
