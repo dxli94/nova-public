@@ -12,6 +12,8 @@ Project by ANU Hybrid System Group.
 - [pycddlib](http://pycddlib.readthedocs.io/en/latest/)
 - [Cython](http://cython.readthedocs.io/en/latest/src/quickstart/install.html)
 
+Tested on Ubuntu 16.04.2 LTS xenial.
+
 ### Running
 
 See options:
