@@ -1,4 +1,4 @@
-# instance_2
+# instance_3
 # x1'(t) = -x2
 # x2'(t) = x1
 

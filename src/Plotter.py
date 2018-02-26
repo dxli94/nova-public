@@ -1,6 +1,4 @@
 import numpy as np
-import plotly.graph_objs as go
-import plotly.offline as py
 
 
 class Plotter:
@@ -8,8 +6,11 @@ class Plotter:
 
     def __init__(self, images):
         self.images = images
+        self.vertices_sorted = list(map(lambda im: self.sort_vertices(im), self.images))
 
-    def PolygonSort(self, corners):
+    @staticmethod
+    def sort_vertices(im):
+        corners = im.vertices
         n = len(corners)
         cx = float(sum(x for x, y in corners)) / n
         cy = float(sum(y for x, y in corners)) / n
@@ -18,77 +19,30 @@ class Plotter:
             an = (np.arctan2(y - cy, x - cx) + 2.0 * np.pi) % (2.0 * np.pi)
             cornersWithAngles.append((x, y, an))
         cornersWithAngles.sort(key=lambda tup: tup[2])
-        return cornersWithAngles  # map(lambda (x, y, an): (x, y), cornersWithAngles)
 
-    def PolygonArea(self, corners):
-        n = len(corners)
-        area = 0.0
-        for i in range(n):
-            j = (i + 1) % n
-            area += corners[i][0] * corners[j][1]
-            area -= corners[j][0] * corners[i][1]
-        area = abs(area) / 2.0
-        return area
+        return list(map(lambda ca: (ca[0], ca[1]), cornersWithAngles))
 
-    def plot(self):
-        trace_data = []
-        for image in self.images:
-            corners_sorted = self.PolygonSort(image.vertices)
-            area = self.PolygonArea(corners_sorted)
+    def plot_polygons(self, flag_op=False):
+        if flag_op:
+            with open('../out/outfile.out', 'w') as opfile:
+                for vertices in self.vertices_sorted:
+                    x, y = [elem[0] for elem in vertices], [elem[1] for elem in vertices]
+                    x.append(x[0])
+                    y.append(y[0])
 
-            x = [corner[0] for corner in corners_sorted]
-            y = [corner[1] for corner in corners_sorted]
+                    for xx, yy in zip(x, y):
+                        opfile.write('%.5f %.5f' % (xx, yy) + '\n')
+                    opfile.write('\n')
+        else:
+            import matplotlib.pyplot as plt
+            import matplotlib.patches as patches
+            fig = plt.figure(1, dpi=90)
+            ax = fig.add_subplot(111)
+            for vertices in self.vertices_sorted:
+                x, y = [elem[0] for elem in vertices], [elem[1] for elem in vertices]
+                mat = np.transpose(np.array([x, y]))
+                poly1patch = patches.Polygon(mat, fill=False, edgecolor='blue')
+                ax.add_patch(poly1patch)
 
-            annotation = go.Annotation(
-                x=5.5,
-                y=8.0,
-                text='The area of the polygon is approximately %s' % (area),
-                showarrow=False
-            )
-
-            trace = go.Scatter(
-                x=x,
-                y=y,
-                mode='markers',
-                fill='tozeroy',
-            )
-
-
-            trace_data.append(trace)
-        layout = go.Layout(
-            annotations=[annotation],
-            xaxis=dict(
-                range=[-1, 3]
-            ),
-            yaxis=dict(
-                range=[-1, 2]
-            )
-        )
-        fig = go.Figure(data=trace_data, layout=layout)
-
-        py.plot(fig)
-
-    def plot_polygons(self):
-        import numpy as np
-
-        import matplotlib.pyplot as plt
-        fig = plt.figure(1, dpi=90)
-        ax = fig.add_subplot(111)
-        # print(images[0].vertices)
-        for im in self.images:
-            corners = im.vertices
-            n = len(corners)
-            cx = float(sum(x for x, y in corners)) / n
-            cy = float(sum(y for x, y in corners)) / n
-            cornersWithAngles = []
-            for x, y in corners:
-                an = (np.arctan2(y - cy, x - cx) + 2.0 * np.pi) % (2.0 * np.pi)
-                cornersWithAngles.append((x, y, an))
-
-            poly1patch = plt.Polygon(np.transpose(np.matrix([[elem[0] for elem in cornersWithAngles],
-                                                             [elem[1] for elem in cornersWithAngles]
-                                                             ])), fill=False, edgecolor='blue')
-            ax.add_patch(poly1patch)
-        plt.autoscale(enable=True)
-
-        plt.show()
+            plt.autoscale(enable=True)
+            plt.show()

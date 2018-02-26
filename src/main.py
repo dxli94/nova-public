@@ -13,6 +13,7 @@ def parse_args():
     parser.add_argument('--dt', type=int, help='direction type. 0 for box; 1 for octagonal.')
     parser.add_argument('--horizon', type=float, help='time horizon.')
     parser.add_argument('--sf', type=float, help='sampling frequency.')
+    parser.add_argument('--output', type=int, help='1, print images to outfile.out\n 0, print to file.')
 
     return parser.parse_args()
 
@@ -23,6 +24,7 @@ def main():
     direction_type = args.dt
     time_horizon = args.horizon
     samp_freq = args.sf
+    flag_op = args.output == 0
 
     try:
         assert all(elem is not None for elem in [instance_file, direction_type, time_horizon, samp_freq])
@@ -40,11 +42,12 @@ def main():
     sf_mat = post_opt.compute_post()
     images = post_opt.get_images(sf_mat=sf_mat)
     # plotter.plot(images)
-    for image in images:
-        print(image.vertices)
+    # for image in images:
+    #     print(image.vertices)
 
     plotter = Plotter(images)
-    plotter.plot_polygons()
+    plotter.plot_polygons(flag_op)
+    # plotter.plot()
 
 if __name__ == '__main__':
     main()
