@@ -68,40 +68,27 @@ class Plotter:
 
         py.plot(fig)
 
-if __name__ == '__main__':
-    corners = [(0.0, 1.030454533953517), (0.0, 0.0), (2.060909067907034, 0.0), (2.060909067907034, 1.030454533953517)]
-    plHelper = Plotter(corners)
-    corners_sorted = plHelper.PolygonSort(corners)
-    area = plHelper.PolygonArea(corners_sorted)
+    def plot_polygons(self):
+        import numpy as np
 
-    x = [corner[0] for corner in corners_sorted]
-    y = [corner[1] for corner in corners_sorted]
+        import matplotlib.pyplot as plt
+        fig = plt.figure(1, dpi=90)
+        ax = fig.add_subplot(111)
+        # print(images[0].vertices)
+        for im in self.images:
+            corners = im.vertices
+            n = len(corners)
+            cx = float(sum(x for x, y in corners)) / n
+            cy = float(sum(y for x, y in corners)) / n
+            cornersWithAngles = []
+            for x, y in corners:
+                an = (np.arctan2(y - cy, x - cx) + 2.0 * np.pi) % (2.0 * np.pi)
+                cornersWithAngles.append((x, y, an))
 
-    annotation = go.Annotation(
-        x=5.5,
-        y=8.0,
-        text='The area of the polygon is approximately %s' % (area),
-        showarrow=False
-    )
+            poly1patch = plt.Polygon(np.transpose(np.matrix([[elem[0] for elem in cornersWithAngles],
+                                                             [elem[1] for elem in cornersWithAngles]
+                                                             ])), fill=False, edgecolor='blue')
+            ax.add_patch(poly1patch)
+        plt.autoscale(enable=True)
 
-    trace1 = go.Scatter(
-        x=x,
-        y=y,
-        mode='markers',
-        fill='tozeroy',
-    )
-
-    layout = go.Layout(
-        annotations=[annotation],
-        xaxis=dict(
-            range=[-1, 9]
-        ),
-        yaxis=dict(
-            range=[-1, 12]
-        )
-    )
-
-    trace_data = [trace1]
-    fig = go.Figure(data=trace_data, layout=layout)
-
-    py.plot(fig)
+        plt.show()

@@ -44,8 +44,7 @@ def main():
         print(image.vertices)
 
     plotter = Plotter(images)
-    plotter.plot()
-
+    plotter.plot_polygons()
 
 if __name__ == '__main__':
     main()
