@@ -4,13 +4,15 @@ import numpy as np
 class Plotter:
     images = []
 
-    def __init__(self, images):
+    def __init__(self, images, opvars):
         self.images = images
+        self.opvars = opvars
         self.vertices_sorted = list(map(lambda im: self.sort_vertices(im), self.images))
 
-    @staticmethod
-    def sort_vertices(im):
-        corners = [v[:2] for v in im.vertices]
+    def sort_vertices(self, im):
+        corners = [(v[self.opvars[0]], v[self.opvars[1]]) for v in im.vertices]
+
+        # corners = [v[:2] for v in im.vertices]
         n = len(corners)
         cx = float(sum(x for x, y in corners)) / n
         cy = float(sum(y for x, y in corners)) / n

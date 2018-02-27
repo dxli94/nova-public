@@ -14,8 +14,17 @@ def parse_args():
     parser.add_argument('--horizon', type=float, help='time horizon.')
     parser.add_argument('--sf', type=float, help='sampling frequency.')
     parser.add_argument('--output', type=int, help='1, print images to outfile.out\n 0, print to file.')
+    parser.add_argument('--opvars',  type=int, nargs='*', help='two index of variables to plot. Indexing from 0! First'
+                                                              'two dimensions (0, 1) by default.')
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.opvars is not None:
+        args.opvars = tuple(args.opvars)
+        if len(args.opvars) is not 2:
+            parser.error("Incorrect number of output variables provided! Either omitted, or two are required!")
+    else:
+        args.opvars = (0, 1)
+    return args
 
 
 def main():
@@ -34,18 +43,20 @@ def main():
     data_reader = DataReader(path2instance=instance_file)
 
     sys_dynamics = data_reader.read_data()
+    sys_dim = sys_dynamics.get_dyn_init_X0()[0].shape[1]
     directions = SuppFuncUtils.generate_directions(direction_type=direction_type,
-                                                   dim=sys_dynamics.get_dyn_init_X0()[0].shape[1])
+                                                   dim=sys_dim)
+
+    assert max(args.opvars) < sys_dim, "output variables' index out of system dimensionality."
 
     post_opt = PostOperator(sys_dynamics, directions, time_horizon, samp_freq)
 
     sf_mat = post_opt.compute_post()
     images = post_opt.get_images(sf_mat=sf_mat)
-    # plotter.plot(images)
-    # for image in images:
-    #     print(image.vertices)
 
-    plotter = Plotter(images)
+    plotter = Plotter(images, args.opvars)
+    print(plotter.opvars)
+
     plotter.plot_polygons(flag_op)
     # plotter.plot()
 
