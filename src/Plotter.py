@@ -10,7 +10,7 @@ class Plotter:
 
     @staticmethod
     def sort_vertices(im):
-        corners = im.vertices
+        corners = [v[:2] for v in im.vertices]
         n = len(corners)
         cx = float(sum(x for x, y in corners)) / n
         cy = float(sum(y for x, y in corners)) / n
