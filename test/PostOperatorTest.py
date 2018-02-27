@@ -21,7 +21,7 @@ class TestPostOperator(unittest.TestCase):
         dynamics_col_vec_U = np.array([[0], [0], [9.81], [-9.81]])
 
         dynamics_init_coeff_matrix_X0 = np.array([[-1, 0], [1, 0], [0, -1], [0, 1]])
-        dynamics_init_col_vec_X0 = np.array([[-10], [10.2], [0.1], [0.1]])
+        dynamics_init_col_vec_X0 = np.array([[-10], [10.2], [0], [0]])
         self.sys_dynamics = SysDynamics(init_coeff_matrix_X0=dynamics_init_coeff_matrix_X0,
                                         init_col_vec_X0=dynamics_init_col_vec_X0,
                                         dynamics_matrix_A=dynamics_matrix_A,
@@ -38,17 +38,20 @@ class TestPostOperator(unittest.TestCase):
         delta_tp = np.transpose(
             SuppFuncUtils.mat_exp(self.sys_dynamics.get_dyn_coeff_matrix_A(), 1 * self.post_opt.tau))
 
+        print(delta_tp)
+
         trans_poly_U = TransPoly(trans_matrix_B=self.sys_dynamics.get_dyn_matrix_B(),
                                  coeff_matrix_U=self.sys_dynamics.get_dyn_coeff_matrix_U(),
                                  col_vec_U=self.sys_dynamics.get_dyn_col_vec_U())
 
-        true_sf_X0 = [10.2, -10, 0.1, 0.1]
-        true_sf_tp_X0 = [10.21, -9.99, 0.1, 0.1]
-        true_sf_V = [0, 0, -9.81, 9.81]
-        sf_omega0 = [10.3134700707,
-                     -9.88652992931,
-                     0.1,
-                     1.18447007069]
+        true_sf_X0 = [10.2, -10, 0.0, 0]
+        true_sf_tp_X0 = [10.2, -10, 0.0, 0]
+        true_sf_V = [0.0, 0, -9.81, 9.81]
+
+        sf_omega0 = [10.3034700707,
+                     -9.89652992931,
+                     0,
+                     1.08447007069]
 
         # max(sf_X0, sf_tp_X0 + self.tau * sf_V + alpha * sf_ball)
         alpha = SuppFuncUtils.compute_alpha(self.sys_dynamics, self.post_opt.tau)
@@ -66,7 +69,7 @@ class TestPostOperator(unittest.TestCase):
             self.assertAlmostEqual(sf_tp_X0, elem[2])
             self.assertAlmostEqual(sf_V, elem[3])
             self.assertAlmostEqual(sf_omega0, elem[4])
-
+            # print(sf_X0, sf_tp_X0, sf_V, sf_ball, sf_omega0)
 
 if __name__ == '__main__':
     unittest.main()
