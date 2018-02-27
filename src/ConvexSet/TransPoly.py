@@ -56,7 +56,7 @@ class TransPoly(Polyhedron):
         elif self.is_universe():
             raise RuntimeError("\n Cannot Compute Support Function of a Universe Polytope.\n")
         else:
-            direction = np.matmul(np.transpose(self.trans_matrix_B), direction)
+            direction = np.dot(np.transpose(self.trans_matrix_B), direction)
             # direction = np.squeeze(np.asarray(direction))
 
             sf = linprog(c=-direction,

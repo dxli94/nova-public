@@ -13,21 +13,23 @@ class PostOperator:
         self.time_horizon = time_horizon
         self.tau = samp_freq
 
-    def compute_initial_sf(self, poly_init, trans_poly_U, l):
+    def compute_initial_sf(self, poly_init, trans_poly_U, l, alpha):
         dyn_matrix_A = self.sys_dynamics.get_dyn_coeff_matrix_A()
         delta_tp = np.transpose(SuppFuncUtils.mat_exp(dyn_matrix_A, 1 * self.tau))
-        sf_X0 = poly_init.compute_support_function(np.matmul(delta_tp, l))
 
-        sf_V = self.tau * trans_poly_U.compute_support_function(l)
-        alpha = SuppFuncUtils.compute_alpha(self.sys_dynamics, self.tau)
+        sf_X0 = poly_init.compute_support_function(l)
+        sf_tp_X0 = poly_init.compute_support_function(np.dot(delta_tp, l))
+
+        sf_V = trans_poly_U.compute_support_function(l)
         sf_ball = SuppFuncUtils.support_unitball_infnorm(l)
 
-        sf_omega0 = max(sf_X0, sf_X0 + sf_V + alpha * sf_ball)
+        sf_omega0 = max(sf_X0, sf_tp_X0 + self.tau * sf_V + alpha * sf_ball)
+        # print('sf_omega0:' + str(sf_omega0))
+        print('sf_ball:' + str(sf_ball))
         return sf_omega0
 
-    def compute_sf_w(self, l, trans_poly_U):
+    def compute_sf_w(self, l, trans_poly_U, beta):
         sf_V = self.tau * trans_poly_U.compute_support_function(l)
-        beta = SuppFuncUtils.compute_beta(self.sys_dynamics, self.tau)
         sf_ball = SuppFuncUtils.support_unitball_infnorm(l)
 
         sf_omega = self.tau * sf_V + beta * sf_ball
@@ -48,8 +50,10 @@ class PostOperator:
                                  col_vec_U=dyn_col_vec_U)
 
         delta_tp = np.transpose(SuppFuncUtils.mat_exp(dyn_matrix_A, self.tau))
+        alpha = SuppFuncUtils.compute_alpha(self.sys_dynamics, self.tau)
+        beta = SuppFuncUtils.compute_beta(self.sys_dynamics, self.tau)
 
-        sf_0 = [self.compute_initial_sf(poly_init, trans_poly_U, l) for l in self.directions]
+        sf_0 = [self.compute_initial_sf(poly_init, trans_poly_U, l, alpha) for l in self.directions]
         poly_omega0 = Polyhedron(np.array(self.directions), np.reshape(sf_0, (len(sf_0), 1)))
 
         time_frames = range(int(np.floor(self.time_horizon / self.tau)))
@@ -63,8 +67,8 @@ class PostOperator:
                     prev_s = 0
                     ret[-1].append(sf_0[idx])
                 else:
-                    r = np.matmul(delta_tp, prev_r)
-                    s = prev_s + self.compute_sf_w(r, trans_poly_U)
+                    r = np.dot(delta_tp, prev_r)
+                    s = prev_s + self.compute_sf_w(r, trans_poly_U, beta)
                     sf = poly_omega0.compute_support_function(r) + s
 
                     ret[-1].append(sf)
@@ -76,8 +80,15 @@ class PostOperator:
     def get_images(self, sf_mat):
         ret = []
 
+        # 10.3134700707
+        # -9.88652992931
+        # 0.1
+        # 1.18447007069
+
         d_mat = np.array(self.directions)
         sf_mat = np.transpose(sf_mat)
         for sf_row in sf_mat:
+            print(sf_row)
+            exit()
             ret.append(Polyhedron(d_mat, np.reshape(sf_row, (len(sf_row), 1))))
         return ret
