@@ -24,7 +24,6 @@ class PostOperator:
         sf_ball = SuppFuncUtils.support_unitball_infnorm(l)
 
         sf_omega0 = max(sf_X0, sf_tp_X0 + self.tau * sf_V + alpha * sf_ball)
-        # print('sf_omega0:' + str(sf_omega0))
         print('sf_ball:' + str(sf_ball))
         return sf_omega0
 
@@ -80,15 +79,8 @@ class PostOperator:
     def get_images(self, sf_mat):
         ret = []
 
-        # 10.3134700707
-        # -9.88652992931
-        # 0.1
-        # 1.18447007069
-
         d_mat = np.array(self.directions)
         sf_mat = np.transpose(sf_mat)
         for sf_row in sf_mat:
-            print(sf_row)
-            exit()
             ret.append(Polyhedron(d_mat, np.reshape(sf_row, (len(sf_row), 1))))
         return ret

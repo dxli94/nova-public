@@ -14,17 +14,12 @@ class TestPostOperator(unittest.TestCase):
         dynamics_matrix_A = np.array([[0, 1], [0, 0]])
         dynamics_matrix_B = np.array([[1, 0], [0, 1]])
 
-        # U is a square with inf_norm = 2
-        # -1 0 1 0 0 -1 0 1
-        # 0 0 9.81 -9.81
         dynamics_coeff_matrix_U = np.array([[-1, 0],  # u1 >= 0
                                             [1, 0],  # u1 <= 0
                                             [0, -1],  # u2 >= 9.81
                                             [0, 1]])  # u2 <= 9.81
         dynamics_col_vec_U = np.array([[0], [0], [9.81], [-9.81]])
 
-        # -1 0 1 0 0 -1 0 1
-        # -10 10.2 -0.00 0.00
         dynamics_init_coeff_matrix_X0 = np.array([[-1, 0], [1, 0], [0, -1], [0, 1]])
         dynamics_init_col_vec_X0 = np.array([[-10], [10.2], [0.1], [0.1]])
         self.sys_dynamics = SysDynamics(init_coeff_matrix_X0=dynamics_init_coeff_matrix_X0,
