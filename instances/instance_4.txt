@@ -1,25 +1,22 @@
-# instance_4, simplified bouncing ball (1 mode, no guard)
-# See https://ths.rwth-aachen.de/research/projects/hypro/bouncing-ball/
-# x'(t) = v(t)
-# v'(t) = 9.81
-# x(0) \in [10, 10.2]
-# v(0) = 0
+# instance_4, spiral-positive
+# x1'(t) = x1 + 2 * x2
+# x2'(t) = -2 * x1 + x2
 
 # A
 2 2
-0 1 0 0
+1 2 -2 1
 # B
 2 2
 1 0 0 1
 # U_coeff
 4 2
--1 0 1 0 0 -1 0 1
+1 0 -1 0 0 1 0 -1
 # U_col
 4 1
-0 0 9.81 -9.81
+0 0 0 0
 # X0_coeff
 4 2
 -1 0 1 0 0 -1 0 1
 # X0_col
 4 1
--10 10.2 -0.00 0.00
+0 0.5 0 0.5

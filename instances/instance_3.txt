@@ -1,4 +1,4 @@
-# instance_3
+# instance_3, spiral-negative
 # x1'(t) = -x2
 # x2'(t) = x1
 
