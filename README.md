@@ -8,9 +8,10 @@ Project by ANU Hybrid System Group.
 
 - [SciPy](https://www.scipy.org/)
 - [NumPy](http://www.numpy.org/)
-- [Matplotlib](https://matplotlib.org/)
+- [Matplotlib](https://matplotlib.org/) and/or [plotutils](https://www.gnu.org/software/plotutils/)
 - [pycddlib](http://pycddlib.readthedocs.io/en/latest/)
 - [Cython](http://cython.readthedocs.io/en/latest/src/quickstart/install.html)
+
 
 Tested on Ubuntu 16.04.2 LTS xenial.
 
