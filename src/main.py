@@ -14,7 +14,7 @@ def parse_args():
     parser.add_argument('--horizon', type=float, help='time horizon.')
     parser.add_argument('--sf', type=float, help='sampling frequency.')
     parser.add_argument('--output', type=int, help='1, print images to outfile.out\n 0, print to file.')
-    parser.add_argument('--opvars',  type=int, nargs='*', help='two index of variables to plot. Indexing from 0! First'
+    parser.add_argument('--opvars', type=int, nargs='*', help='two index of variables to plot. Indexing from 0! First'
                                                               'two dimensions (0, 1) by default.')
 
     args = parser.parse_args()
@@ -55,10 +55,8 @@ def main():
     images = post_opt.get_images(sf_mat=sf_mat)
 
     plotter = Plotter(images, args.opvars)
-    print(plotter.opvars)
-
     plotter.plot_polygons(flag_op)
-    # plotter.plot()
+
 
 if __name__ == '__main__':
     main()

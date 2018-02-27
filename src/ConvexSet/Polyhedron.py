@@ -56,7 +56,11 @@ class Polyhedron:
         return str_repr
 
     def _gen_poly(self):
-        return cdd.Polyhedron(self.mat_poly)
+        try:
+            return cdd.Polyhedron(self.mat_poly)
+        except RuntimeError:
+            print('\nEntrie(s) so small that pycddlib cannot handle. Terminating now!\n')
+            exit(-1)
 
     def _update_vertices(self):
         # return self.vertices.extend(gen[1:] for gen in self.poly.get_generators() if gen[0] == 1)

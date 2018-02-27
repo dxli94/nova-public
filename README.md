@@ -24,7 +24,7 @@ python3 main.py --help
 
 For example:
 ```
-python3 main.py --path ../instances/instance_3.txt --dt 0 --horizon 1 --sf 0.1 --output 1
+python3 main.py --path ../instances/instance_3.txt --dt 0 --horizon 1 --sf 0.1 --output 1 --opvars 0 1
 
 ```
 
