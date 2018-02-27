@@ -24,7 +24,6 @@ class PostOperator:
         sf_ball = SuppFuncUtils.support_unitball_infnorm(l)
 
         sf_omega0 = max(sf_X0, sf_tp_X0 + self.tau * sf_V + alpha * sf_ball)
-        print('sf_ball:' + str(sf_ball))
         return sf_omega0
 
     def compute_sf_w(self, l, trans_poly_U, beta):
