@@ -72,7 +72,4 @@ class TransPoly(Polyhedron):
             c = cvx.matrix(-direction, tc='d')
             cvx.solvers.options['glpk'] = dict(msg_lev='GLP_MSG_OFF')
             sol = cvx.solvers.lp(c, A, b, solver='glpk')
-            # cvx.solvers.options['msg_lev'] = 'GLP_MSG_OFF'
-
-            cvx.solvers.options['show_progress'] = False
             return direction.dot(np.array(sol['x']))[0]
