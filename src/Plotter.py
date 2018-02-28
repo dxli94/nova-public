@@ -1,3 +1,4 @@
+import os
 import numpy as np
 
 
@@ -26,6 +27,9 @@ class Plotter:
 
     def plot_polygons(self, flag_op=False):
         if flag_op:
+            if not os.path.exists('../out/'):
+                os.makedirs('../out/')
+
             with open('../out/outfile.out', 'w') as opfile:
                 for vertices in self.vertices_sorted:
                     x, y = [elem[0] for elem in vertices], [elem[1] for elem in vertices]
