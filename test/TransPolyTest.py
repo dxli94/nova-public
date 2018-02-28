@@ -24,11 +24,11 @@ class TestTransPolyMethods(unittest.TestCase):
         # test compute support functions
         sf = [transPoly.compute_support_function(l) for l in directions]
         correct_sf = [1, 2, 0, 0, 2]
-        self.assertEqual(sf, correct_sf)
+        np.testing.assert_almost_equal(sf, correct_sf)
 
         max_norm = transPoly.compute_max_norm()
         correct_max_norm = 1  # (1,1) on l: (1,0)
-        self.assertEqual(max_norm, correct_max_norm)
+        np.testing.assert_almost_equal(max_norm, correct_max_norm)
 
     def test_shear(self):
         dynamics_matrix_B = np.array([[1, 1], [0, 1]])
@@ -51,11 +51,11 @@ class TestTransPolyMethods(unittest.TestCase):
                       ])
         sf = [transPoly.compute_support_function(l) for l in directions]
         correct_sf = [2, 4, 0, 0, 3]
-        self.assertEqual(sf, correct_sf)
+        np.testing.assert_almost_equal(sf, correct_sf)
 
         max_norm = transPoly.compute_max_norm()
         correct_max_norm = 2  # (2,1) on l: (1,0)
-        self.assertEqual(max_norm, correct_max_norm)
+        np.testing.assert_almost_equal(max_norm, correct_max_norm)
 
     def test_shift(self):
 
@@ -79,11 +79,11 @@ class TestTransPolyMethods(unittest.TestCase):
                       ])
         sf = [transPoly.compute_support_function(l) for l in directions]
         correct_sf = [2, 4, -1, -2, 4]
-        self.assertEqual(sf, correct_sf)
+        np.testing.assert_almost_equal(sf, correct_sf)
 
         max_norm = transPoly.compute_max_norm()
         correct_max_norm = 2  # (1,2) on l: (0,1)
-        self.assertEqual(max_norm, correct_max_norm)
+        np.testing.assert_almost_equal(max_norm, correct_max_norm)
 
 if __name__ == '__main__':
     unittest.main()

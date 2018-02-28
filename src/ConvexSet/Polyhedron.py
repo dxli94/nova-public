@@ -1,7 +1,6 @@
-from scipy.optimize import linprog
-
-import numpy as np
 import cdd
+import cvxopt as cvx
+import numpy as np
 
 
 class Polyhedron:
@@ -89,17 +88,12 @@ class Polyhedron:
         elif self.is_universe():
             raise RuntimeError("\n Cannot Compute Support Function of a Universe Polytope.\n")
         else:
-            # Note that these bounds have to be set to (None, None) to allow (-inf, +inf),
-            # otherwise (0, +inf) by default.
-            # Besides, Scipy only deals with min(). Here we need max(). max(f(x)) = -min(-f(x))
-            # A_ub * x <= b_ub
-            sf = linprog(c=-direction,
-                         A_ub=self.coeff_matrix, b_ub=self.col_vec,
-                         bounds=(None, None))
-            if sf.success:
-                return -sf.fun
-            else:
-                raise RuntimeError(sf.message)
+            A = cvx.matrix(self.coeff_matrix, tc='d')
+            b = cvx.matrix(self.col_vec, tc='d')
+            c = cvx.matrix(-direction, tc='d')
+            cvx.solvers.options['glpk'] = dict(msg_lev='GLP_MSG_OFF')
+            sol = cvx.solvers.lp(c, A, b, solver='glpk')
+            return direction.dot(np.array(sol['x']))[0]
 
     def compute_max_norm(self):
         coeff_matrix = self.coeff_matrix

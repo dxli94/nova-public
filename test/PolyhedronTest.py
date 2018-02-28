@@ -18,7 +18,7 @@ class TestPolyhedronMethods(unittest.TestCase):
         self.assertEqual(self.poly.get_inequalities().all(), np.array([[1, 1, 2], [-1, 0, 0], [0, -1, 0]]).all())
 
     def test_compute_max_norm(self):
-        self.assertEqual(self.poly.compute_max_norm(), 2)
+        np.testing.assert_almost_equal(self.poly.compute_max_norm(), 2)
 
     def test_compute_support_function(self):
         directions = np.array([[1, 0], [2, 0],
@@ -27,7 +27,7 @@ class TestPolyhedronMethods(unittest.TestCase):
                       ])
         sf = [self.poly.compute_support_function(l) for l in directions]
         correct_sf = [2, 4, 0, 0, 2]
-        self.assertEqual(sf, correct_sf)
+        np.testing.assert_almost_equal(sf, correct_sf)
 
 
 if __name__ == '__main__':

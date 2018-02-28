@@ -1,8 +1,8 @@
-from scipy.optimize import linprog
-from ConvexSet.Polyhedron import Polyhedron
-
-import numpy as np
 import cdd
+import cvxopt as cvx
+import numpy as np
+
+from ConvexSet.Polyhedron import Polyhedron
 
 
 class TransPoly(Polyhedron):
@@ -57,11 +57,22 @@ class TransPoly(Polyhedron):
             raise RuntimeError("\n Cannot Compute Support Function of a Universe Polytope.\n")
         else:
             direction = np.dot(self.trans_matrix_B_tp, direction)
-            sf = linprog(c=-direction,
-                         A_ub=self.coeff_matrix, b_ub=self.col_vec,
-                         bounds=(None, None))
+            # SciPy suffers numerical problems quite a bit!
+            # sf = linprog(c=-direction,
+            #              A_ub=self.coeff_matrix, b_ub=self.col_vec,
+            #              bounds=(None, None))
 
-            if sf.success:
-                return -sf.fun
-            else:
-                raise RuntimeError(sf.message)
+            # if sf.success:
+            #     return -sf.fun
+            # else:
+            #     raise RuntimeError(sf.message)
+
+            A = cvx.matrix(self.coeff_matrix, tc='d')
+            b = cvx.matrix(self.col_vec, tc='d')
+            c = cvx.matrix(-direction, tc='d')
+            cvx.solvers.options['glpk'] = dict(msg_lev='GLP_MSG_OFF')
+            sol = cvx.solvers.lp(c, A, b, solver='glpk')
+            # cvx.solvers.options['msg_lev'] = 'GLP_MSG_OFF'
+
+            cvx.solvers.options['show_progress'] = False
+            return direction.dot(np.array(sol['x']))[0]

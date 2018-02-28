@@ -7,6 +7,7 @@ Project by ANU Hybrid System Group.
 ### Prerequisites
 
 - [SciPy](https://www.scipy.org/)
+- [CVXOPT](http://cvxopt.org/install/index.html)
 - [NumPy](http://www.numpy.org/)
 - [Matplotlib](https://matplotlib.org/) and/or [plotutils](https://www.gnu.org/software/plotutils/)
 - [pycddlib](http://pycddlib.readthedocs.io/en/latest/)
