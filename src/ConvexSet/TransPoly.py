@@ -13,13 +13,13 @@ class TransPoly(Polyhedron):
 
     def __init__(self, trans_matrix_B, coeff_matrix_U, col_vec_U=None):
         self.trans_matrix_B = trans_matrix_B
+        self.trans_matrix_B_tp = np.transpose(self.trans_matrix_B)
         self.coeff_matrix = coeff_matrix_U
 
         if col_vec_U is not None:
-            self.col_vec_U = col_vec_U
-            assert self.coeff_matrix.shape[0] == self.col_vec_U.shape[0], \
+            assert self.coeff_matrix.shape[0] == col_vec_U.shape[0], \
                 "Shapes of coefficient matrix %r and column vector %r do not match!" \
-                % (self.coeff_matrix.shape, self.col_vec_U.shape)
+                % (self.coeff_matrix.shape, col_vec_U.shape)
         else:
             col_vec_U = np.zeros(shape=(coeff_matrix_U.shape[0], 1))
 
@@ -56,9 +56,7 @@ class TransPoly(Polyhedron):
         elif self.is_universe():
             raise RuntimeError("\n Cannot Compute Support Function of a Universe Polytope.\n")
         else:
-            direction = np.dot(np.transpose(self.trans_matrix_B), direction)
-            # direction = np.squeeze(np.asarray(direction))
-
+            direction = np.dot(self.trans_matrix_B_tp, direction)
             sf = linprog(c=-direction,
                          A_ub=self.coeff_matrix, b_ub=self.col_vec,
                          bounds=(None, None))
