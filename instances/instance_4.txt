@@ -1,10 +1,10 @@
 # instance_4, spiral-positive
-# x1'(t) = x1 + 2 * x2
-# x2'(t) = -2 * x1 + x2
+# x1'(t) = x2
+# x2'(t) = -1 * x1 - x2
 
 # A
 2 2
-1 2 -2 1
+0 1 -1 -1
 # B
 2 2
 1 0 0 1
