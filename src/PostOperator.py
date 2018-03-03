@@ -57,19 +57,25 @@ class PostOperator:
         time_frames = range(int(np.floor(self.time_horizon / self.tau)))
 
         for idx in range(len(self.directions)):
-            ret.append([])
-            for n in time_frames:
+            for tf in time_frames:
                 # delta_tp = np.transpose(mat_exp(A, n * time_interval))
-                if n == 0:
+                if tf == 0:
                     prev_r = self.directions[idx]
                     prev_s = 0
-                    ret[-1].append(sf_0[idx])
+
+                    if idx == 0:
+                        ret.append([sf_0[idx]])
+                    else:
+                        ret[tf].append(sf_0[idx])
                 else:
                     r = np.dot(delta_tp, prev_r)
                     s = prev_s + self.compute_sf_w(r, trans_poly_U, beta)
                     sf = poly_omega0.compute_support_function(r) + s
 
-                    ret[-1].append(sf)
+                    if idx == 0:
+                        ret.append([sf])
+                    else:
+                        ret[tf].append(sf)
 
                     prev_r = r
                     prev_s = s
@@ -79,7 +85,6 @@ class PostOperator:
         ret = []
 
         d_mat = np.array(self.directions)
-        sf_mat = np.transpose(sf_mat)
         for sf_row in sf_mat:
             ret.append(Polyhedron(d_mat, np.reshape(sf_row, (len(sf_row), 1))))
         return ret
