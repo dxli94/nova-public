@@ -58,6 +58,7 @@ class PostOperator:
 
         for idx in range(len(self.directions)):
             for tf in time_frames:
+                print(idx, len(self.directions), tf, time_frames)
                 # delta_tp = np.transpose(mat_exp(A, n * time_interval))
                 if tf == 0:
                     prev_r = self.directions[idx]
@@ -81,10 +82,20 @@ class PostOperator:
                     prev_s = s
         return np.array(ret)
 
-    def get_images(self, sf_mat):
+    def get_images(self, opdims, sf_mat):
         ret = []
 
-        d_mat = np.array(self.directions)
+        d_mat = []
+        d_mat_idx = []
+        for i in range(len(self.directions)):
+            if self.directions[i][opdims[0]] * self.directions[i][opdims[1]] != 0 or \
+                    not any([self.directions[i][idx] for idx in range(len(self.directions[i])) if idx != opdims[0]]) or \
+                    not any([self.directions[i][idx] for idx in range(len(self.directions[i])) if idx != opdims[1]]):
+                d_mat.append(self.directions[i])
+                d_mat_idx.append(i)
+
         for sf_row in sf_mat:
-            ret.append(Polyhedron(d_mat, np.reshape(sf_row, (len(sf_row), 1))))
+            sf_row_col = np.reshape(sf_row, (len(sf_row), 1))
+            sf_row_dir = sf_row_col[d_mat_idx]
+            ret.append(Polyhedron(np.array(d_mat), sf_row_dir))
         return ret

@@ -52,7 +52,7 @@ def main():
     post_opt = PostOperator(sys_dynamics, directions, time_horizon, samp_freq)
 
     sf_mat = post_opt.compute_post()
-    images = post_opt.get_images(sf_mat=sf_mat)
+    images = post_opt.get_images(opdims=args.opvars, sf_mat=sf_mat)
 
     plotter = Plotter(images, args.opvars)
     plotter.plot_polygons(flag_op)

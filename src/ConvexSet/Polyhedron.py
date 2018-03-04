@@ -58,7 +58,7 @@ class Polyhedron:
         try:
             return cdd.Polyhedron(self.mat_poly)
         except RuntimeError:
-            print('\nEntrie(s) so small that pycddlib cannot handle. Terminating now!\n')
+            print('\nEntries too large/small, pycddlib cannot handle the precision. Terminating now!\n')
             exit(-1)
 
     def _update_vertices(self):
