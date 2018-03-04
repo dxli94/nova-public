@@ -58,7 +58,6 @@ class PostOperator:
 
         for idx in range(len(self.directions)):
             for tf in time_frames:
-                print(idx, len(self.directions), tf, time_frames)
                 # delta_tp = np.transpose(mat_exp(A, n * time_interval))
                 if tf == 0:
                     prev_r = self.directions[idx]

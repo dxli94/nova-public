@@ -1,5 +1,5 @@
 # instance_9
-# Adapted from rwth-Networked Cooperative Platoon of Vehicles for Testing Methods and Verification Tools (2 vehicles)
+# Networked Cooperative Platoon of Vehicles for Testing Methods and Verification Tools (2 vehicles)
 
 # A
 6 6
