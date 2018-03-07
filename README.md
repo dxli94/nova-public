@@ -34,3 +34,10 @@ Plot from outfile.out:
 ```
 ./plot.sh
 ```
+
+### Testing
+```
+cd dir/src
+python3 -m pytest tests/ -v
+
+```

@@ -2,7 +2,8 @@ import unittest
 
 import numpy as np
 
-import SuppFuncUtils
+from SuppFuncUtils import mat_exp, generate_directions, compute_alpha, support_unitball_infnorm
+
 from ConvexSet.Polyhedron import Polyhedron
 from ConvexSet.TransPoly import TransPoly
 from PostOperator import PostOperator
@@ -28,7 +29,7 @@ class TestPostOperator(unittest.TestCase):
                                         dynamics_matrix_B=dynamics_matrix_B,
                                         dynamics_coeff_matrix_U=dynamics_coeff_matrix_U,
                                         dynamics_col_vec_U=dynamics_col_vec_U)
-        directions = SuppFuncUtils.generate_directions(direction_type=0, dim=2)
+        directions = generate_directions(direction_type=0, dim=2)
         self.post_opt = PostOperator(self.sys_dynamics, directions, time_horizon=0.1, samp_freq=0.1)
 
     def test_compute_initial_sf(self):
@@ -36,9 +37,7 @@ class TestPostOperator(unittest.TestCase):
         init = self.sys_dynamics.get_dyn_init_X0()
         poly_init = Polyhedron(init[0], init[1])
         delta_tp = np.transpose(
-            SuppFuncUtils.mat_exp(self.sys_dynamics.get_dyn_coeff_matrix_A(), 1 * self.post_opt.tau))
-
-        print(delta_tp)
+            mat_exp(self.sys_dynamics.get_dyn_coeff_matrix_A(), 1 * self.post_opt.tau))
 
         trans_poly_U = TransPoly(trans_matrix_B=self.sys_dynamics.get_dyn_matrix_B(),
                                  coeff_matrix_U=self.sys_dynamics.get_dyn_coeff_matrix_U(),
@@ -54,7 +53,7 @@ class TestPostOperator(unittest.TestCase):
                      1.08447007069]
 
         # max(sf_X0, sf_tp_X0 + self.tau * sf_V + alpha * sf_ball)
-        alpha = SuppFuncUtils.compute_alpha(self.sys_dynamics, self.post_opt.tau)
+        alpha = compute_alpha(self.sys_dynamics, self.post_opt.tau)
         self.assertAlmostEqual(alpha, 0.1034700706937106)
 
         for elem in zip(self.post_opt.directions, true_sf_X0, true_sf_tp_X0, true_sf_V, sf_omega0):
@@ -62,7 +61,7 @@ class TestPostOperator(unittest.TestCase):
             sf_X0 = poly_init.compute_support_function(l)
             sf_tp_X0 = poly_init.compute_support_function(np.dot(delta_tp, l))
             sf_V = trans_poly_U.compute_support_function(l)
-            sf_ball = SuppFuncUtils.support_unitball_infnorm(l)
+            sf_ball = support_unitball_infnorm(l)
             sf_omega0 = max(sf_X0, sf_tp_X0 + self.post_opt.tau * sf_V + alpha * sf_ball)
 
             self.assertAlmostEqual(sf_X0, elem[1])

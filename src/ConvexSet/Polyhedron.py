@@ -118,6 +118,6 @@ class Polyhedron:
     # def is_intersect_with(self, pl_2):
     #     """
     #     Process: Add all constraints of P1(the calling polyhedron) and P2 to form new constraints;
-    #     then run lp_solver to test if the constraints have no feasible solution.
+    #     then run lp_solver to tests if the constraints have no feasible solution.
     #     """
     #     raise NotImplementedError
