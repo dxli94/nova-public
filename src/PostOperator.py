@@ -7,15 +7,13 @@ from ConvexSet.TransPoly import TransPoly
 
 
 class PostOperator:
-    def __init__(self, sys_dynamics, directions, time_horizon, samp_freq):
+    def __init__(self, sys_dynamics, directions):
         self.sys_dynamics = sys_dynamics
         self.directions = directions
-        self.time_horizon = time_horizon
-        self.tau = samp_freq
 
-    def compute_initial_sf(self, poly_init, trans_poly_U, l, alpha):
+    def compute_initial_sf(self, poly_init, trans_poly_U, l, alpha, tau):
         dyn_matrix_A = self.sys_dynamics.get_dyn_coeff_matrix_A()
-        delta_tp = np.transpose(SuppFuncUtils.mat_exp(dyn_matrix_A, 1 * self.tau))
+        delta_tp = np.transpose(SuppFuncUtils.mat_exp(dyn_matrix_A, 1 * tau))
 
         sf_X0 = poly_init.compute_support_function(l)
         sf_tp_X0 = poly_init.compute_support_function(np.dot(delta_tp, l))
@@ -23,17 +21,17 @@ class PostOperator:
         sf_V = trans_poly_U.compute_support_function(l)
         sf_ball = SuppFuncUtils.support_unitball_infnorm(l)
 
-        sf_omega0 = max(sf_X0, sf_tp_X0 + self.tau * sf_V + alpha * sf_ball)
+        sf_omega0 = max(sf_X0, sf_tp_X0 + tau * sf_V + alpha * sf_ball)
         return sf_omega0
 
-    def compute_sf_w(self, l, trans_poly_U, beta):
+    def compute_sf_w(self, l, trans_poly_U, beta, tau):
         sf_V = trans_poly_U.compute_support_function(l)
         sf_ball = SuppFuncUtils.support_unitball_infnorm(l)
 
-        sf_omega = self.tau * sf_V + beta * sf_ball
+        sf_omega = tau * sf_V + beta * sf_ball
         return sf_omega
 
-    def compute_post(self):
+    def compute_post(self, time_horizon, tau):
         ret = []
         init = self.sys_dynamics.get_dyn_init_X0()
         poly_init = Polyhedron(init[0], init[1])
@@ -47,14 +45,14 @@ class PostOperator:
                                  coeff_matrix_U=dyn_coeff_matrix_U,
                                  col_vec_U=dyn_col_vec_U)
 
-        delta_tp = np.transpose(SuppFuncUtils.mat_exp(dyn_matrix_A, self.tau))
-        alpha = SuppFuncUtils.compute_alpha(self.sys_dynamics, self.tau)
-        beta = SuppFuncUtils.compute_beta(self.sys_dynamics, self.tau)
+        delta_tp = np.transpose(SuppFuncUtils.mat_exp(dyn_matrix_A, tau))
+        alpha = SuppFuncUtils.compute_alpha(self.sys_dynamics, tau)
+        beta = SuppFuncUtils.compute_beta(self.sys_dynamics, tau)
 
-        sf_0 = [self.compute_initial_sf(poly_init, trans_poly_U, l, alpha) for l in self.directions]
+        sf_0 = [self.compute_initial_sf(poly_init, trans_poly_U, l, alpha, tau) for l in self.directions]
         poly_omega0 = Polyhedron(np.array(self.directions), np.reshape(sf_0, (len(sf_0), 1)))
 
-        time_frames = range(int(np.floor(self.time_horizon / self.tau)))
+        time_frames = range(int(np.floor(time_horizon / tau)))
 
         for idx in range(len(self.directions)):
             for tf in time_frames:
@@ -69,7 +67,7 @@ class PostOperator:
                         ret[tf].append(sf_0[idx])
                 else:
                     r = np.dot(delta_tp, prev_r)
-                    s = prev_s + self.compute_sf_w(r, trans_poly_U, beta)
+                    s = prev_s + self.compute_sf_w(r, trans_poly_U, beta, tau)
                     sf = poly_omega0.compute_support_function(r) + s
 
                     if idx == 0:
