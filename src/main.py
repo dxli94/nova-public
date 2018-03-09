@@ -43,7 +43,7 @@ def main():
     data_reader = DataReader(path2instance=instance_file)
 
     sys_dynamics = data_reader.read_data()
-    sys_dim = sys_dynamics.get_dyn_init_X0()[0].shape[1]
+    sys_dim = sys_dynamics.get_dim()
     directions = SuppFuncUtils.generate_directions(direction_type=direction_type,
                                                    dim=sys_dim)
 
