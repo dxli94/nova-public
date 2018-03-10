@@ -1,0 +1,7 @@
+# center neutral stable
+# python3 /home/dxli/workspace/model-checkers/PyFlow/src/main.py --path ../instances/center_neut_stable.txt --dt 0 --horizon 40 --sf 0.01 --output 0 --opvars 0 1
+
+-0.7093582225159858 -0.33680164227642306
+-0.7093582225159858 0.37588919168995566
+0.0033326114503845635 -0.33680164227642306
+0.0033326114503845644 0.3758891916899556

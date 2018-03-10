@@ -1,0 +1,7 @@
+# See 2000-hscc-Approximate reachability analysis of piecewise-linear dynamical systems Sec. 4.6
+# http://www-verimag.imag.fr/PEOPLE/Oded.Maler/Papers/linear.pdf
+# python3 /home/dxli/workspace/model-checkers/PyFlow/src/main.py --path ../instances/hscc_3d_pw.txt --dt 0 --horizon 2 --sf 0.01 --output 0 --opvars 0 1
+-0.021184096715794506 0.00035547087440845985
+-0.021184096715794506 0.005353406465648746
+-0.013829259870582809 0.005353406465648746
+-0.013829259870582807 0.00035547087440845985

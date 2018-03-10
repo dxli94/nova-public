@@ -1,0 +1,6 @@
+# free ball
+# python3 /home/dxli/workspace/model-checkers/PyFlow/src/main.py --path ../instances/free_ball.txt --dt 0 --horizon 40 --sf 0.01 --output 0 --opvars 0 1
+-7881.3315156560775 -394.3690680870017
+-7881.3315156560775 -390.33383575632706
+-7794.507647040135 -394.3690680870017
+-7794.507647040135 -390.33383575632706
