@@ -13,7 +13,6 @@ def parse_args():
     parser.add_argument('--dt', type=int, help='direction type. 0 for box; 1 for octagonal.')
     parser.add_argument('--horizon', type=float, help='time horizon.')
     parser.add_argument('--sf', type=float, help='sampling time.')
-    parser.add_argument('--output', type=int, help='1, print images to outfile.out\n 0, print to file.')
     parser.add_argument('--opvars', type=int, nargs='*', help='two index of variables to plot. Indexing from 0! First'
                                                               'two dimensions (0, 1) by default.')
 
@@ -33,7 +32,6 @@ def main():
     direction_type = args.dt
     time_horizon = args.horizon
     samp_time = args.sf
-    flag_op = args.output == 0
 
     try:
         assert all(elem is not None for elem in [instance_file, direction_type, time_horizon, samp_time])
@@ -55,7 +53,7 @@ def main():
     images = post_opt.get_images(opdims=args.opvars, sf_mat=sf_mat)
 
     plotter = Plotter(images, args.opvars)
-    plotter.plot_polygons(flag_op)
+    plotter.save_polygons_to_file()
 
 
 if __name__ == '__main__':

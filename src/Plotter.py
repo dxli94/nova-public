@@ -25,30 +25,51 @@ class Plotter:
 
         return list(map(lambda ca: (ca[0], ca[1]), cornersWithAngles))
 
-    def plot_polygons(self, flag_op=False):
-        if flag_op:
-            if not os.path.exists('../out/'):
-                os.makedirs('../out/')
+    def save_polygons_to_file(self):
+        if not os.path.exists('../out/'):
+            os.makedirs('../out/')
 
-            with open('../out/outfile.out', 'w') as opfile:
-                for vertices in self.vertices_sorted:
-                    x, y = [elem[0] for elem in vertices], [elem[1] for elem in vertices]
-                    x.append(x[0])
-                    y.append(y[0])
-
-                    for xx, yy in zip(x, y):
-                        opfile.write('%.5f %.5f' % (xx, yy) + '\n')
-                    opfile.write('\n')
-        else:
-            import matplotlib.pyplot as plt
-            import matplotlib.patches as patches
-            fig = plt.figure(1, dpi=90)
-            ax = fig.add_subplot(111)
+        with open('../out/outfile.out', 'w') as opfile:
             for vertices in self.vertices_sorted:
                 x, y = [elem[0] for elem in vertices], [elem[1] for elem in vertices]
-                mat = np.transpose(np.array([x, y]))
-                poly1patch = patches.Polygon(mat, fill=False, edgecolor='blue')
-                ax.add_patch(poly1patch)
+                x.append(x[0])
+                y.append(y[0])
 
-            plt.autoscale(enable=True)
-            plt.show()
+                for xx, yy in zip(x, y):
+                    opfile.write('%.5f %.5f' % (xx, yy) + '\n')
+                opfile.write('\n')
+
+    @staticmethod
+    def plot_polygons(ipfile_path):
+        import matplotlib.pyplot as plt
+        import matplotlib.patches as patches
+
+        try:
+            with open(ipfile_path) as ipfile:
+                content = ipfile.read().strip('\n')
+                polygons = content.split('\n\n')
+                vertices_sorted = list(map(lambda poly: poly.split('\n'), polygons))
+        except FileExistsError:
+            print('File does not exist %s' % ipfile_path)
+
+        fig = plt.figure(1, dpi=90)
+        ax = fig.add_subplot(111)
+        for vertices in vertices_sorted:
+            x, y = [float(elem.split()[0]) for elem in vertices], [float(elem.split()[1]) for elem in vertices]
+            mat = np.transpose(np.array([x, y]))
+            poly1patch = patches.Polygon(mat, fill=False, edgecolor='red')
+            ax.add_patch(poly1patch)
+
+        plt.autoscale(enable=True)
+        plt.show()
+
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--path', help='path to the input file storing vertex.')
+    args = parser.parse_args()
+    file = args.path if args.path else '../out/outfile.out'
+
+    Plotter.plot_polygons(file)
