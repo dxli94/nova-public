@@ -1,7 +1,9 @@
 # PyFlow-assignment
 
 Project by ANU Hybrid System Group.
-
+<p align="center">
+  <img src="/tex/figs/spiral_sink.png" width="350"/>
+</p>
 ## Getting Started
 
 First, clone PyFlow-assignment into your workplace by
