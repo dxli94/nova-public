@@ -33,33 +33,47 @@ class DataReader:
 
     def read_data(self):
         with open(self.path, 'r') as ins_file:
-            for index in range(7):
+            for index in range(11):
                 data = read_next_block(ins_file)
                 if index == 0:
-                    dim = int(data[0])
+                    direction_type = int(data[0])
                 elif index == 1:
+                    horizon = float(data[0])
+                elif index == 2:
+                    sampling_time = float(data[0])
+                elif index == 3:
+                    opvars = tuple([int(entry) for entry in data])
+                elif index == 4:
+                    dim = int(data[0])
+                elif index == 5:
                     arr = np.array(data).reshape((dim, dim))
                     self.dynamics_matrix_A = arr
-                elif index == 2:
+                elif index == 6:
                     arr = np.array(data).reshape((dim, dim))
                     self.dynamics_matrix_B = arr
-                elif index == 3:
+                elif index == 7:
                     arr = np.array(data).reshape(len(data)//dim, dim)
                     self.dynamics_coeff_matrix_U = arr
-                elif index == 4:
+                elif index == 8:
                     arr = np.array(data).reshape(len(data), 1)
                     self.dynamics_col_vec_U = arr
-                elif index == 5:
+                elif index == 9:
                     arr = np.array(data).reshape(len(data)//dim, dim)
                     self.init_coeff_matrix_X0 = arr
-                elif index == 6:
+                elif index == 10:
                     arr = np.array(data).reshape(len(data), 1)
                     self.init_col_vec_X0 = arr
 
-            return SysDynamics(dim=dim,
+            return direction_type, horizon, sampling_time, opvars, \
+                   SysDynamics(dim=dim,
                                init_coeff_matrix_X0=self.init_coeff_matrix_X0,
                                init_col_vec_X0=self.init_col_vec_X0,
                                dynamics_matrix_A=self.dynamics_matrix_A,
                                dynamics_matrix_B=self.dynamics_matrix_B,
                                dynamics_coeff_matrix_U=self.dynamics_coeff_matrix_U,
                                dynamics_col_vec_U=self.dynamics_col_vec_U)
+
+
+if __name__ == '__main__':
+    data_reader = DataReader('../new_instances/sample_box.txt')
+    data_reader.read_data()
