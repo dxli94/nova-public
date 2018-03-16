@@ -34,7 +34,6 @@ def main():
     # time_horizon = args.horizon
     # samp_time = args.sf
 
-    print(sys.argv)
     instance_file_path = sys.argv[1]  # expecting python main.py instance_file.txt
 
     assert sys.argv[1] is not None

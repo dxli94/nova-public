@@ -1,5 +1,3 @@
-# spiral source
-# python3 /home/dxli/workspace/model-checkers/PyFlow/src/main.py --path ../instances/spiral_source.txt --dt 1 --horizon 10 --sf 0.01 --output 0 --opvars 0 1
 -111.95097469785512 -5457.191459598984
 -111.95097469785512 -102.98442123950986
 4597.287209243312 -10166.42964354015

@@ -1,5 +1,3 @@
-# Networked Cooperative Platoon of Vehicles for Testing Methods and Verification Tools (2 vehicles)
-# python3 /home/dxli/workspace/model-checkers/PyFlow/src/main.py --path ../instances/vehicle_platoon_2.txt --dt 1 --horizon 20 --sf 0.01 --output 0 --opvars 0 1
 -29.590404282221726 4.561291240750827
 -29.590404282221723 0.6020671118658492
 -25.293172277479172 8.858523245493384

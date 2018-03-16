@@ -44,6 +44,7 @@ class Plotter:
         import matplotlib.pyplot as plt
         import matplotlib.patches as patches
 
+        print('Start reading file...')
         try:
             with open(ipfile_path) as ipfile:
                 content = ipfile.read().strip('\n')
@@ -51,6 +52,7 @@ class Plotter:
                 vertices_sorted = list(map(lambda poly: poly.split('\n'), polygons))
         except FileExistsError:
             print('File does not exist %s' % ipfile_path)
+        print('Finished. \nStart plotting...')
 
         fig = plt.figure(1, dpi=90)
         ax = fig.add_subplot(111)
@@ -61,6 +63,7 @@ class Plotter:
             ax.add_patch(poly1patch)
 
         plt.autoscale(enable=True)
+        print('Showing plot now.')
         plt.show()
 
 

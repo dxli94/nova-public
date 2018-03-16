@@ -1,6 +1,3 @@
-# instance_11
-# Networked Cooperative Platoon of Vehicles for Testing Methods and Verification Tools (3 vehicles, communication dropout)
-# python3 /home/dxli/workspace/model-checkers/PyFlow/src/main.py --path ../instances/vehicle_platoon_dropout.txt --dt 1 --horizon 3 --sf 0.01 --output 0 --opvars 0 3
 -16.446684428336056 -18.772740361806896
 -16.446684428336056 -7.554135540988511
 -16.25156529328904 -18.96785949685391

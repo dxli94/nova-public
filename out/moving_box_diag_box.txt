@@ -1,5 +1,3 @@
-# moving-box diag
-# python3 /home/dxli/workspace/model-checkers/PyFlow/src/main.py --path ../instances/moving_box_diag.txt --dt 0 --horizon 40 --sf 0.01 --output 0 --opvars 0 1
 39.99 39.99
 39.99 42.00
 42.00 39.99

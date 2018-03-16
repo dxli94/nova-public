@@ -1,0 +1,45 @@
+# free ball
+# x'(t) = v(t)
+# v'(t) = 9.81
+# x(0) \in [10, 10.2]
+# v(0) = 0
+# direction type
+1
+
+# horizon
+40
+
+# sampling time
+0.01
+
+# opvars
+0 1
+
+# dim
+2
+
+# A
+0 1
+0 0
+
+# B
+1 0
+0 1
+
+# U_coeff
+-1 0
+1 0
+0 -1
+0 1
+
+# U_col
+0 0 9.81 -9.81
+
+# X0_coeff
+-1 0
+1 0
+0 -1
+0 1
+
+# X0_col
+-10 10.2 -0.00 0.00
