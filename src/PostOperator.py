@@ -102,6 +102,22 @@ class PostOperator:
         return ret
 
     def get_general_projections(self, directions, sf_mat, opdims, sys_dims):
+        """Pi is of shape (len(projection_dimensions), sys_dims)
+            E.g. project on x1, x2 with a 3 dimensional system,
+            \Pi is
+            [[1, 0, 0],
+             [0, 1, 0]
+            ]
+
+        \rho_Y(d) = \rho_X(\Pi^T \cdot d)
+
+        This mapping is a general approach to project X on any direction d.
+        However, this methods calls extra LPs (compared with get_projections()).
+
+        For projection on the dimensions of the system (not a random direction,
+        user get_projections() instead.
+        """
+
         ret = []
 
         transform_matrix_pi = np.zeros((len(opdims), sys_dims))
