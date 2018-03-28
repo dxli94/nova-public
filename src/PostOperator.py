@@ -79,17 +79,21 @@ class PostOperator:
                     prev_s = s
         return np.array(ret)
 
-    def get_images(self, opdims, sf_mat):
+    def get_projections(self, opdims, sf_mat):
         ret = []
 
         d_mat = []
         d_mat_idx = []
+        close_list = {}
         for i in range(len(self.directions)):
-            if self.directions[i][opdims[0]] * self.directions[i][opdims[1]] != 0 or \
-                    not any([self.directions[i][idx] for idx in range(len(self.directions[i])) if idx != opdims[0]]) or \
-                    not any([self.directions[i][idx] for idx in range(len(self.directions[i])) if idx != opdims[1]]):
-                d_mat.append(self.directions[i])
-                d_mat_idx.append(i)
+            if self.directions[i][opdims[0]] != 0 or self.directions[i][opdims[1]] != 0:
+                projection_dir = self.directions[i][list(opdims)]
+                projection_dir_tuple = tuple(projection_dir.tolist())
+
+                if projection_dir_tuple not in close_list:
+                    d_mat.append(projection_dir)
+                    d_mat_idx.append(i)
+                    close_list[projection_dir_tuple] = True
 
         for sf_row in sf_mat:
             sf_row_col = np.reshape(sf_row, (len(sf_row), 1))

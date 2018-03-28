@@ -56,6 +56,9 @@ class Plotter:
 
         fig = plt.figure(1, dpi=90)
         ax = fig.add_subplot(111)
+        ax.set_xlabel('$x_{1}$')
+        ax.set_ylabel('$x_{2}$')
+    
         for vertices in vertices_sorted:
             x, y = [float(elem.split()[0]) for elem in vertices], [float(elem.split()[1]) for elem in vertices]
             mat = np.transpose(np.array([x, y]))

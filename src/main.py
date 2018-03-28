@@ -48,12 +48,12 @@ def main():
     post_opt = PostOperator(sys_dynamics, directions)
 
     sf_mat = post_opt.compute_post(time_horizon, samp_time)
-    images = post_opt.get_images(opdims=opvars, sf_mat=sf_mat)
+    images = post_opt.get_projections(opdims=opvars, sf_mat=sf_mat)
 
     for i in range(len(images)):
-        for v in sorted(images[i].vertices, key=lambda vv: (float(vv[0]), float(vv[1]))):
-            print('%.5f %.5f' % (v[0], v[1]))
-        print('\n')
+        for v in images[i].vertices:
+            print('%.5f %.5f' % v)
+        print('\n', end='')
 
     plotter = Plotter(images, opvars)
     plotter.save_polygons_to_file()
