@@ -86,7 +86,7 @@ class PostOperator:
         d_mat_idx = []
         close_list = {}
         for i in range(len(self.directions)):
-            if self.directions[i][opdims[0]] != 0 or self.directions[i][opdims[1]] != 0:
+            if any(self.directions[i][list(opdims)]): # != 0 or self.directions[i][opdims[1]] != 0:
                 projection_dir = self.directions[i][list(opdims)]
                 projection_dir_tuple = tuple(projection_dir.tolist())
 
