@@ -49,6 +49,8 @@ def main():
 
     sf_mat = post_opt.compute_post(time_horizon, samp_time)
     images = post_opt.get_projections(opdims=opvars, sf_mat=sf_mat)
+    # images = post_opt.get_general_projections(SuppFuncUtils.generate_directions(direction_type=direction_type, dim=len(opvars)),
+    #                                  sf_mat, opvars, sys_dim)
 
     for i in range(len(images)):
         for v in images[i].vertices:

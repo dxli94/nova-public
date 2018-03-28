@@ -100,3 +100,22 @@ class PostOperator:
             sf_row_dir = sf_row_col[d_mat_idx]
             ret.append(Polyhedron(np.array(d_mat), sf_row_dir))
         return ret
+
+    def get_general_projections(self, directions, sf_mat, opdims, sys_dims):
+        ret = []
+
+        transform_matrix_pi = np.zeros((len(opdims), sys_dims))
+        transform_matrix_pi[0][opdims[0]] = 1
+        transform_matrix_pi[1][opdims[1]] = 1
+
+        for sf_row in sf_mat:
+            # print(len(sf_row))
+            # print(len(self.directions))
+            # exit()
+            poly_x = Polyhedron(np.array(self.directions), np.reshape(sf_row, (len(sf_row), 1)))
+            sf_vec = [poly_x.compute_support_function(transform_matrix_pi.T.dot(l)) for l in directions]
+            sf_vec = np.reshape(sf_vec, (len(sf_vec), 1))
+
+            ret.append(Polyhedron(np.array(directions), sf_vec))
+
+        return ret
