@@ -88,14 +88,9 @@ class Polyhedron:
         elif self.is_universe():
             raise RuntimeError("\n Cannot Compute Support Function of a Universe Polytope.\n")
         else:
-            # A = cvx.matrix(self.coeff_matrix, tc='d')
-            # b = cvx.matrix(self.col_vec, tc='d')
-            # c = cvx.matrix(-direction, tc='d')
             A = cvx.matrix(self.coeff_matrix)
             b = cvx.matrix(self.col_vec)
             c = cvx.matrix(-direction)
-
-            cvx.solvers.options['glpk'] = dict(msg_lev='GLP_MSG_OFF')
             sol = cvx.solvers.lp(c, A, b, solver='glpk')
             return direction.dot(np.array(sol['x']))[0]
 

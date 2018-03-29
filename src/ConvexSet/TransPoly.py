@@ -1,4 +1,3 @@
-import cdd
 import cvxopt as cvx
 import numpy as np
 
@@ -26,15 +25,6 @@ class TransPoly(Polyhedron):
         self.col_vec = col_vec_U
 
         if self.coeff_matrix.size > 0:
-            if self.coeff_matrix is not None:
-                self.mat_poly = cdd.Matrix(np.hstack((self.col_vec, -self.coeff_matrix)).tolist())
-            else:
-                self.mat_poly = cdd.Matrix()
-            self.mat_poly.rep_type = cdd.RepType.INEQUALITY
-
-            self.poly = self._gen_poly()
-            self.vertices = self._update_vertices()
-
             self.isEmpty = False
             self.isUniverse = False
         else:
@@ -57,19 +47,9 @@ class TransPoly(Polyhedron):
             raise RuntimeError("\n Cannot Compute Support Function of a Universe Polytope.\n")
         else:
             direction = np.dot(self.trans_matrix_B_tp, direction)
-            # SciPy suffers numerical problems quite a bit!
-            # sf = linprog(c=-direction,
-            #              A_ub=self.coeff_matrix, b_ub=self.col_vec,
-            #              bounds=(None, None))
-
-            # if sf.success:
-            #     return -sf.fun
-            # else:
-            #     raise RuntimeError(sf.message)
-
-            A = cvx.matrix(self.coeff_matrix, tc='d')
-            b = cvx.matrix(self.col_vec, tc='d')
-            c = cvx.matrix(-direction, tc='d')
-            cvx.solvers.options['glpk'] = dict(msg_lev='GLP_MSG_OFF')
+            A = cvx.matrix(self.coeff_matrix)
+            b = cvx.matrix(self.col_vec)
+            c = cvx.matrix(-direction)
             sol = cvx.solvers.lp(c, A, b, solver='glpk')
-            return direction.dot(np.array(sol['x']))[0]
+            return direction.dot(sol['x'])[0]
+

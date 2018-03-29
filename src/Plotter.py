@@ -17,10 +17,7 @@ class Plotter:
         n = len(corners)
         cx = float(sum(x for x, y in corners)) / n
         cy = float(sum(y for x, y in corners)) / n
-        cornersWithAngles = []
-        for x, y in corners:
-            an = (np.arctan2(y - cy, x - cx) + 2.0 * np.pi) % (2.0 * np.pi)
-            cornersWithAngles.append((x, y, an))
+        cornersWithAngles = [(x, y, (np.arctan2(y - cy, x - cx) + 2.0 * np.pi) % (2.0 * np.pi)) for x, y in corners]
         cornersWithAngles.sort(key=lambda tup: tup[2])
 
         return list(map(lambda ca: (ca[0], ca[1]), cornersWithAngles))

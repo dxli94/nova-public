@@ -112,7 +112,7 @@ def generate_directions(direction_type, dim):
                     direction[j] = -1
                     direction_generator.append(direction)
 
-        return direction_generator
+        return np.ndarray(direction_generator)
 
 
 if __name__ == '__main__':
