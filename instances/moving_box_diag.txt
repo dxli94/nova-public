@@ -1,17 +1,5 @@
 # moving-box diag
 # x'(t) = 1
-# direction type
-1
-
-# horizon
-40
-
-# sampling time
-0.01
-
-# opvars
-0 1
-
 # dim
 2
 

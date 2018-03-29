@@ -1,16 +1,4 @@
 # Networked Cooperative Platoon of Vehicles for Testing Methods and Verification Tools (2 vehicles)
-# direction type
-0
-
-# horizon
-20
-
-# sampling time
-0.01
-
-# opvars
-0 1
-
 # dim
 6
 

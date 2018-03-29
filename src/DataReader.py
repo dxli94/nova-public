@@ -33,39 +33,30 @@ class DataReader:
 
     def read_data(self):
         with open(self.path, 'r') as ins_file:
-            for index in range(11):
+            for index in range(7):
                 data = read_next_block(ins_file)
                 if index == 0:
-                    direction_type = int(data[0])
-                elif index == 1:
-                    horizon = float(data[0])
-                elif index == 2:
-                    sampling_time = float(data[0])
-                elif index == 3:
-                    opvars = tuple([int(entry) for entry in data])
-                elif index == 4:
                     dim = int(data[0])
-                elif index == 5:
+                elif index == 1:
                     arr = np.array(data).reshape((dim, dim))
                     self.dynamics_matrix_A = arr
-                elif index == 6:
+                elif index == 2:
                     arr = np.array(data).reshape((dim, dim))
                     self.dynamics_matrix_B = arr
-                elif index == 7:
+                elif index == 3:
                     arr = np.array(data).reshape(len(data)//dim, dim)
                     self.dynamics_coeff_matrix_U = arr
-                elif index == 8:
+                elif index == 4:
                     arr = np.array(data).reshape(len(data), 1)
                     self.dynamics_col_vec_U = arr
-                elif index == 9:
+                elif index == 5:
                     arr = np.array(data).reshape(len(data)//dim, dim)
                     self.init_coeff_matrix_X0 = arr
-                elif index == 10:
+                elif index == 6:
                     arr = np.array(data).reshape(len(data), 1)
                     self.init_col_vec_X0 = arr
 
-            return direction_type, horizon, sampling_time, opvars, \
-                   SysDynamics(dim=dim,
+            return SysDynamics(dim=dim,
                                init_coeff_matrix_X0=self.init_coeff_matrix_X0,
                                init_col_vec_X0=self.init_col_vec_X0,
                                dynamics_matrix_A=self.dynamics_matrix_A,

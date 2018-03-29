@@ -3,18 +3,6 @@
 # v'(t) = 9.81
 # x(0) \in [10, 10.2]
 # v(0) = 0
-# direction type
-0
-
-# horizon
-40
-
-# sampling time
-0.01
-
-# opvars
-0 1
-
 # dim
 2
 

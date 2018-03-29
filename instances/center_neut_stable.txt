@@ -1,18 +1,6 @@
 # center neutral stable
 # x1'(t) = -x2
 # x2'(t) = x1
-# direction type
-0
-
-# horizon
-40
-
-# sampling time
-0.01
-
-# opvars
-0 1
-
 # dim
 2
 
