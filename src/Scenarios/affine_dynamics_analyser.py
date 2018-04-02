@@ -1,5 +1,4 @@
 import argparse
-import sys
 import cvxopt as cvx
 
 import SuppFuncUtils

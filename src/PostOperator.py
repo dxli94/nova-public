@@ -48,7 +48,7 @@ class PostOperator:
         beta = SuppFuncUtils.compute_beta(sys_dynamics, tau)
 
         sf_0 = [self.compute_initial_sf(sys_dynamics, poly_init, trans_poly_U, l, alpha, tau) for l in directions]
-        poly_omega0 = Polyhedron(np.array(directions), np.reshape(sf_0, (len(sf_0), 1)))
+        poly_omega0 = Polyhedron(directions, np.reshape(sf_0, (len(sf_0), 1)))
 
         time_frames = range(int(np.floor(time_horizon / tau)))
 

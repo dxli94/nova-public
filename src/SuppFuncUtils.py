@@ -78,7 +78,7 @@ def generate_directions(direction_type, dim):
             direction[i] = -1
             direction_generator.append(direction)
 
-        return direction_generator
+        return np.array(direction_generator)
 
     elif direction_type == 1:  # octagonal
         for i in range(dim):
@@ -112,7 +112,7 @@ def generate_directions(direction_type, dim):
                     direction[j] = -1
                     direction_generator.append(direction)
 
-        return np.ndarray(direction_generator)
+        return np.array(direction_generator)
 
 
 if __name__ == '__main__':
