@@ -1,15 +1,18 @@
-name: PyFlow
+name: HyPyFlow
 channels:
   - conda-forge
   - defaults
 dependencies:
   - matplotlib
-  - numpy=1.14.2=py35_blas_openblas_200
-  - scipy=1.0.0=py35_blas_openblas_201
-  - pip=9.0.1=py35_5
-  - python=3.5.0=1
+  - numpy
+  - scipy
+  - pip
+  - python=3.6
   - cython
-  - cvxopt=1.1.9=py35_blas_openblas_202
+  - cvxopt=1.1.9
+  - cysignals
   - pip:
     - pycddlib==2.0.0
-prefix: /anaconda3/envs/PyFlow
+    - pyibex
+    - pplpy
+prefix: /anaconda3/envs/HyPyFlow
