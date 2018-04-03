@@ -47,9 +47,9 @@ class TransPoly(Polyhedron):
             raise RuntimeError("\n Cannot Compute Support Function of a Universe Polytope.\n")
         else:
             direction = np.dot(self.trans_matrix_B_tp, direction)
-            A = cvx.matrix(self.coeff_matrix)
-            b = cvx.matrix(self.col_vec)
-            c = cvx.matrix(-direction)
+            A = cvx.matrix(self.coeff_matrix, tc='d')
+            b = cvx.matrix(self.col_vec, tc='d')
+            c = cvx.matrix(-direction, tc='d')
             sol = cvx.solvers.lp(c, A, b, solver='glpk')
             return direction.dot(sol['x'])[0]
 

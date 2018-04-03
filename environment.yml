@@ -11,6 +11,7 @@ dependencies:
   - cython
   - cvxopt=1.1.9
   - cysignals
+  - gmpy2
   - pip:
     - pycddlib==2.0.0
     - pyibex
