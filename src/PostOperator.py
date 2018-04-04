@@ -8,10 +8,7 @@ from ConvexSet.TransPoly import TransPoly
 
 class PostOperator:
     @staticmethod
-    def compute_initial_sf(sys_dynamics, poly_init, trans_poly_U, l, alpha, tau):
-        dyn_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
-        delta_tp = np.transpose(SuppFuncUtils.mat_exp(dyn_matrix_A, 1 * tau))
-
+    def compute_initial_sf(delta_tp, poly_init, trans_poly_U, l, alpha, tau):
         sf_X0 = poly_init.compute_support_function(l)
         sf_tp_X0 = poly_init.compute_support_function(np.dot(delta_tp, l))
 
@@ -47,8 +44,7 @@ class PostOperator:
         alpha = SuppFuncUtils.compute_alpha(sys_dynamics, tau)
         beta = SuppFuncUtils.compute_beta(sys_dynamics, tau)
 
-        sf_0 = [self.compute_initial_sf(sys_dynamics, poly_init, trans_poly_U, l, alpha, tau) for l in directions]
-        poly_omega0 = Polyhedron(directions, np.reshape(sf_0, (len(sf_0), 1)))
+        sf_0 = [self.compute_initial_sf(delta_tp, poly_init, trans_poly_U, l, alpha, tau) for l in directions]
 
         time_frames = range(int(np.floor(time_horizon / tau)))
 
@@ -65,8 +61,8 @@ class PostOperator:
                         ret[tf].append(sf_0[idx])
                 else:
                     r = np.dot(delta_tp, prev_r)
-                    s = prev_s + self.compute_sf_w(r, trans_poly_U, beta, tau)
-                    sf = poly_omega0.compute_support_function(r) + s
+                    s = prev_s + self.compute_sf_w(prev_r, trans_poly_U, beta, tau)
+                    sf = self.compute_initial_sf(delta_tp, poly_init, trans_poly_U, r, alpha, tau) + s
 
                     if idx == 0:
                         ret.append([sf])
@@ -86,16 +82,17 @@ class PostOperator:
         close_list = {}
         for i in range(len(directions)):
             if any(directions[i][list(opdims)]):
-                projection_dir = directions[i][list(opdims)]
-                projection_dir_tuple = tuple(projection_dir.tolist())
+                    projection_dir = directions[i][list(opdims)]
+                    projection_dir_tuple = tuple(projection_dir.tolist())
 
-                if projection_dir_tuple not in close_list:
-                    d_mat.append(projection_dir)
-                    d_mat_idx.append(i)
-                    close_list[projection_dir_tuple] = True
+                    if projection_dir_tuple not in close_list:
+                        d_mat.append(projection_dir)
+                        d_mat_idx.append(i)
+                        close_list[projection_dir_tuple] = True
 
         for sf_row in sf_mat:
-            sf_row_dir = np.reshape(sf_row, (len(sf_row), 1))
+            sf_row_col = np.reshape(sf_row, (len(sf_row), 1))
+            sf_row_dir = sf_row_col[d_mat_idx]
             ret.append(Polyhedron(np.array(d_mat), sf_row_dir))
         return ret
 

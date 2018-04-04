@@ -11,13 +11,17 @@ class Plotter:
         self.vertices_sorted = list(map(lambda im: self.sort_vertices(im), self.images))
 
     def sort_vertices(self, im):
-        corners = [(v[self.opvars[0]], v[self.opvars[1]]) for v in im.vertices]
+        # corners = [(v[self.opvars[0]], v[self.opvars[1]]) for v in im.vertices]
+        corners = im.vertices
 
         # corners = [v[:2] for v in im.vertices]
         n = len(corners)
         cx = float(sum(x for x, y in corners)) / n
         cy = float(sum(y for x, y in corners)) / n
-        cornersWithAngles = [(x, y, (np.arctan2(y - cy, x - cx) + 2.0 * np.pi) % (2.0 * np.pi)) for x, y in corners]
+        cornersWithAngles = []
+        for x, y in corners:
+            an = (np.arctan2(y - cy, x - cx) + 2.0 * np.pi) % (2.0 * np.pi)
+            cornersWithAngles.append((x, y, an))
         cornersWithAngles.sort(key=lambda tup: tup[2])
 
         return list(map(lambda ca: (ca[0], ca[1]), cornersWithAngles))
@@ -55,7 +59,7 @@ class Plotter:
         ax = fig.add_subplot(111)
         ax.set_xlabel('$x_{1}$')
         ax.set_ylabel('$x_{2}$')
-    
+
         for vertices in vertices_sorted:
             x, y = [float(elem.split()[0]) for elem in vertices], [float(elem.split()[1]) for elem in vertices]
             mat = np.transpose(np.array([x, y]))
