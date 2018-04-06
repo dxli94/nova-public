@@ -10,6 +10,7 @@ def normalised(n):
 
 class HyperBox:
     def __init__(self, vertices):
+        self.vertices = vertices
         self.dim = len(vertices[0])
         if len(vertices) > 0:
             lower_bounds = [1e9] * self.dim
