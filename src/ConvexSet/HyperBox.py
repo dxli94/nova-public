@@ -18,6 +18,8 @@ class HyperBox:
         else:
             raise RuntimeError('Emtpy vertex set.')
 
+
+        # print(vertices)
         for v in vertices:
             for idx in range(len(v)):
                 if v[idx] < lower_bounds[idx]:

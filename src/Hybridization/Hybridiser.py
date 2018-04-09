@@ -14,7 +14,7 @@ generator_2d_matrix = np.array([[1, 0], [-1, 0], [0, 1], [0, -1]])
 
 def evaluate_exp(nonli_dyn, x, y):
     # for now just hard-code it
-    # return np.array([x+2*y, -2*x+y])
+    # return np.array([y, -1*x-y])
     return np.array([y, (1 - x * x) * y - x])
 
 
@@ -25,7 +25,7 @@ class reachParams:
         self.delta_tp = delta_tp
 
 
-class Hybridizer:
+class Hybridiser:
     def __init__(self, dim, nonlin_dyn, starting_epsilon, tau, directions, init_mat_X0, init_col_X0, is_linear):
         self.dim = dim
         self.nonlin_dyn = nonlin_dyn
@@ -37,7 +37,6 @@ class Hybridizer:
 
         # the following attributes would be updated along the flowpipe construction
         self.directions = directions
-        self.init_flag = True
         self.abs_dynamics = None
         self.abs_domain = None
         self.init_mat_X0 = None
@@ -46,46 +45,22 @@ class Hybridizer:
         self.reach_params = reachParams()
         self.r_array = self.directions
         self.s_array = [0] * len(self.directions)
+        self.prev_sf = np.zeros(len(self.directions))
         # self.r_array = []
 
     def reset_abs_domain(self, starting_epsilon):
         self.epsilon = starting_epsilon
 
     def hybridise(self, bbox, starting_epsilon):
-        """
-        Take the hybridisation domain, do the following:
-            1) approximate non-linear dynamics on the hybridisation domain using affine dynamics;
-            2) compute image reachable in the current time interval;
-            3) if image is contained in the hybridisation domain, then return the affine dynnamics;
-               else: re-bloat the hybridisation domain with larger epsilon and goto 2).
-
-        :param bbox: hybridisation domain to start with.
-        :return: affine dynamics, hybridisation domain constructed.
-        """
         self.reset_abs_domain(starting_epsilon)
         bbox.bloat(self.epsilon)
-        ppl_bbox = bbox.to_ppl()
+        matrix_A, poly_U = self.gen_abs_dynamics(abs_domain=bbox)
 
-        while True:
-            # now, refine the bounding box by checking whether the bbox contains the image.
-            # 1) approximate non-linear dynamic g(x) with affine dynamic Ax + u
-            matrix_A, poly_U = self.gen_abs_dynamics(abs_domain=bbox)
-            self.set_abs_dynamics(matrix_A, poly_U)
-
-            self.reach_params.alpha = SuppFuncUtils.compute_alpha(self.abs_dynamics, self.tau)
-            self.reach_params.delta_tp = np.transpose(SuppFuncUtils.mat_exp(self.abs_dynamics.matrix_A, self.tau))
-            self.sf = np.array(self.compute_initial_image())
-
-            ppl_image = PPLHelper.create_ppl_polyhedra_from_support_functions(self.sf, self.directions, self.dim)
-
-            if PPLHelper.contains(ppl_bbox, ppl_image):
-                self.set_abs_domain(bbox)
-                self.reach_params.beta = SuppFuncUtils.compute_beta(self.abs_dynamics, self.tau)
-                break
-            else:
-                bbox.bloat(self.epsilon)
-                ppl_bbox = bbox.to_ppl()
-                self.epsilon *= 2
+        self.set_abs_dynamics(matrix_A, poly_U)
+        self.reach_params.alpha = SuppFuncUtils.compute_alpha(self.abs_dynamics, self.tau)
+        self.reach_params.beta = SuppFuncUtils.compute_beta(self.abs_dynamics, self.tau)
+        self.reach_params.delta_tp = np.transpose(SuppFuncUtils.mat_exp(self.abs_dynamics.matrix_A, self.tau))
+        self.set_abs_domain(bbox)
 
     def gen_abs_dynamics(self, abs_domain):
         vertices = Polyhedron(*abs_domain.to_constraints()).vertices
@@ -148,11 +123,14 @@ class Hybridizer:
                         return coeff_map
 
     def compute_initial_image(self):
-        return self.post_opt.compute_initial(abs_dynamics=self.abs_dynamics,
-                                             delta_tp=self.reach_params.delta_tp,
-                                             tau=self.tau,
-                                             alpha=self.reach_params.alpha,
-                                             directions=self.directions)
+        sf_array = self.post_opt.compute_initial(abs_dynamics=self.abs_dynamics,
+                                                 delta_tp=self.reach_params.delta_tp,
+                                                 tau=self.tau,
+                                                 alpha=self.reach_params.alpha,
+                                                 directions=self.directions)
+        self.sf = np.array(sf_array)
+        self.r_array = self.directions
+        self.s_array = [0] * len(self.directions)
 
     # abs_dynamics, delta_tp, tau, alpha, beta, prev_directions, sf_current
     def compute_next_image(self):
@@ -183,3 +161,12 @@ class Hybridizer:
     def set_init_image(self, mat, col):
         self.init_mat_X0 = mat
         self.init_col_X0 = col
+
+    def refine_bbox(self, sf):
+        x_ub = sf[0]
+        x_lb = -sf[1]
+        y_ub = sf[2]
+        y_lb = -sf[3]
+        # print(self.directions)
+        from ConvexSet.HyperBox import HyperBox
+        return HyperBox([[x_lb, y_lb], [x_lb, y_ub], [x_ub, y_lb], [x_ub, y_ub]])
