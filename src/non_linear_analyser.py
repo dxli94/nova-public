@@ -17,15 +17,23 @@ def main():
     # ============== setting up ============== #
     cvx.solvers.options['glpk'] = dict(msg_lev='GLP_MSG_OFF')
 
-    tau = 0.01
-    time_horizon = 1
+    tau = 0.0001
+    time_horizon = 0.002
     direction_type = 0
-    starting_epsilon = 1e-1
+    starting_epsilon = 1e-7
     dim = 2
     directions = SuppFuncUtils.generate_directions(direction_type, dim)
     # f: Vanderpol dynamics
     non_linear_dynamics = ['x[1]', '(1-x[0]^2)*x[1]-x[0]']
-    init_set = HyperBox(np.array([[2, 2], [2, 2], [2, 2], [2, 2]]))
+    is_linear = [True, False]
+    # non_linear_dynamics = ['x[0] + 2*x[1]', '-2*x[0]+x[1]']
+    # is_linear = [True, True]
+    # init_set = HyperBox(np.array([[2, 2], [2, 2], [2, 2], [2, 2]]))
+    init_set = HyperBox(np.array([[2, -0.5]*4]))
+    # init_set = HyperBox(np.array([[-1, -4]*4]))
+    # init_set = HyperBox(np.array([[-1, -4], [-1, -4], [-1, -4], [-1, -4]]))
+    # init_set = HyperBox(np.array([[2, -0.5], [2, -0.5], [2, -0.5], [2, -0.5]]))
+    # init_set = HyperBox(np.array([[-1.3, -4], [-1.3, -4], [-1.3, -4], [-1.3, -4]]))
     init_matrix_X0, init_col_vec_X0 = init_set.to_constraints()
     init_poly = Polyhedron(init_matrix_X0, init_col_vec_X0)
     # ============== setting up done ============== #
@@ -38,35 +46,47 @@ def main():
 
     # (A, V) = L(f, B),
     # P0 = R_[0,r](P)
-    hybridiser = Hybridizer(dim, non_linear_dynamics, starting_epsilon, tau, directions)
-    hybridiser.set_current_image(init_matrix_X0, init_col_vec_X0)
-    hybridiser.hybridise(bbox)
+    hybridiser = Hybridizer(dim, non_linear_dynamics, starting_epsilon, tau, directions,
+                            init_matrix_X0, init_col_vec_X0, is_linear)
+    hybridiser.set_init_image(init_matrix_X0, init_col_vec_X0)
+    hybridiser.hybridise(bbox, hybridiser.epsilon)
 
     # initialise support function matrix
-    sf_mat = [hybridiser.current_image_col_vec]
+    sf_mat = [hybridiser.sf]
 
     hybridiser.compute_next_image()
 
     time_frames = int(np.floor(time_horizon / tau))
 
+    # Remember to comment this section in for functioning
     while i < time_frames:
         # if P_{i+1} \subset B
-        ppl_poly_next = PPLHelper.create_ppl_polyhedra_from_support_functions(hybridiser.current_image_col_vec,
-                                                                              hybridiser.current_image_coff_mat,
+        ppl_poly_next = PPLHelper.create_ppl_polyhedra_from_support_functions(hybridiser.sf,
+                                                                              hybridiser.directions,
                                                                               dim)
         if PPLHelper.contains(hybridiser.abs_domain.to_ppl(), ppl_poly_next):
-            sf_mat.append(hybridiser.current_image_col_vec)
-            i += 1
-
-            hybridiser.compute_next_image()
-            sf_mat.append(hybridiser.current_image_col_vec)
+            sf_mat.append(hybridiser.sf)
+            # sf_mat.append(hybridiser.current_image_col_vec)
         else:
             # print(i)
-            bbox = generate_bounding_box(Polyhedron(hybridiser.current_image_coff_mat,
-                                                    hybridiser.current_image_col_vec))
-            hybridiser.reset_abs_domain(bbox, starting_epsilon)
+            bbox = generate_bounding_box(Polyhedron(hybridiser.directions,
+                                                    hybridiser.sf.reshape(len(hybridiser.sf), 1)))
+            hybridiser.reset_abs_domain(starting_epsilon)
+            hybridiser.set_init_image(hybridiser.directions, hybridiser.sf.reshape(len(hybridiser.sf), 1))
+            hybridiser.hybridise(bbox, starting_epsilon)
+        i += 1
+        hybridiser.compute_next_image()
 
-    sf_mat = np.array(sf_mat)
+    # while i < time_frames:
+    #     # if P_{i+1} \subset B
+    #     sf_mat.append(hybridiser.sf)
+    #     bbox = generate_bounding_box(Polyhedron(hybridiser.directions,
+    #                                             hybridiser.sf.reshape(len(hybridiser.sf), 1)))
+    #     hybridiser.hybridise(bbox, starting_epsilon)
+    #     i += 1
+    #     hybridiser.compute_next_image()
+        # hybridiser.compute_initial_image()
+
     opvars = (0, 1)
     images = hybridiser.post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=sf_mat)
 

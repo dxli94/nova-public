@@ -14,6 +14,7 @@ generator_2d_matrix = np.array([[1, 0], [-1, 0], [0, 1], [0, -1]])
 
 def evaluate_exp(nonli_dyn, x, y):
     # for now just hard-code it
+    # return np.array([x+2*y, -2*x+y])
     return np.array([y, (1 - x * x) * y - x])
 
 
@@ -25,37 +26,43 @@ class reachParams:
 
 
 class Hybridizer:
-    def __init__(self, dim, nonlin_dyn, starting_epsilon, tau, directions):
+    def __init__(self, dim, nonlin_dyn, starting_epsilon, tau, directions, init_mat_X0, init_col_X0, is_linear):
         self.dim = dim
         self.nonlin_dyn = nonlin_dyn
         self.epsilon = starting_epsilon
         self.tau = tau
         self.coeff_matrix_B = np.identity(dim)
         self.post_opt = PostOperator()
+        self.is_linear = is_linear
 
         # the following attributes would be updated along the flowpipe construction
         self.directions = directions
-        self.current_image_coff_mat = None
-        self.current_image_col_vec = None
+        self.init_flag = True
         self.abs_dynamics = None
         self.abs_domain = None
+        self.init_mat_X0 = None
+        self.init_col_X0 = None
+        self.sf = np.zeros(len(self.directions))
         self.reach_params = reachParams()
+        self.r_array = self.directions
+        self.s_array = [0] * len(self.directions)
+        # self.r_array = []
 
-    def reset_abs_domain(self, bbox, starting_epsilon):
-        self.abs_domain = bbox
+    def reset_abs_domain(self, starting_epsilon):
         self.epsilon = starting_epsilon
 
-    def hybridise(self, bbox):
+    def hybridise(self, bbox, starting_epsilon):
         """
         Take the hybridisation domain, do the following:
             1) approximate non-linear dynamics on the hybridisation domain using affine dynamics;
-            2) compute image reachable in the current time step;
+            2) compute image reachable in the current time interval;
             3) if image is contained in the hybridisation domain, then return the affine dynnamics;
                else: re-bloat the hybridisation domain with larger epsilon and goto 2).
 
         :param bbox: hybridisation domain to start with.
         :return: affine dynamics, hybridisation domain constructed.
         """
+        self.reset_abs_domain(starting_epsilon)
         bbox.bloat(self.epsilon)
         ppl_bbox = bbox.to_ppl()
 
@@ -67,15 +74,13 @@ class Hybridizer:
 
             self.reach_params.alpha = SuppFuncUtils.compute_alpha(self.abs_dynamics, self.tau)
             self.reach_params.delta_tp = np.transpose(SuppFuncUtils.mat_exp(self.abs_dynamics.matrix_A, self.tau))
-            sf = self.post_opt.compute_initial(self.abs_dynamics, self.reach_params.delta_tp, self.tau,
-                                               self.reach_params.alpha, self.directions)
-            ppl_image = PPLHelper.create_ppl_polyhedra_from_support_functions(sf, self.directions, self.dim)
+            self.sf = np.array(self.compute_initial_image())
+
+            ppl_image = PPLHelper.create_ppl_polyhedra_from_support_functions(self.sf, self.directions, self.dim)
 
             if PPLHelper.contains(ppl_bbox, ppl_image):
                 self.set_abs_domain(bbox)
                 self.reach_params.beta = SuppFuncUtils.compute_beta(self.abs_dynamics, self.tau)
-                self.current_image_coff_mat = self.directions
-                self.current_image_col_vec = np.array(sf)
                 break
             else:
                 bbox.bloat(self.epsilon)
@@ -99,17 +104,25 @@ class Hybridizer:
 
         u_max_array = []
         for i in range(matrix_A.shape[0]):
-            # assuming 2 dimensions, can be easily generalised to n-dimension case
-            affine_dynamic = str(matrix_A[i][0]) + '*x[0] + ' + str(matrix_A[i][1]) + '*x[1]'
-            error_func_str = str(self.nonlin_dyn[i]) + '-(' + affine_dynamic + ')'
-            error_func = pyibex.Function("x[%d]" % self.dim, error_func_str)
+            if self.is_linear[i]:
+                u_max_array.extend([0] * 2)
+            else:
+                # assuming 2 dimensions, can be easily generalised to n-dimension case
+                affine_dynamic = str(matrix_A[i][0]) + '*x[0] + ' + str(matrix_A[i][1]) + '*x[1]'
+                error_func_str = str(self.nonlin_dyn[i]) + '-(' + affine_dynamic + ')'
+                error_func = pyibex.Function("x[%d]" % self.dim, error_func_str)
 
-            xy = pyibex.IntervalVector(
-                [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)])
-            u_max_temp = error_func.eval(xy)
-            u_max = max(u_max_temp[0], u_max_temp[1])
-            u_max_array.extend([u_max] * 2)
+                xy = pyibex.IntervalVector(
+                    [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)])
+                u_max_temp = error_func.eval(xy)
+                u_max = max(u_max_temp[0], u_max_temp[1])
+                """
+                Remember to change this back!!
+                TODO
+                """
+                # u_max_array.extend([u_max] * 2)
 
+                u_max_array.extend([0] * 2)
         col_vec = np.array(u_max_array)
 
         # poly_U
@@ -135,23 +148,29 @@ class Hybridizer:
                         return coeff_map
 
     def compute_initial_image(self):
-        return []
+        return self.post_opt.compute_initial(abs_dynamics=self.abs_dynamics,
+                                             delta_tp=self.reach_params.delta_tp,
+                                             tau=self.tau,
+                                             alpha=self.reach_params.alpha,
+                                             directions=self.directions)
 
     # abs_dynamics, delta_tp, tau, alpha, beta, prev_directions, sf_current
     def compute_next_image(self):
-        next_image, next_directions = self.post_opt.compute_next(abs_dynamics=self.abs_dynamics,
-                                                                 delta_tp=self.reach_params.delta_tp,
-                                                                 tau=self.tau,
-                                                                 alpha=self.reach_params.alpha,
-                                                                 beta=self.reach_params.beta,
-                                                                 prev_directions=self.directions,
-                                                                 prev_s_list=self.current_image_col_vec)
-        self.set_current_image(next_directions, next_image)
+        next_image, next_s_array, next_r_array = self.post_opt.compute_next(abs_dynamics=self.abs_dynamics,
+                                                                            delta_tp=self.reach_params.delta_tp,
+                                                                            tau=self.tau,
+                                                                            alpha=self.reach_params.alpha,
+                                                                            beta=self.reach_params.beta,
+                                                                            prev_directions=self.r_array,
+                                                                            prev_s_array=self.s_array)
+        self.s_array = next_s_array
+        self.r_array = next_r_array
+        self.sf = np.array(next_image)
 
     def set_abs_dynamics(self, matrix_A, poly_U):
         abs_dynamics = SysDynamics(dim=self.dim,
-                                   init_coeff_matrix_X0=self.current_image_coff_mat,
-                                   init_col_vec_X0=self.current_image_col_vec,
+                                   init_coeff_matrix_X0=self.init_mat_X0,
+                                   init_col_vec_X0=self.init_col_X0,
                                    dynamics_matrix_A=matrix_A,
                                    dynamics_matrix_B=self.coeff_matrix_B,
                                    dynamics_coeff_matrix_U=poly_U[0],
@@ -161,6 +180,6 @@ class Hybridizer:
     def set_abs_domain(self, abs_domain):
         self.abs_domain = abs_domain
 
-    def set_current_image(self, init_matrix_X0, init_col_vec_X0):
-        self.current_image_coff_mat = init_matrix_X0
-        self.current_image_col_vec = init_col_vec_X0
+    def set_init_image(self, mat, col):
+        self.init_mat_X0 = mat
+        self.init_col_X0 = col
