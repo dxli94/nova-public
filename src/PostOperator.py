@@ -16,6 +16,7 @@ class PostOperator:
         sf_ball = SuppFuncUtils.support_unitball_infnorm(l)
 
         sf_omega0 = max(sf_X0, sf_tp_X0 + tau * sf_V + alpha * sf_ball)
+        sf_omega0 = sf_tp_X0 + tau * sf_V
         return sf_omega0
 
     @staticmethod

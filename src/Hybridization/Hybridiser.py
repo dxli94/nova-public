@@ -5,6 +5,7 @@ import SuppFuncUtils
 
 import itertools
 import numpy as np
+import sympy
 import pyibex
 
 from SysDynamics import SysDynamics
@@ -26,34 +27,35 @@ class reachParams:
 
 
 class Hybridiser:
-    def __init__(self, dim, nonlin_dyn, starting_epsilon, tau, directions, init_mat_X0, init_col_X0, is_linear):
+    def __init__(self, dim, nonlin_dyn, tau, directions, init_mat_X0, init_col_X0, is_linear):
         self.dim = dim
         self.nonlin_dyn = nonlin_dyn
-        self.epsilon = starting_epsilon
         self.tau = tau
         self.coeff_matrix_B = np.identity(dim)
         self.post_opt = PostOperator()
         self.is_linear = is_linear
 
+        # assume 2 dims for now, not hard to generalise
+        self.variables = sympy.symbols('x,y', real=True)
+        x, y = self.variables
+        non_linear_dynamics = [y, (1 - x ** 2) * y - x]
+        self.jacobian_func = sympy.Matrix(non_linear_dynamics).jacobian(self.variables)
+        # print(self.jacobian_func)
+        # exit()
+
         # the following attributes would be updated along the flowpipe construction
         self.directions = directions
         self.abs_dynamics = None
         self.abs_domain = None
-        self.init_mat_X0 = None
-        self.init_col_X0 = None
+        self.init_mat_X0 = init_mat_X0
+        self.init_col_X0 = init_col_X0
         self.sf = np.zeros(len(self.directions))
         self.reach_params = reachParams()
-        self.r_array = self.directions
-        self.s_array = [0] * len(self.directions)
         self.prev_sf = np.zeros(len(self.directions))
         # self.r_array = []
 
-    def reset_abs_domain(self, starting_epsilon):
-        self.epsilon = starting_epsilon
-
     def hybridise(self, bbox, starting_epsilon):
-        self.reset_abs_domain(starting_epsilon)
-        bbox.bloat(self.epsilon)
+        bbox.bloat(starting_epsilon)
         matrix_A, poly_U = self.gen_abs_dynamics(abs_domain=bbox)
 
         self.set_abs_dynamics(matrix_A, poly_U)
@@ -66,16 +68,25 @@ class Hybridiser:
         vertices = Polyhedron(*abs_domain.to_constraints()).vertices
         abs_domain_corners = np.array(vertices)
         abs_domain_centre = np.average(abs_domain_corners, axis=0)
-        center_and_corners = np.append([abs_domain_centre], abs_domain_corners, axis=0)
+
+        # matrix_A = np.array(self.jacobian_func.subs(list(zip(self.variables, abs_domain_centre)))).astype(np.float64)
+        # matrix_A = np.array(self.jacobian_func.subs(list(zip(self.variables, abs_domain_corners[-1])))).astype(np.float64)
 
         abs_domain_lower_bounds = abs_domain_corners.min(axis=0)
         abs_domain_upper_bounds = abs_domain_corners.max(axis=0)
 
+        center_and_corners = np.append([abs_domain_centre], abs_domain_corners, axis=0)
         sampling_points = [(cc, evaluate_exp(self.nonlin_dyn, cc[0], cc[1])) for cc in center_and_corners]
         coeff_map = self.approx_non_linear_dyn(sampling_points)
 
         # matrix_A
         matrix_A = np.array(list(coeff_map[i] for i in range(self.dim)))
+
+        # print('matrix_A: ' + str(matrix_A))
+        # print('abs centre: ' + str(abs_domain_centre))
+        # print('approx. val: ' + str(np.dot(matrix_A, abs_domain_centre)))
+        # print('real val: ' + str(evaluate_exp(self.nonlin_dyn, abs_domain_centre[0], abs_domain_centre[1])))
+        # print('\n')
 
         u_max_array = []
         for i in range(matrix_A.shape[0]):
@@ -90,7 +101,7 @@ class Hybridiser:
                 xy = pyibex.IntervalVector(
                     [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)])
                 u_max_temp = error_func.eval(xy)
-                u_max = max(u_max_temp[0], u_max_temp[1])
+                u_max = max(abs(u_max_temp[0]), abs(u_max_temp[1]))
                 """
                 Remember to change this back!!
                 TODO
@@ -99,6 +110,7 @@ class Hybridiser:
 
                 u_max_array.extend([0] * 2)
         col_vec = np.array(u_max_array)
+        # print(col_vec)
 
         # poly_U
         poly_U = (generator_2d_matrix, col_vec.reshape(len(col_vec), 1))
@@ -129,21 +141,19 @@ class Hybridiser:
                                                  alpha=self.reach_params.alpha,
                                                  directions=self.directions)
         self.sf = np.array(sf_array)
-        self.r_array = self.directions
-        self.s_array = [0] * len(self.directions)
 
     # abs_dynamics, delta_tp, tau, alpha, beta, prev_directions, sf_current
-    def compute_next_image(self):
-        next_image, next_s_array, next_r_array = self.post_opt.compute_next(abs_dynamics=self.abs_dynamics,
-                                                                            delta_tp=self.reach_params.delta_tp,
-                                                                            tau=self.tau,
-                                                                            alpha=self.reach_params.alpha,
-                                                                            beta=self.reach_params.beta,
-                                                                            prev_directions=self.r_array,
-                                                                            prev_s_array=self.s_array)
-        self.s_array = next_s_array
-        self.r_array = next_r_array
+    def compute_next_image(self, s_arr, r_arr):
+        next_image, s_arr, r_arr = self.post_opt.compute_next(abs_dynamics=self.abs_dynamics,
+                                                              delta_tp=self.reach_params.delta_tp,
+                                                              tau=self.tau,
+                                                              alpha=self.reach_params.alpha,
+                                                              beta=self.reach_params.beta,
+                                                              prev_directions=r_arr,
+                                                              prev_s_array=s_arr)
+        # print(next_image)
         self.sf = np.array(next_image)
+        return s_arr, r_arr
 
     def set_abs_dynamics(self, matrix_A, poly_U):
         abs_dynamics = SysDynamics(dim=self.dim,
@@ -158,15 +168,8 @@ class Hybridiser:
     def set_abs_domain(self, abs_domain):
         self.abs_domain = abs_domain
 
-    def set_init_image(self, mat, col):
-        self.init_mat_X0 = mat
-        self.init_col_X0 = col
-
-    def refine_bbox(self, sf):
-        x_ub = sf[0]
-        x_lb = -sf[1]
-        y_ub = sf[2]
-        y_lb = -sf[3]
-        # print(self.directions)
-        from ConvexSet.HyperBox import HyperBox
-        return HyperBox([[x_lb, y_lb], [x_lb, y_ub], [x_ub, y_lb], [x_ub, y_ub]])
+    def update_init_image(self, init_mat, init_col):
+        # self.init_coeff_matrix = init_coeff_matrix_X0
+        # self.init_col_vec = init_col_vec_X0
+        self.init_mat_X0 = init_mat
+        self.init_col_X0 = init_col

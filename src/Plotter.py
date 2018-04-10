@@ -63,7 +63,7 @@ class Plotter:
         for vertices in vertices_sorted:
             x, y = [float(elem.split()[0]) for elem in vertices], [float(elem.split()[1]) for elem in vertices]
             mat = np.transpose(np.array([x, y]))
-            poly1patch = patches.Polygon(mat, fill=False, edgecolor='red')
+            poly1patch = patches.Polygon(mat, fill=False, edgecolor='red', )
             ax.add_patch(poly1patch)
 
         plt.autoscale(enable=True)
