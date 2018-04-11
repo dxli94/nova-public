@@ -17,8 +17,8 @@ def main():
     # ============== setting up ============== #
     cvx.solvers.options['glpk'] = dict(msg_lev='GLP_MSG_OFF')
 
-    tau = 0.001
-    time_horizon = 0.01
+    tau = 0.01
+    time_horizon = 10
     direction_type = 0
     starting_epsilon = 1e-4
     dim = 2
@@ -26,7 +26,7 @@ def main():
     # f: Vanderpol dynamics
     non_linear_dynamics = ['x[1]', '(1-x[0]^2)*x[1]-x[0]']
     is_linear = [True, False]
-    init_set = HyperBox(np.array([[-1, -2], [-1, -2.00001], [-1.00001, -2], [-1.00001, -2.000001]]))
+    init_set = HyperBox(np.array([[0, 0.7], [0, 0.700001], [0.00001, 0.7], [0.00001, 0.700001]]))
     init_matrix_X0, init_col_vec_X0 = init_set.to_constraints()
     init_poly = Polyhedron(init_matrix_X0, init_col_vec_X0)
     # ============== setting up done ============== #
@@ -54,7 +54,6 @@ def main():
     r_on_each_direction = directions
 
     isChanged = False
-    # Remember to comment this section in for functioning
     while i < time_frames:
         # if P_{i+1} \subset B
         s_temp, r_temp = hybridiser.compute_next_image(s_on_each_direction, r_on_each_direction)

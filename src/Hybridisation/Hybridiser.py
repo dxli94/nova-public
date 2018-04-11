@@ -1,5 +1,6 @@
 import PPLHelper
 from ConvexSet.Polyhedron import Polyhedron
+from ConvexSet.TransPoly import TransPoly
 from PostOperator import PostOperator
 import SuppFuncUtils
 
@@ -82,6 +83,10 @@ class Hybridiser:
         # matrix_A
         matrix_A = np.array(list(coeff_map[i] for i in range(self.dim)))
 
+        # print('sampling matrix A: ' + str(matrix_A))
+        # print('jacobian matrix A: ' + str(np.array(self.jacobian_func.subs(list(zip(self.variables, abs_domain_centre)))).astype(np.float64)))
+        # exit()
+
         # print('matrix_A: ' + str(matrix_A))
         # print('abs centre: ' + str(abs_domain_centre))
         # print('approx. val: ' + str(np.dot(matrix_A, abs_domain_centre)))
@@ -102,10 +107,9 @@ class Hybridiser:
                     [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)])
                 u_max_temp = error_func.eval(xy)
                 u_max = max(abs(u_max_temp[0]), abs(u_max_temp[1]))
-                """
-                Remember to change this back!!
-                TODO
-                """
+
+                # Todo Remember to change this back!!
+
                 # u_max_array.extend([u_max] * 2)
 
                 u_max_array.extend([0] * 2)
@@ -135,25 +139,40 @@ class Hybridiser:
                         return coeff_map
 
     def compute_initial_image(self):
-        sf_array = self.post_opt.compute_initial(abs_dynamics=self.abs_dynamics,
-                                                 delta_tp=self.reach_params.delta_tp,
-                                                 tau=self.tau,
-                                                 alpha=self.reach_params.alpha,
-                                                 directions=self.directions)
-        self.sf = np.array(sf_array)
+        poly_init = Polyhedron(self.abs_dynamics.init_coeff_matrix, self.abs_dynamics.init_col_vec)
+        trans_poly_U = TransPoly(self.abs_dynamics.matrix_B,
+                                 self.abs_dynamics.coeff_matrix_U,
+                                 self.abs_dynamics.col_vec_U)
 
-    # abs_dynamics, delta_tp, tau, alpha, beta, prev_directions, sf_current
-    def compute_next_image(self, s_arr, r_arr):
-        next_image, s_arr, r_arr = self.post_opt.compute_next(abs_dynamics=self.abs_dynamics,
-                                                              delta_tp=self.reach_params.delta_tp,
-                                                              tau=self.tau,
-                                                              alpha=self.reach_params.alpha,
-                                                              beta=self.reach_params.beta,
-                                                              prev_directions=r_arr,
-                                                              prev_s_array=s_arr)
-        # print(next_image)
-        self.sf = np.array(next_image)
-        return s_arr, r_arr
+        sf_arr = [self.post_opt.compute_initial_sf(self.reach_params.delta_tp, poly_init, trans_poly_U, l,
+                                                   self.reach_params.alpha, self.tau) for l in self.directions]
+        self.sf = np.array(sf_arr)
+        return sf_arr
+
+    def compute_next_image(self, s_vec, r_vec):
+        sf_vec = []
+        current_s_array = []
+        current_r_array = []
+        poly_init = Polyhedron(self.abs_dynamics.init_coeff_matrix, self.abs_dynamics.init_col_vec)
+        trans_poly_U = TransPoly(self.abs_dynamics.matrix_B, self.abs_dynamics.coeff_matrix_U,
+                                 self.abs_dynamics.col_vec_U)
+
+        for idx in range(len(r_vec)):
+            prev_r = r_vec[idx]
+            prev_s = s_vec[idx]
+            r = np.dot(self.reach_params.delta_tp, prev_r)
+            s = prev_s + self.post_opt.compute_sf_w(prev_r, trans_poly_U, self.reach_params.beta, self.tau)
+            sf = s + self.post_opt.compute_initial_sf(self.reach_params.delta_tp,
+                                                      poly_init, trans_poly_U,
+                                                      r,
+                                                      self.reach_params.alpha,
+                                                      self.tau)
+            current_s_array.append(s)
+            sf_vec.append(sf)
+            current_r_array.append(r)
+
+        self.sf = np.array(sf_vec)
+        return current_s_array, current_r_array
 
     def set_abs_dynamics(self, matrix_A, poly_U):
         abs_dynamics = SysDynamics(dim=self.dim,

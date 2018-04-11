@@ -129,31 +129,3 @@ class PostOperator:
             ret.append(Polyhedron(np.array(directions), sf_vec))
 
         return ret
-
-    def compute_initial(self, abs_dynamics, delta_tp, tau, alpha, directions):
-        poly_init = Polyhedron(abs_dynamics.init_coeff_matrix, abs_dynamics.init_col_vec)
-        trans_poly_U = TransPoly(abs_dynamics.matrix_B, abs_dynamics.coeff_matrix_U, abs_dynamics.col_vec_U)
-
-        sf_arr = [self.compute_initial_sf(delta_tp, poly_init, trans_poly_U, l, alpha, tau) for l in directions]
-        return sf_arr
-
-    def compute_next(self, abs_dynamics, delta_tp, tau, alpha, beta, prev_directions, prev_s_array):
-        ret = []
-        s_array = []
-        current_directions = []
-        poly_init = Polyhedron(abs_dynamics.init_coeff_matrix, abs_dynamics.init_col_vec)
-        trans_poly_U = TransPoly(abs_dynamics.matrix_B, abs_dynamics.coeff_matrix_U, abs_dynamics.col_vec_U)
-
-        for idx in range(len(prev_directions)):
-            prev_r = prev_directions[idx]
-            prev_s = prev_s_array[idx]
-            r = np.dot(delta_tp, prev_r)
-            s = prev_s + self.compute_sf_w(prev_r, trans_poly_U, beta, tau)
-            sf = self.compute_initial_sf(delta_tp, poly_init, trans_poly_U, r, alpha, tau) + s
-            # print(sf)
-            # exit()
-            s_array.append(s)
-            ret.append(sf)
-            current_directions.append(r)
-
-        return ret, s_array, current_directions
