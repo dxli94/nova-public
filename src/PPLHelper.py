@@ -12,6 +12,7 @@ def create_ppl_polyhedra_from_support_functions(sf_vec, directions, dim):
     cs = Constraint_System()
     variables = np.array([Variable(idx) for idx in range(dim)])
 
+    # print(sf_vec)
     for idx, sf_val in zip(range(len(sf_vec)), sf_vec):
         cs.insert(normalised(np.dot(directions[idx], variables)) <= normalised(sf_val))
     return C_Polyhedron(cs)

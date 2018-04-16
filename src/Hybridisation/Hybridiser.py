@@ -41,8 +41,6 @@ class Hybridiser:
         x, y = self.variables
         non_linear_dynamics = [y, (1 - x ** 2) * y - x]
         self.jacobian_func = sympy.Matrix(non_linear_dynamics).jacobian(self.variables)
-        # print(self.jacobian_func)
-        # exit()
 
         # the following attributes would be updated along the flowpipe construction
         self.directions = directions
@@ -50,10 +48,10 @@ class Hybridiser:
         self.abs_domain = None
         self.init_mat_X0 = init_mat_X0
         self.init_col_X0 = init_col_X0
-        self.sf = np.zeros(len(self.directions))
         self.reach_params = reachParams()
-        self.prev_sf = np.zeros(len(self.directions))
-        # self.r_array = []
+        self.P = np.zeros(len(self.directions))
+        self.X = np.zeros(len(self.directions))
+        self.init_X = np.zeros(len(self.directions))
 
     def hybridise(self, bbox, starting_epsilon):
         bbox.bloat(starting_epsilon)
@@ -79,7 +77,6 @@ class Hybridiser:
         center_and_corners = np.append([abs_domain_centre], abs_domain_corners, axis=0)
         sampling_points = [(cc, evaluate_exp(self.nonlin_dyn, cc[0], cc[1])) for cc in center_and_corners]
         coeff_map = self.approx_non_linear_dyn(sampling_points)
-
         # matrix_A
         matrix_A = np.array(list(coeff_map[i] for i in range(self.dim)))
 
@@ -101,7 +98,10 @@ class Hybridiser:
                 # assuming 2 dimensions, can be easily generalised to n-dimension case
                 affine_dynamic = str(matrix_A[i][0]) + '*x[0] + ' + str(matrix_A[i][1]) + '*x[1]'
                 error_func_str = str(self.nonlin_dyn[i]) + '-(' + affine_dynamic + ')'
-                error_func = pyibex.Function("x[%d]" % self.dim, error_func_str)
+                try:
+                    error_func = pyibex.Function("x[%d]" % self.dim, error_func_str)
+                except RuntimeError:
+                    print('severe error.')
 
                 xy = pyibex.IntervalVector(
                     [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)])
@@ -131,29 +131,33 @@ class Hybridiser:
                     b_x = np.array(list(comb[i][1][k] for i in range(self.dim)))
                     try:
                         a_x = np.linalg.solve(x, b_x)
-                        coeff_map[k] = a_x
                     except np.linalg.LinAlgError:
                         continue
 
+                    # if any(np.isnan(a_x)) or any(np.isinf(a_x)):
+                    #     continue
+                    coeff_map[k] = a_x
+
                     if len(coeff_map) == self.dim:
+                        # print(coeff_map)
                         return coeff_map
 
-    def compute_initial_image(self):
-        poly_init = Polyhedron(self.abs_dynamics.init_coeff_matrix, self.abs_dynamics.init_col_vec)
+    def compute_alpha_step(self):
+        poly_init = Polyhedron(self.directions, self.X)
         trans_poly_U = TransPoly(self.abs_dynamics.matrix_B,
                                  self.abs_dynamics.coeff_matrix_U,
                                  self.abs_dynamics.col_vec_U)
 
         sf_arr = [self.post_opt.compute_initial_sf(self.reach_params.delta_tp, poly_init, trans_poly_U, l,
                                                    self.reach_params.alpha, self.tau) for l in self.directions]
-        self.sf = np.array(sf_arr)
-        return sf_arr
+        self.P = np.array(sf_arr)
+        # .reshape(len(self.directions), 1)
 
-    def compute_next_image(self, s_vec, r_vec):
+    def compute_beta_step(self, s_vec, r_vec):
         sf_vec = []
         current_s_array = []
         current_r_array = []
-        poly_init = Polyhedron(self.abs_dynamics.init_coeff_matrix, self.abs_dynamics.init_col_vec)
+        poly_init = Polyhedron(self.directions, self.init_X)
         trans_poly_U = TransPoly(self.abs_dynamics.matrix_B, self.abs_dynamics.coeff_matrix_U,
                                  self.abs_dynamics.col_vec_U)
 
@@ -167,12 +171,28 @@ class Hybridiser:
                                                       r,
                                                       self.reach_params.alpha,
                                                       self.tau)
-            current_s_array.append(s)
             sf_vec.append(sf)
+            current_s_array.append(s)
             current_r_array.append(r)
 
-        self.sf = np.array(sf_vec)
+        self.P = np.array(sf_vec)
         return current_s_array, current_r_array
+
+    def compute_gamma_step(self):
+        sf_vec = []
+        poly_init = Polyhedron(self.directions, self.X)
+        # print(poly_init.vertices)
+        trans_poly_U = TransPoly(self.abs_dynamics.matrix_B, self.abs_dynamics.coeff_matrix_U,
+                                 self.abs_dynamics.col_vec_U)
+
+        for l, sf_val in zip(self.directions, self.X):
+            r = np.dot(self.reach_params.delta_tp, l)
+            s = self.post_opt.compute_sf_w(r, trans_poly_U, 0, self.tau)
+            sf_X0 = poly_init.compute_support_function(r)
+            sf = sf_X0 + s
+            sf_vec.append(sf)
+
+        self.X = np.array(sf_vec).reshape(len(self.directions), 1)
 
     def set_abs_dynamics(self, matrix_A, poly_U):
         abs_dynamics = SysDynamics(dim=self.dim,
@@ -188,7 +208,5 @@ class Hybridiser:
         self.abs_domain = abs_domain
 
     def update_init_image(self, init_mat, init_col):
-        # self.init_coeff_matrix = init_coeff_matrix_X0
-        # self.init_col_vec = init_col_vec_X0
         self.init_mat_X0 = init_mat
         self.init_col_X0 = init_col
