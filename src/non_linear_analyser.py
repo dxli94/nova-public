@@ -1,6 +1,6 @@
-import PPLHelper
 import SuppFuncUtils
 from ConvexSet.HyperBox import HyperBox
+from ConvexSet.HyperBox import hyperbox_contain
 from ConvexSet.Polyhedron import Polyhedron
 from Hybridisation.Hybridiser import Hybridiser
 
@@ -23,20 +23,18 @@ def main():
     cvx.solvers.options['glpk'] = dict(msg_lev='GLP_MSG_OFF')
 
     tau = 0.01
-    time_horizon = 8
+    time_horizon = 15
     direction_type = 0
-    starting_epsilon = 1e-4
     dim = 2
     directions = SuppFuncUtils.generate_directions(direction_type, dim)
     # f: Vanderpol oscillator
     non_linear_dynamics = ['x[1]', '(1-x[0]^2)*x[1]-x[0]']
     is_linear = [True, False]
-    # init_set = HyperBox(np.array([[1.75705, -0.34387], [1.75705, -0.54896], [2.06926, -0.54896], [2.06926, -0.34387]]))
-    init_set = HyperBox(np.array([[1, -2], [1, -2.0001], [1.0001, -2], [1.0001, -2.0001]]))
+    init_set = HyperBox(np.array([[1.765, 1.935]]*4))
+
     init_matrix_X0, init_col_vec_X0 = init_set.to_constraints()
     init_poly = Polyhedron(init_matrix_X0, init_col_vec_X0)
     time_frames = int(np.floor(time_horizon / tau))
-    epsilon = starting_epsilon
     # ============== setting up done ============== #
 
     # ============== start flowpipe construction. ============== #
@@ -47,13 +45,15 @@ def main():
     # B := \bb(X0)
     bbox = generate_bounding_box(init_poly)
     # (A, V) := L(f, B), s.t. f(x) = (A, V) over-approx. g(x)
-    hybridiser.hybridise(bbox, starting_epsilon)
+    hybridiser.hybridise(bbox, 1e-9)
     # P_{0} := \alpha(X_{0})
     hybridiser.compute_alpha_step()
+    hybridiser.P = hybridiser.P_temp
     i = 0
 
     # initialise support function matrix, [r], [s]
-    sf_mat = [hybridiser.P]
+    sf_mat = []
+
     s_on_each_direction = [0] * len(directions)
     r_on_each_direction = directions
 
@@ -65,15 +65,14 @@ def main():
             hybridiser.compute_alpha_step()
             s_temp = [0] * len(directions)
             r_temp = directions
-
             isalpha = True
         else:
             # P_{i+1} := \beta(P_{i})
             s_temp, r_temp = hybridiser.compute_beta_step(s_on_each_direction, r_on_each_direction)
 
         # if P_{i+1} \subset B
-        ppl_poly_next = PPLHelper.create_ppl_polyhedra_from_support_functions(hybridiser.P, hybridiser.directions, dim)
-        if PPLHelper.contains(hybridiser.abs_domain.to_ppl(), ppl_poly_next):
+        if hyperbox_contain(hybridiser.abs_domain.to_constraints()[1], hybridiser.P_temp):
+            hybridiser.P = hybridiser.P_temp
             sf_mat.append(hybridiser.P)
             if isalpha:
                 hybridiser.init_X = hybridiser.X
@@ -83,13 +82,10 @@ def main():
             i += 1
             if i % 100 == 0:
                 print(i)
-
-            epsilon = starting_epsilon
             flag = False
         else:
-            bbox = generate_bounding_box(Polyhedron(hybridiser.directions, hybridiser.P.reshape(len(hybridiser.P), 1)))
-            hybridiser.hybridise(bbox, epsilon)
-            epsilon *= 2
+            bbox = hybridiser.refine_domain()
+            hybridiser.hybridise(bbox, 0)
             flag = True
 
     opvars = (0, 1)

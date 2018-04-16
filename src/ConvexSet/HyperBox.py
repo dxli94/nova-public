@@ -8,6 +8,20 @@ def normalised(n):
     return n * normalised_factor
 
 
+def hyperbox_contain(sf_1, sf_2):
+    for elem in zip(sf_1, sf_2):
+
+        abs_domain_sf = round(elem[0][0], 9)
+        image_sf = round(elem[1], 9)
+
+        # print(abs_domain_sf, image_sf)
+        # exit()
+
+        if abs_domain_sf < image_sf:
+            return False
+    return True
+
+
 class HyperBox:
     def __init__(self, vertices):
         self.vertices = vertices
@@ -53,13 +67,20 @@ class HyperBox:
         """ Todo:
             To be generalised to high dimensions
         """
-        coeff_matrix = np.array([[-1, 0],
-                               [1, 0],
-                               [0, -1],
-                               [0, 1]])
-        col_vec = np.array([-self.bounds[0][0],
-                            self.bounds[0][1],
-                            -self.bounds[1][0],
-                            self.bounds[1][1]]
+        coeff_matrix = np.array([[1, 0],
+                               [-1, 0],
+                               [0, 1],
+                               [0, -1]])
+        col_vec = np.array([self.bounds[0][1],
+                            -self.bounds[0][0],
+                            self.bounds[1][1],
+                            -self.bounds[1][0]]
                            )
         return coeff_matrix, col_vec.reshape(len(col_vec), 1)
+
+
+if __name__ == '__main__':
+    sf_1 = [-1, 2, -4, 5]
+    sf_2 = [-1, 2, -4, 5]
+
+    print(hyperbox_contain(sf_1, sf_2))

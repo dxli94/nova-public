@@ -19,12 +19,11 @@ def create_ppl_polyhedra_from_support_functions(sf_vec, directions, dim):
 
 
 def contains(poly_1, poly_2):
-    # print("poly_1: " + str(poly_1.constraints()) + " contains:")
-    # print("poly_2: " + str(poly_2.constraints()) + " ?")
-    # print(poly_1.contains(poly_2))
+    print("poly_1: " + str(poly_1.constraints()) + " contains:")
+    print("poly_2: " + str(poly_2.constraints()) + " ?")
+    print(poly_1.contains(poly_2))
 
     return poly_1.contains(poly_2)
-
 
 if __name__ == '__main__':
     create_ppl_polyhedra_from_support_functions([1, 1], np.array([[-1, 0], [1, 0]]), 2)

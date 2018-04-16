@@ -1,4 +1,5 @@
 import PPLHelper
+from ConvexSet.HyperBox import HyperBox
 from ConvexSet.Polyhedron import Polyhedron
 from ConvexSet.TransPoly import TransPoly
 from PostOperator import PostOperator
@@ -50,6 +51,7 @@ class Hybridiser:
         self.init_col_X0 = init_col_X0
         self.reach_params = reachParams()
         self.P = np.zeros(len(self.directions))
+        self.P_temp = np.zeros(len(self.directions))
         self.X = np.zeros(len(self.directions))
         self.init_X = np.zeros(len(self.directions))
 
@@ -107,10 +109,11 @@ class Hybridiser:
                     [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)])
                 u_max_temp = error_func.eval(xy)
                 u_max = max(abs(u_max_temp[0]), abs(u_max_temp[1]))
+                u_min = min(abs(u_max_temp[0]), abs(u_max_temp[1]))
 
                 # Todo Remember to change this back!!
-
-                # u_max_array.extend([u_max] * 2)
+                # print([u_max, u_min])
+                # u_max_array.extend([u_max, u_min])
 
                 u_max_array.extend([0] * 2)
         col_vec = np.array(u_max_array)
@@ -150,8 +153,7 @@ class Hybridiser:
 
         sf_arr = [self.post_opt.compute_initial_sf(self.reach_params.delta_tp, poly_init, trans_poly_U, l,
                                                    self.reach_params.alpha, self.tau) for l in self.directions]
-        self.P = np.array(sf_arr)
-        # .reshape(len(self.directions), 1)
+        self.P_temp = np.array(sf_arr)
 
     def compute_beta_step(self, s_vec, r_vec):
         sf_vec = []
@@ -175,7 +177,7 @@ class Hybridiser:
             current_s_array.append(s)
             current_r_array.append(r)
 
-        self.P = np.array(sf_vec)
+        self.P_temp = np.array(sf_vec)
         return current_s_array, current_r_array
 
     def compute_gamma_step(self):
@@ -210,3 +212,13 @@ class Hybridiser:
     def update_init_image(self, init_mat, init_col):
         self.init_mat_X0 = init_mat
         self.init_col_X0 = init_col
+
+    def refine_domain(self):
+        # take the convex hall of P_{i} and P_{i+1}
+        bounds = np.maximum(self.P_temp.reshape(len(self.directions), 1),
+                            self.P.reshape(len(self.directions), 1))
+
+        vertices = Polyhedron(self.directions, bounds).vertices
+        bbox = HyperBox(vertices)
+
+        return bbox
