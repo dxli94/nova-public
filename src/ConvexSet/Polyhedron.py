@@ -27,6 +27,8 @@ class Polyhedron:
         if coeff_matrix.size > 0:
             self.coeff_matrix = coeff_matrix
             self.col_vec = col_vec
+            self.cvx_coeff_matrix = cvx.matrix(coeff_matrix, tc='d')
+            self.cvx_col_vec = cvx.matrix(col_vec, tc='d')
             # cdd requires b-Ax <= 0 as inputs
 
             self.mat_poly = cdd.Matrix(np.hstack((self.col_vec, -self.coeff_matrix)))
@@ -82,19 +84,19 @@ class Polyhedron:
     def is_universe(self):
         return self.isUniverse
 
-    def compute_support_function(self, direction):
+    def compute_support_function(self, direction, lp):
         if self.is_empty():
             raise RuntimeError("\n Compute Support Function called for an Empty Set.")
         elif self.is_universe():
             raise RuntimeError("\n Cannot Compute Support Function of a Universe Polytope.\n")
         else:
-            A = cvx.matrix(self.coeff_matrix, tc='d')
-            b = cvx.matrix(self.col_vec, tc='d')
             c = cvx.matrix(-direction, tc='d')
-            sol = cvx.solvers.lp(c, A, b, solver='glpk')
-            return direction.dot(np.array(sol['x']))[0]
+            return lp.lp(c, self.cvx_coeff_matrix, self.cvx_col_vec)
 
-    def compute_max_norm(self):
+            # sol = cvx.solvers.lp(c, A, b, solver='glpk')
+            # return direction.dot(np.array(sol['x']))[0]
+
+    def compute_max_norm(self, lp):
         coeff_matrix = self.coeff_matrix
         dim_for_max_norm = coeff_matrix.shape[1]
 
@@ -112,7 +114,7 @@ class Polyhedron:
                 direction[i] = -1
                 generator_directions.append(direction.copy())
 
-            return max([self.compute_support_function(d) for d in generator_directions])
+            return max([self.compute_support_function(d, lp) for d in generator_directions])
 
     # def is_intersect_with(self, pl_2):
     #     """
@@ -120,3 +122,41 @@ class Polyhedron:
     #     then run lp_solver to tests if the constraints have no feasible solution.
     #     """
     #     raise NotImplementedError
+
+
+# def lp(c, G, h):
+#     from cvxopt import glpk
+#     # options = kwargs.get('options', globals()['options'])
+#     # glpk.options = options.get('glpk', {})
+#     glpk.options = dict(msg_lev='GLP_MSG_OFF')
+#     n = c.size[0]
+#     A = cvx.spmatrix([], [], [], (0, n), 'd')
+#     #
+#     # p = A.size[0]
+#     b = cvx.matrix(0.0, (0, 1))
+#     status, x, z, y = glpk.lp(-c, G, h, A, b)
+#     # print(np.array(c).reshape(1, len(c)))
+#     return np.array(c).reshape(1, len(c)).dot(np.array(x))[0][0]
+
+if __name__ == '__main__':
+    directions = np.array([[1, 0], [2, 0],
+                           [-1, 0], [-2, 0],
+                           [1, 1]
+                           ])
+    # A = np.array([[1, 1], [-1, 0], [0, -1]])
+    # col_vec = np.array([[2], [0], [0]])
+    # c = directions[4]
+    # poly = Polyhedron(A, col_vec)
+    # print()
+    # print(poly.compute_support_function(c))
+    # correct_sf = [2, 4, 0, 0, 2]
+    # np.testilp(ng.assert_almost_equal(sf, correct_sf)
+
+    G = cvx.matrix(np.array([[1, 1], [-1, 0], [0, -1]]), tc='d')
+    col_vec = cvx.matrix(np.array([[2], [0], [0]]), tc='d')
+    c = cvx.matrix(directions[4], tc='d')
+    # poly = Polyhedron(A, col_vec)
+
+    print(lp(c=c, G=G, h=col_vec))
+    # correct_sf = [2, 4, 0, 0, 2]
+    # np.testilp(ng.assert_almost_equal(sf, correct_sf)

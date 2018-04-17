@@ -26,11 +26,11 @@ class Plotter:
 
         return list(map(lambda ca: (ca[0], ca[1]), cornersWithAngles))
 
-    def save_polygons_to_file(self):
-        if not os.path.exists('../out/'):
-            os.makedirs('../out/')
+    def save_polygons_to_file(self, dirpath='../out/', filename='outfile.out'):
+        if not os.path.exists(dirpath):
+            os.makedirs(dirpath)
 
-        with open('../out/outfile.out', 'w') as opfile:
+        with open(os.path.join(dirpath, filename), 'w') as opfile:
             for vertices in self.vertices_sorted:
                 x, y = [elem[0] for elem in vertices], [elem[1] for elem in vertices]
                 x.append(x[0])
@@ -41,30 +41,37 @@ class Plotter:
                 opfile.write('\n')
 
     @staticmethod
-    def plot_polygons(ipfile_path):
+    def plot_polygons(filelist):
         import matplotlib.pyplot as plt
         import matplotlib.patches as patches
 
         print('Start reading file...')
-        try:
-            with open(ipfile_path) as ipfile:
-                content = ipfile.read().strip('\n')
-                polygons = content.split('\n\n')
-                vertices_sorted = list(map(lambda poly: poly.split('\n'), polygons))
-        except FileExistsError:
-            print('File does not exist %s' % ipfile_path)
-        print('Finished. \nStart plotting...')
+        colors = ['blue', 'red']
+        linewidths = [2, 1]
+        linestyles = ['solid', 'dashed']
+
 
         fig = plt.figure(1, dpi=90)
         ax = fig.add_subplot(111)
         ax.set_xlabel('$x_{1}$')
         ax.set_ylabel('$x_{2}$')
 
-        for vertices in vertices_sorted:
-            x, y = [float(elem.split()[0]) for elem in vertices], [float(elem.split()[1]) for elem in vertices]
-            mat = np.transpose(np.array([x, y]))
-            poly1patch = patches.Polygon(mat, fill=False, edgecolor='red', )
-            ax.add_patch(poly1patch)
+        for ipfile_path, color, lw, ls in zip(filelist, colors[:len(filelist)], linewidths[:len(filelist)], linestyles[:len(filelist)]):
+            print(ipfile_path)
+            try:
+                with open(ipfile_path) as ipfile:
+                    content = ipfile.read().strip('\n')
+                    polygons = content.split('\n\n')
+                    vertices_sorted = list(map(lambda poly: poly.split('\n'), polygons))
+            except FileExistsError:
+                print('File does not exist %s' % ipfile_path)
+            print('Finished. \nStart plotting...')
+
+            for vertices in vertices_sorted:
+                x, y = [float(elem.split()[0]) for elem in vertices], [float(elem.split()[1]) for elem in vertices]
+                mat = np.transpose(np.array([x, y]))
+                poly1patch = patches.Polygon(mat, fill=False, edgecolor=color, linewidth=lw, linestyle=ls)
+                ax.add_patch(poly1patch)
 
         plt.autoscale(enable=True)
         print('Showing plot now.')
@@ -75,8 +82,10 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path', help='path to the input file storing vertex.')
+    parser.add_argument('--path', type=str, nargs='*', help='path to the input file storing vertex.')
     args = parser.parse_args()
-    file = args.path if args.path else '../out/outfile.out'
+    filelist = args.path if args.path else ['../out/outfile.out']
+    # print(filelist)
+    # exit()
 
-    Plotter.plot_polygons(file)
+    Plotter.plot_polygons(filelist)

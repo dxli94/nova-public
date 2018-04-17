@@ -10,6 +10,8 @@ import numpy as np
 import sympy
 import pyibex
 
+from scipy.optimize import minimize
+
 from SysDynamics import SysDynamics
 
 generator_2d_matrix = np.array([[1, 0], [-1, 0], [0, 1], [0, -1]])
@@ -55,13 +57,13 @@ class Hybridiser:
         self.X = np.zeros(len(self.directions))
         self.init_X = np.zeros(len(self.directions))
 
-    def hybridise(self, bbox, starting_epsilon):
+    def hybridise(self, bbox, starting_epsilon, lp):
         bbox.bloat(starting_epsilon)
         matrix_A, poly_U = self.gen_abs_dynamics(abs_domain=bbox)
 
         self.set_abs_dynamics(matrix_A, poly_U)
-        self.reach_params.alpha = SuppFuncUtils.compute_alpha(self.abs_dynamics, self.tau)
-        self.reach_params.beta = SuppFuncUtils.compute_beta(self.abs_dynamics, self.tau)
+        self.reach_params.alpha = SuppFuncUtils.compute_alpha(self.abs_dynamics, self.tau, lp)
+        self.reach_params.beta = SuppFuncUtils.compute_beta(self.abs_dynamics, self.tau, lp)
         self.reach_params.delta_tp = np.transpose(SuppFuncUtils.mat_exp(self.abs_dynamics.matrix_A, self.tau))
         self.set_abs_domain(bbox)
 
@@ -97,30 +99,62 @@ class Hybridiser:
             if self.is_linear[i]:
                 u_max_array.extend([0] * 2)
             else:
+                # affine_dynamic = str(matrix_A[i][0]) + '*x[0] + ' + str(matrix_A[i][1]) + '*x[1]'
+                x = abs_domain_centre
+                coeff_vec = matrix_A[i]
+
+                def err_func(x):
+                    lin_func = np.dot(coeff_vec, x)
+                    non_lin_func = evaluate_exp('', *x)
+                    err = non_lin_func[1] - lin_func
+                    return err
+
+                def minus_err_func(x):
+                    lin_func = np.dot(coeff_vec, x)
+                    non_lin_func = evaluate_exp('', *x)
+                    err = lin_func - non_lin_func[1]
+                    return err
+
+                # get_err_func([1, 1], x)
+                bound = [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)]
+                # print(estimate_error(err_func, bound, 1, x))
+
+                # print('guess: ' + str(x))
+                # print('coeff_vec: ' + str(coeff_vec))
+                # print('bound x: ' + str(bound[0]))
+                # print('bound y: ' + str(bound[1]))
+
+                u_min = minimize(err_func, x, bounds=bound).fun
+                u_max = -minimize(minus_err_func, x, bounds=bound).fun
+
+                # u_max_array.extend([u_max, -u_min])
+
+                # print('\n')
+                # exit()
                 # assuming 2 dimensions, can be easily generalised to n-dimension case
-                affine_dynamic = str(matrix_A[i][0]) + '*x[0] + ' + str(matrix_A[i][1]) + '*x[1]'
-                error_func_str = str(self.nonlin_dyn[i]) + '-(' + affine_dynamic + ')'
-                try:
-                    error_func = pyibex.Function("x[%d]" % self.dim, error_func_str)
-                except RuntimeError:
-                    print('severe error.')
-
-                xy = pyibex.IntervalVector(
-                    [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)])
-                u_max_temp = error_func.eval(xy)
-                u_max = max(abs(u_max_temp[0]), abs(u_max_temp[1]))
-                u_min = min(abs(u_max_temp[0]), abs(u_max_temp[1]))
-
+                # affine_dynamic = str(matrix_A[i][0]) + '*x[0] + ' + str(matrix_A[i][1]) + '*x[1]'
+                # error_func_str = str(self.nonlin_dyn[i]) + '-(' + affine_dynamic + ')'
+                # try:
+                #     error_func = pyibex.Function("x[%d]" % self.dim, error_func_str)
+                # except RuntimeError:
+                #     print('severe error.')
+                #
+                # xy = pyibex.IntervalVector(
+                #     [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)])
+                # u_max_temp = error_func.eval(xy)
+                # u_max = max(abs(u_max_temp[0]), abs(u_max_temp[1]))
+                # u_min = min(abs(u_max_temp[0]), abs(u_max_temp[1]))
                 # Todo Remember to change this back!!
                 # print([u_max, u_min])
                 # u_max_array.extend([u_max, u_min])
-
+                #
                 u_max_array.extend([0] * 2)
         col_vec = np.array(u_max_array)
         # print(col_vec)
 
         # poly_U
         poly_U = (generator_2d_matrix, col_vec.reshape(len(col_vec), 1))
+        # print(poly_U)
 
         return matrix_A, poly_U
 
@@ -145,17 +179,17 @@ class Hybridiser:
                         # print(coeff_map)
                         return coeff_map
 
-    def compute_alpha_step(self):
+    def compute_alpha_step(self, lp):
         poly_init = Polyhedron(self.directions, self.X)
         trans_poly_U = TransPoly(self.abs_dynamics.matrix_B,
                                  self.abs_dynamics.coeff_matrix_U,
                                  self.abs_dynamics.col_vec_U)
 
         sf_arr = [self.post_opt.compute_initial_sf(self.reach_params.delta_tp, poly_init, trans_poly_U, l,
-                                                   self.reach_params.alpha, self.tau) for l in self.directions]
+                                                   self.reach_params.alpha, self.tau, lp) for l in self.directions]
         self.P_temp = np.array(sf_arr)
 
-    def compute_beta_step(self, s_vec, r_vec):
+    def compute_beta_step(self, s_vec, r_vec, lp):
         sf_vec = []
         current_s_array = []
         current_r_array = []
@@ -167,12 +201,13 @@ class Hybridiser:
             prev_r = r_vec[idx]
             prev_s = s_vec[idx]
             r = np.dot(self.reach_params.delta_tp, prev_r)
-            s = prev_s + self.post_opt.compute_sf_w(prev_r, trans_poly_U, self.reach_params.beta, self.tau)
+            s = prev_s + self.post_opt.compute_sf_w(prev_r, trans_poly_U, self.reach_params.beta, self.tau, lp)
             sf = s + self.post_opt.compute_initial_sf(self.reach_params.delta_tp,
                                                       poly_init, trans_poly_U,
                                                       r,
                                                       self.reach_params.alpha,
-                                                      self.tau)
+                                                      self.tau,
+                                                      lp)
             sf_vec.append(sf)
             current_s_array.append(s)
             current_r_array.append(r)
@@ -180,7 +215,7 @@ class Hybridiser:
         self.P_temp = np.array(sf_vec)
         return current_s_array, current_r_array
 
-    def compute_gamma_step(self):
+    def compute_gamma_step(self, lp):
         sf_vec = []
         poly_init = Polyhedron(self.directions, self.X)
         # print(poly_init.vertices)
@@ -189,8 +224,8 @@ class Hybridiser:
 
         for l, sf_val in zip(self.directions, self.X):
             r = np.dot(self.reach_params.delta_tp, l)
-            s = self.post_opt.compute_sf_w(r, trans_poly_U, 0, self.tau)
-            sf_X0 = poly_init.compute_support_function(r)
+            s = self.post_opt.compute_sf_w(r, trans_poly_U, 0, self.tau, lp)
+            sf_X0 = poly_init.compute_support_function(r, lp)
             sf = sf_X0 + s
             sf_vec.append(sf)
 
@@ -222,3 +257,30 @@ class Hybridiser:
         bbox = HyperBox(vertices)
 
         return bbox
+
+def estimate_error(func, bound, minOrMax, x):
+    from scipy.optimize import minimize_scalar
+    res = minimize(func, x, bounds=[bound, bound])
+
+    print(res)
+
+
+# if __name__ == '__main__':
+    # def func(x):
+    #     lin_f = x[0]
+    #     nonlin_g = x[0] ** 2
+    #     error = -(nonlin_g - lin_f)
+    #     return error
+    #
+    # x = np.array([1, 1])
+    # coeff = [1, 1]
+
+    # def err_func(x):
+    #     lin_func = np.dot(coeff, x)
+    #     non_lin_func = evaluate_exp('', *x)
+    #     err_func = non_lin_func[1] - lin_func
+    #     return err_func
+
+    # # get_err_func([1, 1], x)
+    # bound = (0, 0.5)
+    # print(estimate_error(err_func, bound, 1, x))

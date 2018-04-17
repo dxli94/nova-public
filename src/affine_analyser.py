@@ -6,6 +6,7 @@ import SuppFuncUtils
 from DataReader import DataReader
 from Plotter import Plotter
 from PostOperator import PostOperator
+from glpkWrapper import glpkWrapper
 
 
 def parse_args():
@@ -42,9 +43,11 @@ def main():
                                                    dim=sys_dynamics.get_dim())
 
     cvx.solvers.options['glpk'] = dict(msg_lev='GLP_MSG_OFF')
+    lp = glpkWrapper(sys_dynamics.get_dim())
+
     post_opt = PostOperator()
 
-    sf_mat = post_opt.compute_post(sys_dynamics, directions, time_horizon, samp_time)
+    sf_mat = post_opt.compute_post(sys_dynamics, directions, time_horizon, samp_time, lp)
     images = post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=sf_mat)
 
     # for i in range(len(images)):
