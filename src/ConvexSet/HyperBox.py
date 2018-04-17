@@ -10,9 +10,8 @@ def normalised(n):
 
 def hyperbox_contain(sf_1, sf_2):
     for elem in zip(sf_1, sf_2):
-
-        abs_domain_sf = round(elem[0][0], 9)
-        image_sf = round(elem[1], 9)
+        abs_domain_sf = elem[0][0]
+        image_sf = elem[1]
 
         # print(abs_domain_sf, image_sf)
         # exit()

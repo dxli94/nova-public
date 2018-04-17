@@ -42,7 +42,6 @@ def main():
     directions = SuppFuncUtils.generate_directions(direction_type=direction_type,
                                                    dim=sys_dynamics.get_dim())
 
-    cvx.solvers.options['glpk'] = dict(msg_lev='GLP_MSG_OFF')
     lp = glpkWrapper(sys_dynamics.get_dim())
 
     post_opt = PostOperator()
