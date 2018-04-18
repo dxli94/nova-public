@@ -21,7 +21,7 @@ def compute_support_functions_for_polyhedra(poly, directions, lp):
 def main():
     # ============== setting up ============== #
     tau = 0.01
-    time_horizon = 4
+    time_horizon = 10
     direction_type = 0
     dim = 2
     glpk_wrapper = glpkWrapper(dim)
@@ -30,7 +30,8 @@ def main():
     # f: Vanderpol oscillator
     non_linear_dynamics = ['x[1]', '(1-x[0]^2)*x[1]-x[0]']
     is_linear = [True, False]
-    init_set = HyperBox(np.array([[1.765, 1.935]]*4))
+
+    init_set = HyperBox(np.array([[1.765, 1.75]]*4))
     init_matrix_X0, init_col_vec_X0 = init_set.to_constraints()
     init_poly = Polyhedron(init_matrix_X0, init_col_vec_X0)
     time_frames = int(np.floor(time_horizon / tau))
@@ -42,23 +43,25 @@ def main():
     hybridiser.X = compute_support_functions_for_polyhedra(init_poly, directions, glpk_wrapper)
     hybridiser.init_X = hybridiser.X
     # B := \bb(X0)
-    bbox = generate_bounding_box(init_poly)
+    bbox = HyperBox(init_poly.vertices)
+    # print(init_set.to_constraints()[1])
+    # exit()
     # (A, V) := L(f, B), s.t. f(x) = (A, V) over-approx. g(x)
-    hybridiser.hybridise(bbox, 1e-9, glpk_wrapper)
+    hybridiser.hybridise(bbox, 1e-6, glpk_wrapper)
     # P_{0} := \alpha(X_{0})
-    hybridiser.compute_alpha_step(glpk_wrapper)
-    hybridiser.P = hybridiser.P_temp
+    # hybridiser.compute_alpha_step(glpk_wrapper)
+    hybridiser.P_temp = hybridiser.X
+    hybridiser.P = hybridiser.X
     i = 0
 
     # initialise support function matrix, [r], [s]
     sf_mat = []
-
     bbox_mat = []
 
     s_on_each_direction = [0] * len(directions)
     r_on_each_direction = directions
 
-    flag = False  # whether we have a new abstraction domain
+    flag = True  # whether we have a new abstraction domain
     isalpha = False
     epsilon = start_epsilon
     while i < time_frames:
@@ -75,10 +78,10 @@ def main():
         # if P_{i+1} \subset B
         if hyperbox_contain(hybridiser.abs_domain.to_constraints()[1], hybridiser.P_temp):
             hybridiser.P = hybridiser.P_temp
+            # print(hybridiser.P)
             sf_mat.append(hybridiser.P)
 
             bbox_mat.append(bbox.to_constraints()[1])
-
             if isalpha:
                 hybridiser.init_X = hybridiser.X
                 isalpha = False

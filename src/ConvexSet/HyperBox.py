@@ -1,5 +1,7 @@
 import numpy as np
 from ppl import Variable, Constraint_System, C_Polyhedron
+from itertools import combinations
+
 
 normalised_factor = 1e9
 
@@ -23,7 +25,6 @@ def hyperbox_contain(sf_1, sf_2):
 
 class HyperBox:
     def __init__(self, vertices):
-        self.vertices = vertices
         self.dim = len(vertices[0])
         if len(vertices) > 0:
             lower_bounds = [1e9] * self.dim
@@ -41,6 +42,7 @@ class HyperBox:
                     upper_bounds[idx] = v[idx]
 
         self.bounds = np.array([[lower_bounds[idx], upper_bounds[idx]] for idx in range(len(upper_bounds))])
+        self.vertices = list(combinations(self.bounds, self.dim))
 
     def __str__(self):
         str_repr = ''

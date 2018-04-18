@@ -1,0 +1,313 @@
+GNU gdb (Ubuntu 7.11.1-0ubuntu1~16.5) 7.11.1
+Copyright (C) 2016 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "x86_64-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+<http://www.gnu.org/software/gdb/documentation/>.
+For help, type "help".
+Type "apropos word" to search for commands related to "word".
+done.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+done.
+done.
+done.
+done.
+done.
+0x00007fa5d29ddf7b in __waitpid (pid=6083, stat_loc=stat_loc@entry=0x0, 
+    options=options@entry=0) at ../sysdeps/unix/sysv/linux/waitpid.c:29
+
+Stack backtrace
+---------------
+    options=options@entry=0) at ../sysdeps/unix/sysv/linux/waitpid.c:29
+        resultvar = 18446744073709551104
+        sc_cancel_oldtype = 0
+#1  0x00007fa5c0817ee3 in print_enhanced_backtrace ()
+    at build/src/cysignals/implementation.c:405
+        parent_pid = 5116
+        pid = <optimised out>
+#2  0x00007fa5c0818041 in sigdie (sig=sig@entry=6, 
+    s=s@entry=0x7fa5c0820ee0 "Unhandled SIGABRT: An abort() occurred.")
+    at build/src/cysignals/implementation.c:427
+No locals.
+#3  0x00007fa5c081a4fa in cysigs_signal_handler (sig=6)
+    at build/src/cysignals/implementation.c:203
+        inside = <optimised out>
+#4  <signal handler called>
+No locals.
+#5  0x00007fa5d2638428 in __GI_raise (sig=sig@entry=6)
+    at ../sysdeps/unix/sysv/linux/raise.c:54
+        resultvar = 0
+        pid = 5116
+        selftid = 5116
+#6  0x00007fa5d263a02a in __GI_abort () at abort.c:89
+        save_stage = 2
+        act = {__sigaction_handler = {
+            sa_handler = 0x7fa5d29c9780 <_IO_stdfile_1_lock>, 
+            sa_sigaction = 0x7fa5d29c9780 <_IO_stdfile_1_lock>}, sa_mask = {
+            __val = {140350184122112, 30, 57382976, 0, 140350176346823, 
+              140350941298687, 140350179804704, 57382976, 30, 223394496, 
+              223394592, 2, 140350176301256, 140350179804704, 140350176299039, 
+              57327136}}, sa_flags = -1167511032, sa_restorer = 0x36abe20}
+        sigs = {__val = {32, 0 <repeats 15 times>}}
+#7  0x00007fa5ba692f53 in errfunc (fmt=0x7fa5ba6ed4a6 "Assertion failed: %s\n")
+    at env/error.c:55
+        env = 0x36abe20
+        arg = {{gp_offset = 16, fp_offset = 48, 
+            overflow_arg_area = 0x7ffe14efbc20, 
+            reg_save_area = 0x7ffe14efbb50}}
+#8  0x00007fa5ba6c6fbc in _glp_spx_chuzr_harris (lp=lp@entry=0x7ffe14efbe80, 
+    phase=<optimised out>, beta=beta@entry=0xd501f30, q=q@entry=2, 
+    s=<optimised out>, tcol=tcol@entry=0xd50cc60, 
+    p_flag=p_flag@entry=0x7ffe14efbe3c, 
+    tol_piv=tol_piv@entry=1.0000000000000001e-09, tol=<optimised out>, 
+    tol1=<optimised out>) at simplex/spxchuzr.c:294
+        m = 4
+        n = <optimised out>
+        c = 0xd5096a0
+        l = 0xd50bac0
+        u = 0xd50bb20
+        head = 0xd50bb80
+        i = 3
+        i_flag = <optimised out>
+        k = <optimised out>
+        p = <optimised out>
+        alfa = <optimised out>
+        biga = <optimised out>
+        delta = <optimised out>
+        lk = <optimised out>
+        uk = <optimised out>
+        teta = nan(0x8000000000000)
+        teta_min = <optimised out>
+#9  0x00007fa5ba6cb2f3 in choose_pivot (csa=0x7ffe14efbef0)
+    at simplex/spxprim.c:556
+        lp = 0x7ffe14efbe80
+        nnn = 1
+        p = <optimised out>
+        q = 2
+        big = 1
+        list = 0xd502000
+        p_flag = 1
+        best_ratio = <optimised out>
+        m = 4
+        se = 0x7ffe14efbe60
+        tol_piv = 1.0000000000000001e-09
+        try = 1
+        n = 6
+        beta = 0xd501f30
+        d = 0xd501f80
+        t = <optimised out>
+        tcol = 0xd50cc60
+#10 primal_simplex (csa=0x7ffe14efbef0) at simplex/spxprim.c:917
+        m = 4
+        beta = 0xd501f30
+        tcol = 0xd50cbd0
+        msg_lev = 0
+        tol_dj = 9.9999999999999995e-08
+        tol_dj1 = 1e-10
+        n = 6
+        pi = 0xd50cc60
+        c = 0xd5096a0
+        head = 0xd50bb80
+        se = 0x7ffe14efbe60
+        list = 0xd502000
+        trow = 0xd50cc20
+        rho = 0xd50cc60
+        at = 0x0
+        d = 0xd501f80
+        j = <optimised out>
+        refct = 999
+        lp = 0x7ffe14efbe80
+        nt = 0x7ffe14efbe40
+        ret = <optimised out>
+        tol_bnd = 9.9999999999999995e-08
+        tol_bnd1 = 1e-10
+#11 _glp_spx_primal (P=P@entry=0xd501490, parm=parm@entry=0x7ffe14efc450)
+    at simplex/spxprim.c:1130
+        csa_ = {lp = 0x7ffe14efbe80, dir = 1, c = 0xd50aaf0, at = 0x0, 
+          nt = 0x7ffe14efbe40, phase = 2, beta = 0xd501f30, beta_st = 2, 
+          d = 0xd501f80, d_st = 2, se = 0x7ffe14efbe60, num = 1, 
+          list = 0xd502000, q = 0, tcol = 0xd50cbd0, p = 2, p_flag = 1, 
+          trow = 0xd50cc20, work = 0xd50cc60, p_stat = 0, d_stat = 0, 
+          msg_lev = 0, harris = 1, tol_bnd = 9.9999999999999995e-08, 
+          tol_bnd1 = 1e-10, tol_dj = 9.9999999999999995e-08, tol_dj1 = 1e-10, 
+          tol_piv = 1.0000000000000001e-09, it_lim = 2147483647, 
+          tm_lim = 2147483647, out_frq = 500, out_dly = 0, 
+          tm_beg = 1523967876160, it_beg = 0, it_cnt = 1, it_dpy = -1, 
+          inv_cnt = 0}
+        csa = 0x7ffe14efbef0
+        lp = {m = 4, n = 6, nnz = 8, A_ptr = 0xd501e30, A_ind = 0xd50bcd0, 
+          A_val = 0xd5095e0, b = 0xd509650, c = 0xd5096a0, l = 0xd50bac0, 
+          u = 0xd50bb20, head = 0xd50bb80, flag = 0xd5011b0 "", valid = 1, 
+          bfd = 0xd509290}
+        nt = {ptr = 0xd50bbd0, len = 0xd50ab50, ind = 0xd50ab90, 
+          val = 0xd501ec0}
+        se = {valid = 1, refsp = 0xd50acb0 "0", gamma = 0xd501fc0, 
+          work = 0xd50cb80}
+        ret = 223354884
+        map = 0xd50aaa0
+        daeh = <optimised out>
+#12 0x00007fa5ba62c3af in solve_lp (P=P@entry=0xd501490, 
+    parm=parm@entry=0x7ffe14efc450) at glpapi06.c:252
+        ret = <optimised out>
+#13 0x00007fa5ba62ccfb in glp_simplex (P=P@entry=0xd501490, 
+    parm=parm@entry=0x7ffe14efc450) at glpapi06.c:463
+        _parm = {msg_lev = 40, meth = 0, pricing = 5566240, r_test = 0, 
+          tol_bnd = 0, tol_dj = 6.9341890746424155e-310, tol_piv = 0, 
+          obj_ll = 6.9529487630685861e-310, obj_ul = 6.9529487630685861e-310, 
+          it_lim = 0, tm_lim = 0, out_frq = 351256744, out_dly = 32766, 
+          presolve = 40, foo_bar = {0, 2.8789728892754028e-317, 
+            2.9643938750474793e-323, 2.8862885192933741e-317, 
+            6.9341890753874665e-310, 6.9342069383226904e-310, 
+            1.103505382723586e-315, 2.9119522652009518e-317, 
+            2.403905585274169e+114, 6.9529487630713528e-310, 
+            1.2578911343118137e-319, 6.9342004054360333e-310, 
+            6.9342004005127679e-310, 2.403905585274169e+114, 
+            1.9762625833649862e-322, 6.9342069384234798e-310, 
+            6.9342070432226095e-310, 2.9213563107038941e-317, 
+            6.2746337021838311e-322, 1.1035054617740893e-315, 0, 
+            9.8813129168249309e-324, 6.9342004005127679e-310, 
+            1.2155623353593995e+238, 6.9342004054360333e-310, 
+            6.9342004005127679e-310, 6.9342202227778586e-310, 
+            6.9529487630780721e-310, 6.9342202227794396e-310, 
+            -nan(0xf8001eb103e61), 6.9529487630780227e-310, 
+            2.6701506093384957e-317, 1.4821969375237396e-323, 0, 
+            4.9406564584124654e-324, 6.9342203659738928e-310}}
+        i = <optimised out>
+        j = <optimised out>
+        ret = <optimised out>
+#14 0x00007fa5ba9167e5 in simplex (self=<optimised out>, args=<optimised out>, 
+    kwrds=<optimised out>) at src/C/glpk.c:354
+        c = 0x7fa5ad08a030
+        h = 0x7fa5ad089170
+        b = 0x7fa5d2c8cc10
+        x = 0x0
+        z = 0x0
+        y = 0x0
+        G = 0x7fa5ad089260
+        A = 0x7fa5bba6fb70
+        t = 0x7fa5c17ced68
+        param = 0x7fa5bb1d5a08
+        key = 0x7fa5c17cdc38
+        value = 0x7fa5bb1d57f0
+        lp = <optimised out>
+        smcp = {msg_lev = 0, meth = 1, pricing = 34, r_test = 34, 
+          tol_bnd = 9.9999999999999995e-08, tol_dj = 9.9999999999999995e-08, 
+          tol_piv = 1.0000000000000001e-09, obj_ll = -1.7976931348623157e+308, 
+          obj_ul = 1.7976931348623157e+308, it_lim = 2147483647, 
+          tm_lim = 2147483647, out_frq = 500, out_dly = 0, presolve = 0, 
+          foo_bar = {6.9529487631175974e-310, 6.9342202227754871e-310, 
+            1.5810100666919889e-322, 6.934201868305518e-310, 
+            1.5810100666919889e-322, 1.9762625833649862e-323, 
+            6.9342003993744407e-310, 6.9342200542826989e-310, 
+            6.934189074408426e-310, 7.9050503334599447e-323, 
+            4.9406564584124654e-324, 6.9342200543911957e-310, 
+            6.934204146561182e-310, 6.9341890746424155e-310, 
+            6.9342018682818029e-310, 6.934204146561182e-310, 
+            6.9342018682818029e-310, 6.9341890744953816e-310, 
+            1.5475323722035192e-314, 6.9342003993744407e-310, 
+            4.9406564584124654e-324, 6.9342203651936644e-310, 
+            6.9342007463650441e-310, -1.0997455047917976e-151, 
+            5.3012532344235743e-317, 6.9342203848456195e-310, 
+            6.9342203917716294e-310, -5.4289718939990662e-301, 
+            2.8288471627371916e-316, 6.9342191827704646e-310, 0, 
+            2.9213034456797891e-317, 6.9342003980424397e-310, 
+            2.2972866774067945e-316, 6.9342203651936644e-310, 
+            6.9342203848456195e-310}}
+        m = 4
+        n = 2
+        p = 0
+        i = <optimised out>
+        j = <optimised out>
+        k = <optimised out>
+        nnz = <optimised out>
+        nnzmax = <optimised out>
+        rn = <optimised out>
+        cn = <optimised out>
+        pos = 3
+        a = <optimised out>
+        val = <optimised out>
+        kwlist = {0x7fa5ba9175c0 "c", 0x7fa5ba9175c2 "G", 0x7fa5ba917742 "h", 
+          0x7fa5ba9175c4 "A", 0x7fa5ba9175c6 "b", 0x0}
+#15 0x00000000004e9ba7 in PyCFunction_Call ()
+No symbol table info available.
+#16 0x00000000005372f4 in PyEval_EvalFrameEx ()
+No symbol table info available.
+#17 0x000000000053b7e4 in PyEval_EvalFrameEx ()
+No symbol table info available.
+#18 0x000000000053b7e4 in PyEval_EvalFrameEx ()
+No symbol table info available.
+#19 0x00000000005406df in ?? ()
+No symbol table info available.
+#20 0x000000000053c1d0 in PyEval_EvalFrameEx ()
+No symbol table info available.
+#21 0x00000000005406df in ?? ()
+No symbol table info available.
+#22 0x000000000053c1d0 in PyEval_EvalFrameEx ()
+No symbol table info available.
+#23 0x000000000053b7e4 in PyEval_EvalFrameEx ()
+No symbol table info available.
+#24 0x000000000053b7e4 in PyEval_EvalFrameEx ()
+No symbol table info available.
+#25 0x000000000053b7e4 in PyEval_EvalFrameEx ()
+No symbol table info available.
+#26 0x0000000000540199 in ?? ()
+No symbol table info available.
+#27 0x0000000000540e4f in PyEval_EvalCode ()
+No symbol table info available.
+#28 0x000000000060c272 in ?? ()
+No symbol table info available.
+#29 0x000000000060e71a in PyRun_FileExFlags ()
+No symbol table info available.
+#30 0x000000000060ef0c in PyRun_SimpleFileExFlags ()
+No symbol table info available.
+#31 0x000000000063fb26 in Py_Main ()
+No symbol table info available.
+#32 0x00000000004cfeb1 in main ()
+No symbol table info available.
+
+
+Cython backtrace
+----------------
+#0  0x00007fa5d29ddf10 in __waitpid () at /build/glibc-Cl5G7W/glibc-2.23/nptl/../sysdeps/unix/sysv/linux/waitpid.c:29
+#1  0x00007fa5c0817e70 in print_enhanced_backtrace () at /tmp/pip-build-za2gr2rr/cysignals/build/src/cysignals/implementation.c:405
+#2  0x00007fa5c0817fc0 in sigdie () at /tmp/pip-build-za2gr2rr/cysignals/build/src/cysignals/implementation.c:427
+#3  0x00007fa5c081a330 in cysigs_signal_handler () at /tmp/pip-build-za2gr2rr/cysignals/build/src/cysignals/implementation.c:203
+#4  0x00007fa5d2c056c0 in __restore_rt ()
+#5  0x00007fa5d26383f0 in __GI_raise () at /build/glibc-Cl5G7W/glibc-2.23/signal/../sysdeps/unix/sysv/linux/raise.c:54
+#6  0x00007fa5d2639ec0 in __GI_abort () at /build/glibc-Cl5G7W/glibc-2.23/stdlib/abort.c:89
+#7  0x00007fa5ba692e80 in errfunc () at /io/glpk-4.61/src/env/error.c:55
+#8  0x00007fa5ba6c6d20 in _glp_spx_chuzr_harris () at /io/glpk-4.61/src/simplex/spxchuzr.c:294
+#9  0x00007fa5ba6caf2c in choose_pivot () at /io/glpk-4.61/src/simplex/spxprim.c:556
+#10 0x00007fa5ba6ca3a2 in primal_simplex () at /io/glpk-4.61/src/simplex/spxprim.c:917
+#11 0x00007fa5ba6ca030 in _glp_spx_primal () at /io/glpk-4.61/src/simplex/spxprim.c:1130
+#12 0x00007fa5ba62c2e0 in solve_lp () at /io/glpk-4.61/src/glpapi06.c:252
+#13 0x00007fa5ba62c490 in glp_simplex () at /io/glpk-4.61/src/glpapi06.c:463
+#14 0x00007fa5ba9160c0 in simplex () at /tmp/pip-x7nh0h7m-build/src/C/glpk.c:354
+#15 0x00000000004e9b30 in PyCFunction_Call ()
+#16 0x0000000000536ce0 in PyEval_EvalFrameEx ()
+#17 0x0000000000536ce0 in PyEval_EvalFrameEx ()
+#18 0x0000000000536ce0 in PyEval_EvalFrameEx ()
+#19 0x0000000000000000 in ?? ()
+#20 0x0000000000536ce0 in PyEval_EvalFrameEx ()
+#21 0x0000000000000000 in ?? ()
+#22 0x0000000000536ce0 in PyEval_EvalFrameEx ()
+#23 0x0000000000536ce0 in PyEval_EvalFrameEx ()
+#24 0x0000000000536ce0 in PyEval_EvalFrameEx ()
+#25 0x0000000000536ce0 in PyEval_EvalFrameEx ()
+#26 0x0000000000000000 in ?? ()
+#27 0x0000000000540e30 in PyEval_EvalCode ()
+#28 0x0000000000000000 in ?? ()
+#29 0x000000000060e680 in PyRun_FileExFlags ()
+#30 0x000000000060ed50 in PyRun_SimpleFileExFlags ()
+#31 0x000000000063f6d0 in Py_Main ()
+#32 0x00000000004cfdd0 in main ()
+
+29	../sysdeps/unix/sysv/linux/waitpid.c: No such file or directory.
+Install pygments for colorized source code.

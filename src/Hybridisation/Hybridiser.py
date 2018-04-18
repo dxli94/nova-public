@@ -10,7 +10,7 @@ import numpy as np
 import sympy
 import pyibex
 
-from scipy.optimize import minimize
+from scipy.optimize import minimize, least_squares
 
 from SysDynamics import SysDynamics
 
@@ -53,7 +53,8 @@ class Hybridiser:
         self.init_col_X0 = init_col_X0
         self.reach_params = reachParams()
         self.P = np.zeros(len(self.directions))
-        self.P_temp = np.zeros(len(self.directions))
+        # self.P_temp = np.zeros(len(self.directions))
+        self.P_temp = np.array([np.inf, -np.inf]*2)
         self.X = np.zeros(len(self.directions))
         self.init_X = np.zeros(len(self.directions))
 
@@ -72,27 +73,19 @@ class Hybridiser:
         abs_domain_corners = np.array(vertices)
         abs_domain_centre = np.average(abs_domain_corners, axis=0)
 
-        # matrix_A = np.array(self.jacobian_func.subs(list(zip(self.variables, abs_domain_centre)))).astype(np.float64)
-        # matrix_A = np.array(self.jacobian_func.subs(list(zip(self.variables, abs_domain_corners[-1])))).astype(np.float64)
-
         abs_domain_lower_bounds = abs_domain_corners.min(axis=0)
         abs_domain_upper_bounds = abs_domain_corners.max(axis=0)
-
+        # for i in range(0, 100):
+        # points_around_centre = self.do_sampling(abs_domain_lower_bounds, abs_domain_upper_bounds, abs_domain_centre)
+        # # exit()
+        # points_around_centre.add(tuple(abs_domain_centre))
         center_and_corners = np.append([abs_domain_centre], abs_domain_corners, axis=0)
+        # sampling_points = [(cc, evaluate_exp(self.nonlin_dyn, cc[0], cc[1])) for cc in points_around_centre]
         sampling_points = [(cc, evaluate_exp(self.nonlin_dyn, cc[0], cc[1])) for cc in center_and_corners]
+        # print(sampling_points)
         coeff_map = self.approx_non_linear_dyn(sampling_points)
         # matrix_A
         matrix_A = np.array(list(coeff_map[i] for i in range(self.dim)))
-
-        # print('sampling matrix A: ' + str(matrix_A))
-        # print('jacobian matrix A: ' + str(np.array(self.jacobian_func.subs(list(zip(self.variables, abs_domain_centre)))).astype(np.float64)))
-        # exit()
-
-        # print('matrix_A: ' + str(matrix_A))
-        # print('abs centre: ' + str(abs_domain_centre))
-        # print('approx. val: ' + str(np.dot(matrix_A, abs_domain_centre)))
-        # print('real val: ' + str(evaluate_exp(self.nonlin_dyn, abs_domain_centre[0], abs_domain_centre[1])))
-        # print('\n')
 
         u_max_array = []
         for i in range(matrix_A.shape[0]):
@@ -117,17 +110,12 @@ class Hybridiser:
 
                 # get_err_func([1, 1], x)
                 bound = [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)]
-                # print(estimate_error(err_func, bound, 1, x))
-
-                # print('guess: ' + str(x))
-                # print('coeff_vec: ' + str(coeff_vec))
-                # print('bound x: ' + str(bound[0]))
-                # print('bound y: ' + str(bound[1]))
 
                 u_min = minimize(err_func, x, bounds=bound).fun
                 u_max = -minimize(minus_err_func, x, bounds=bound).fun
 
-                # u_max_array.extend([u_max, -u_min])
+                u_max_array.extend([u_max, -u_min])
+                # u_max_array.extend([0] * 2)
 
                 # print('\n')
                 # exit()
@@ -148,15 +136,35 @@ class Hybridiser:
                 # print([u_max, u_min])
                 # u_max_array.extend([u_max, u_min])
                 #
-                u_max_array.extend([0] * 2)
         col_vec = np.array(u_max_array)
         # print(col_vec)
 
         # poly_U
         poly_U = (generator_2d_matrix, col_vec.reshape(len(col_vec), 1))
-        # print(poly_U)
-
         return matrix_A, poly_U
+
+    def do_sampling(self, abs_domain_lower_bounds, abs_domain_upper_bounds, abs_domain_centre):
+        num = self.dim - 1
+        width = abs_domain_upper_bounds - abs_domain_lower_bounds
+        # print(c_x, c_y)
+        new_width = []
+        for wd in width:
+            if wd >= 1e-6:
+                new_width.append(wd)
+            else:
+                new_width.append(1e-6)
+        new_width = np.array(new_width)
+        points = set()
+        # print(abs_domain_upper_bounds)
+        # print(abs_domain_lower_bounds)
+        i = 0
+        while i < num:
+            point = tuple(new_width * np.random.random_sample() + abs_domain_centre)
+            # y = new_width[i] * np.random.random_sample() + c_y
+            if point not in points:
+                points.add(point)
+                i += 1
+        return points
 
     def approx_non_linear_dyn(self, sampling_points):
         coeff_map = {}
@@ -225,11 +233,13 @@ class Hybridiser:
         for l, sf_val in zip(self.directions, self.X):
             r = np.dot(self.reach_params.delta_tp, l)
             s = self.post_opt.compute_sf_w(r, trans_poly_U, 0, self.tau, lp)
+            # s = 0
             sf_X0 = poly_init.compute_support_function(r, lp)
             sf = sf_X0 + s
-            sf_vec.append(sf)
+            sf_vec.append([sf])
 
-        self.X = np.array(sf_vec).reshape(len(self.directions), 1)
+        self.X = np.array(sf_vec)
+        # self.X = np.array(sf_vec).reshape(len(self.directions), 1)
 
     def set_abs_dynamics(self, matrix_A, poly_U):
         abs_dynamics = SysDynamics(dim=self.dim,
@@ -258,6 +268,10 @@ class Hybridiser:
 
         return bbox
 
+    def reset_P_temp(self):
+        self.P_temp = np.array([np.inf, -np.inf]*2)
+
+
 def estimate_error(func, bound, minOrMax, x):
     from scipy.optimize import minimize_scalar
     res = minimize(func, x, bounds=[bound, bound])
@@ -265,22 +279,20 @@ def estimate_error(func, bound, minOrMax, x):
     print(res)
 
 
-# if __name__ == '__main__':
-    # def func(x):
-    #     lin_f = x[0]
-    #     nonlin_g = x[0] ** 2
-    #     error = -(nonlin_g - lin_f)
-    #     return error
-    #
-    # x = np.array([1, 1])
-    # coeff = [1, 1]
+if __name__ == '__main__':
+    from scipy.optimize import leastsq
 
-    # def err_func(x):
-    #     lin_func = np.dot(coeff, x)
-    #     non_lin_func = evaluate_exp('', *x)
-    #     err_func = non_lin_func[1] - lin_func
-    #     return err_func
+    def func(x, p):
+        return np.dot(x, p.reshape(2, 1).flatten())
 
-    # # get_err_func([1, 1], x)
-    # bound = (0, 0.5)
-    # print(estimate_error(err_func, bound, 1, x))
+    def residuals(p, y, x):
+        return (y - func(x, p)).tolist()
+
+    abs_bound = [[0, 1], [0, 1]]
+
+    points = []
+    x = np.random.random_sample((30, 2))
+    y0 = [evaluate_exp('', x0, x1)[1] for x0, x1 in x]
+    p0 = [10, 1]
+    plsq = leastsq(residuals, p0, args=(y0, x))
+    print(plsq[0])
