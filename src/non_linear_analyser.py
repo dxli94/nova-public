@@ -21,7 +21,7 @@ def compute_support_functions_for_polyhedra(poly, directions, lp):
 def main():
     # ============== setting up ============== #
     tau = 0.01
-    time_horizon = 10
+    time_horizon = 6.7
     direction_type = 0
     dim = 2
     glpk_wrapper = glpkWrapper(dim)
@@ -31,7 +31,9 @@ def main():
     non_linear_dynamics = ['x[1]', '(1-x[0]^2)*x[1]-x[0]']
     is_linear = [True, False]
 
-    init_set = HyperBox(np.array([[1.765, 1.75]]*4))
+    init_set = HyperBox(np.array([[1.25, 2.3]]*4))
+    # init_set = HyperBox(np.array([[0, 0.7], [0, 0.700001], [0.00001, 0.7], [0.00001, 0.700001]]))
+
     init_matrix_X0, init_col_vec_X0 = init_set.to_constraints()
     init_poly = Polyhedron(init_matrix_X0, init_col_vec_X0)
     time_frames = int(np.floor(time_horizon / tau))
@@ -44,12 +46,9 @@ def main():
     hybridiser.init_X = hybridiser.X
     # B := \bb(X0)
     bbox = HyperBox(init_poly.vertices)
-    # print(init_set.to_constraints()[1])
-    # exit()
     # (A, V) := L(f, B), s.t. f(x) = (A, V) over-approx. g(x)
     hybridiser.hybridise(bbox, 1e-6, glpk_wrapper)
     # P_{0} := \alpha(X_{0})
-    # hybridiser.compute_alpha_step(glpk_wrapper)
     hybridiser.P_temp = hybridiser.X
     hybridiser.P = hybridiser.X
     i = 0

@@ -1,17 +1,13 @@
-import PPLHelper
+import numpy as np
+import sympy
+from scipy.optimize import minimize
+
+import SuppFuncUtils
 from ConvexSet.HyperBox import HyperBox
 from ConvexSet.Polyhedron import Polyhedron
 from ConvexSet.TransPoly import TransPoly
+from Hybridisation import fit_dynamics
 from PostOperator import PostOperator
-import SuppFuncUtils
-
-import itertools
-import numpy as np
-import sympy
-import pyibex
-
-from scipy.optimize import minimize, least_squares
-
 from SysDynamics import SysDynamics
 
 generator_2d_matrix = np.array([[1, 0], [-1, 0], [0, 1], [0, -1]])
@@ -75,20 +71,10 @@ class Hybridiser:
 
         abs_domain_lower_bounds = abs_domain_corners.min(axis=0)
         abs_domain_upper_bounds = abs_domain_corners.max(axis=0)
-        # for i in range(0, 100):
-        # points_around_centre = self.do_sampling(abs_domain_lower_bounds, abs_domain_upper_bounds, abs_domain_centre)
-        # # exit()
-        # points_around_centre.add(tuple(abs_domain_centre))
-        center_and_corners = np.append([abs_domain_centre], abs_domain_corners, axis=0)
-        # sampling_points = [(cc, evaluate_exp(self.nonlin_dyn, cc[0], cc[1])) for cc in points_around_centre]
-        sampling_points = [(cc, evaluate_exp(self.nonlin_dyn, cc[0], cc[1])) for cc in center_and_corners]
-        # print(sampling_points)
-        coeff_map = self.approx_non_linear_dyn(sampling_points)
-        # matrix_A
-        matrix_A = np.array(list(coeff_map[i] for i in range(self.dim)))
+        matrix_A = fit_dynamics.fit(abs_domain, abs_domain_centre, 5, [0, 0], self.is_linear)
 
         u_max_array = []
-        for i in range(matrix_A.shape[0]):
+        for i in range(self.dim):
             if self.is_linear[i]:
                 u_max_array.extend([0] * 2)
             else:
@@ -114,8 +100,8 @@ class Hybridiser:
                 u_min = minimize(err_func, x, bounds=bound).fun
                 u_max = -minimize(minus_err_func, x, bounds=bound).fun
 
-                u_max_array.extend([u_max, -u_min])
-                # u_max_array.extend([0] * 2)
+                # u_max_array.extend([u_max, -u_min])
+                u_max_array.extend([0] * 2)
 
                 # print('\n')
                 # exit()
@@ -142,50 +128,6 @@ class Hybridiser:
         # poly_U
         poly_U = (generator_2d_matrix, col_vec.reshape(len(col_vec), 1))
         return matrix_A, poly_U
-
-    def do_sampling(self, abs_domain_lower_bounds, abs_domain_upper_bounds, abs_domain_centre):
-        num = self.dim - 1
-        width = abs_domain_upper_bounds - abs_domain_lower_bounds
-        # print(c_x, c_y)
-        new_width = []
-        for wd in width:
-            if wd >= 1e-6:
-                new_width.append(wd)
-            else:
-                new_width.append(1e-6)
-        new_width = np.array(new_width)
-        points = set()
-        # print(abs_domain_upper_bounds)
-        # print(abs_domain_lower_bounds)
-        i = 0
-        while i < num:
-            point = tuple(new_width * np.random.random_sample() + abs_domain_centre)
-            # y = new_width[i] * np.random.random_sample() + c_y
-            if point not in points:
-                points.add(point)
-                i += 1
-        return points
-
-    def approx_non_linear_dyn(self, sampling_points):
-        coeff_map = {}
-        combination = itertools.combinations(sampling_points, self.dim)
-        for comb in combination:
-            x = np.array(list(comb[i][0] for i in range(self.dim)))
-            for k in range(self.dim):
-                if k not in coeff_map:
-                    b_x = np.array(list(comb[i][1][k] for i in range(self.dim)))
-                    try:
-                        a_x = np.linalg.solve(x, b_x)
-                    except np.linalg.LinAlgError:
-                        continue
-
-                    # if any(np.isnan(a_x)) or any(np.isinf(a_x)):
-                    #     continue
-                    coeff_map[k] = a_x
-
-                    if len(coeff_map) == self.dim:
-                        # print(coeff_map)
-                        return coeff_map
 
     def compute_alpha_step(self, lp):
         poly_init = Polyhedron(self.directions, self.X)
@@ -233,7 +175,6 @@ class Hybridiser:
         for l, sf_val in zip(self.directions, self.X):
             r = np.dot(self.reach_params.delta_tp, l)
             s = self.post_opt.compute_sf_w(r, trans_poly_U, 0, self.tau, lp)
-            # s = 0
             sf_X0 = poly_init.compute_support_function(r, lp)
             sf = sf_X0 + s
             sf_vec.append([sf])
@@ -270,29 +211,3 @@ class Hybridiser:
 
     def reset_P_temp(self):
         self.P_temp = np.array([np.inf, -np.inf]*2)
-
-
-def estimate_error(func, bound, minOrMax, x):
-    from scipy.optimize import minimize_scalar
-    res = minimize(func, x, bounds=[bound, bound])
-
-    print(res)
-
-
-if __name__ == '__main__':
-    from scipy.optimize import leastsq
-
-    def func(x, p):
-        return np.dot(x, p.reshape(2, 1).flatten())
-
-    def residuals(p, y, x):
-        return (y - func(x, p)).tolist()
-
-    abs_bound = [[0, 1], [0, 1]]
-
-    points = []
-    x = np.random.random_sample((30, 2))
-    y0 = [evaluate_exp('', x0, x1)[1] for x0, x1 in x]
-    p0 = [10, 1]
-    plsq = leastsq(residuals, p0, args=(y0, x))
-    print(plsq[0])

@@ -47,7 +47,7 @@ class Plotter:
 
         print('Start reading file...')
         colors = ['blue', 'red']
-        linewidths = [2, 1]
+        linewidths = [1, 1]
         linestyles = ['solid', 'dashed']
 
 
