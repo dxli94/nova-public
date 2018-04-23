@@ -52,6 +52,7 @@ class Hybridiser:
         self.P_temp = np.array([np.inf, -np.inf]*2)
         self.X = np.zeros(len(self.directions))
         self.init_X = np.zeros(len(self.directions))
+        self.init_X_in_each_domain = np.zeros(len(self.directions))
 
     def hybridise(self, bbox, starting_epsilon, lp):
         bbox.bloat(starting_epsilon)
@@ -145,7 +146,7 @@ class Hybridiser:
         sf_vec = []
         current_s_array = []
         current_r_array = []
-        poly_init = Polyhedron(self.directions, self.init_X)
+        poly_init = Polyhedron(self.directions, self.init_X_in_each_domain)
         trans_poly_U = TransPoly(self.abs_dynamics.matrix_B, self.abs_dynamics.coeff_matrix_U,
                                  self.abs_dynamics.col_vec_U)
 
@@ -167,22 +168,28 @@ class Hybridiser:
         self.P_temp = np.array(sf_vec)
         return current_s_array, current_r_array
 
-    def compute_gamma_step(self, lp):
+    def compute_gamma_step(self, r_arr, s_arr, lp):
         sf_vec = []
-        poly_init = Polyhedron(self.directions, self.X)
+        next_r_arr = []
+        next_s_arr = []
+        poly_init = Polyhedron(self.directions, self.init_X)
         # print(poly_init.vertices)
         trans_poly_U = TransPoly(self.abs_dynamics.matrix_B, self.abs_dynamics.coeff_matrix_U,
                                  self.abs_dynamics.col_vec_U)
 
-        for l, sf_val in zip(self.directions, self.X):
-            r = np.dot(self.reach_params.delta_tp, l)
-            s = self.post_opt.compute_sf_w(r, trans_poly_U, self.reach_params.beta, self.tau, lp)
+        for prev_r, prev_s in zip(r_arr, s_arr):
+            r = np.dot(self.reach_params.delta_tp, prev_r)
+            s = prev_s + self.post_opt.compute_sf_w(prev_r, trans_poly_U, self.reach_params.beta, self.tau, lp)
             # s = 0
             sf_X0 = poly_init.compute_support_function(r, lp)
+
             sf = sf_X0 + s
             sf_vec.append([sf])
+            next_r_arr.append(r)
+            next_s_arr.append(s)
 
         self.X = np.array(sf_vec)
+        return next_r_arr, next_s_arr
         # self.X = np.array(sf_vec).reshape(len(self.directions), 1)
 
     def set_abs_dynamics(self, matrix_A, poly_U):

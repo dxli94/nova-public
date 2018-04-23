@@ -21,7 +21,7 @@ def compute_support_functions_for_polyhedra(poly, directions, lp):
 def main():
     # ============== setting up ============== #
     tau = 0.01
-    time_horizon = 0.3
+    time_horizon = 1.5
     time_frames = int(np.floor(time_horizon / tau))
     direction_type = 0
     dim = 2
@@ -33,9 +33,9 @@ def main():
     is_linear = [True, False]
 
     # ============== initial state set ==========#
-    # init_set = HyperBox(np.array([[1.25, 2.3]]*4))
+    init_set = HyperBox(np.array([[1.25, 2.3]]*4))
     # large Init
-    init_set = HyperBox(np.array([[1.1, 2.35], [1.1, 2.45], [1.4, 2.35], [1.4, 2.45]]))
+    # init_set = HyperBox(np.array([[1.1, 2.35], [1.1, 2.45], [1.4, 2.35], [1.4, 2.45]]))
     # larger Init
     # init_set = HyperBox(np.array([[0, 0.7], [0, 1.7], [1, 1.7], [1, 1.7]]))
     init_matrix_X0, init_col_vec_X0 = init_set.to_constraints()
@@ -46,6 +46,7 @@ def main():
     hybridiser = Hybridiser(dim, non_linear_dynamics, tau, directions,
                             init_matrix_X0, init_col_vec_X0, is_linear)
     hybridiser.X = compute_support_functions_for_polyhedra(init_poly, directions, glpk_wrapper)
+    hybridiser.init_X_in_each_domain = hybridiser.X
     hybridiser.init_X = hybridiser.X
     # B := \bb(X0)
     bbox = HyperBox(init_poly.vertices)
@@ -61,13 +62,15 @@ def main():
     bbox_mat = []
     x_mat = []
 
-    s_on_each_direction, x_s_on_each_direction = [0] * len(directions)
-    r_on_each_direction, x_r_on_each_direction = directions
+    s_on_each_direction = [0] * len(directions)
+    r_on_each_direction = directions
+
+    x_s_on_each_direction = [0] * len(directions)
+    x_r_on_each_direction = directions
 
     flag = True  # whether we have a new abstraction domain
     isalpha = False
     epsilon = start_epsilon
-    nu = 0
     while i < time_frames:
         if flag:
             # P_{i+1} := \alpha(X_{i})
@@ -77,6 +80,7 @@ def main():
             isalpha = True
         else:
             # P_{i+1} := \beta(P_{i})
+            # s_temp, r_temp = hybridiser.compute_beta_step(s_on_each_direction, r_on_each_direction, glpk_wrapper)
             s_temp, r_temp = hybridiser.compute_beta_step(s_on_each_direction, r_on_each_direction, glpk_wrapper)
 
         # if P_{i+1} \subset B
@@ -87,22 +91,12 @@ def main():
             bbox_mat.append(bbox.to_constraints()[1])
             x_mat.append(hybridiser.X)
 
-            # print(hybridiser.abs_dynamics.matrix_A)
-
-            eigens = np.linalg.eig(hybridiser.abs_dynamics.matrix_A)[0]
-            if all(eigens.imag != 0):
-                if all(eigens.real > 0):
-                    nu += 1
-            else:
-                if not all(eigens.real < 0):
-                    nu += 1
-            # print(eigens)
-            # print('\n')
-
             if isalpha:
-                hybridiser.init_X = hybridiser.X
+                hybridiser.init_X_in_each_domain = hybridiser.X
                 isalpha = False
-            hybridiser.compute_gamma_step(glpk_wrapper)
+            x_r_on_each_direction, x_s_on_each_direction = hybridiser.compute_gamma_step(x_r_on_each_direction,
+                                                                                         x_s_on_each_direction,
+                                                                                         glpk_wrapper)
             s_on_each_direction, r_on_each_direction = s_temp, r_temp
             i += 1
             if i % 100 == 0:
@@ -130,6 +124,7 @@ def main():
     images = hybridiser.post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=bbox_mat)
     plotter = Plotter(images, opvars)
     plotter.save_polygons_to_file(filename='x.out')
+
 
 if __name__ == '__main__':
     main()
