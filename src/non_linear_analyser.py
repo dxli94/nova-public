@@ -21,7 +21,7 @@ def compute_support_functions_for_polyhedra(poly, directions, lp):
 def main():
     # ============== setting up ============== #
     tau = 0.01
-    time_horizon = 3
+    time_horizon = 7
     time_frames = int(np.floor(time_horizon / tau))
     direction_type = 0
     dim = 2

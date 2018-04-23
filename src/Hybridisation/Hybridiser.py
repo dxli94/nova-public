@@ -176,7 +176,7 @@ class Hybridiser:
 
         for l, sf_val in zip(self.directions, self.X):
             r = np.dot(self.reach_params.delta_tp, l)
-            s = self.post_opt.compute_sf_w(r, trans_poly_U, 0, self.tau, lp)
+            s = self.post_opt.compute_sf_w(r, trans_poly_U, self.reach_params.beta, self.tau, lp)
             # s = 0
             sf_X0 = poly_init.compute_support_function(r, lp)
             sf = sf_X0 + s
