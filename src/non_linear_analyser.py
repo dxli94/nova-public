@@ -21,7 +21,7 @@ def compute_support_functions_for_polyhedra(poly, directions, lp):
 def main():
     # ============== setting up ============== #
     tau = 0.01
-    time_horizon = 3
+    time_horizon = 0.3
     time_frames = int(np.floor(time_horizon / tau))
     direction_type = 0
     dim = 2
@@ -33,8 +33,11 @@ def main():
     is_linear = [True, False]
 
     # ============== initial state set ==========#
-    init_set = HyperBox(np.array([[1.25, 2.3]]*4))
-    # init_set = HyperBox(np.array([[0, 0.7], [0, 0.71], [0.1, 0.7], [0.1, 0.71]]))
+    # init_set = HyperBox(np.array([[1.25, 2.3]]*4))
+    # large Init
+    init_set = HyperBox(np.array([[1.1, 2.35], [1.1, 2.45], [1.4, 2.35], [1.4, 2.45]]))
+    # larger Init
+    # init_set = HyperBox(np.array([[0, 0.7], [0, 1.7], [1, 1.7], [1, 1.7]]))
     init_matrix_X0, init_col_vec_X0 = init_set.to_constraints()
     init_poly = Polyhedron(init_matrix_X0, init_col_vec_X0)
     # ============== setting up done ============== #
@@ -56,13 +59,15 @@ def main():
     # initialise support function matrix, [r], [s]
     sf_mat = []
     bbox_mat = []
+    x_mat = []
 
-    s_on_each_direction = [0] * len(directions)
-    r_on_each_direction = directions
+    s_on_each_direction, x_s_on_each_direction = [0] * len(directions)
+    r_on_each_direction, x_r_on_each_direction = directions
 
     flag = True  # whether we have a new abstraction domain
     isalpha = False
     epsilon = start_epsilon
+    nu = 0
     while i < time_frames:
         if flag:
             # P_{i+1} := \alpha(X_{i})
@@ -80,6 +85,19 @@ def main():
             # print(hybridiser.P)
             sf_mat.append(hybridiser.P)
             bbox_mat.append(bbox.to_constraints()[1])
+            x_mat.append(hybridiser.X)
+
+            # print(hybridiser.abs_dynamics.matrix_A)
+
+            eigens = np.linalg.eig(hybridiser.abs_dynamics.matrix_A)[0]
+            if all(eigens.imag != 0):
+                if all(eigens.real > 0):
+                    nu += 1
+            else:
+                if not all(eigens.real < 0):
+                    nu += 1
+            # print(eigens)
+            # print('\n')
 
             if isalpha:
                 hybridiser.init_X = hybridiser.X
@@ -109,6 +127,9 @@ def main():
     plotter = Plotter(images, opvars)
     plotter.save_polygons_to_file(filename='bbox.out')
 
+    images = hybridiser.post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=bbox_mat)
+    plotter = Plotter(images, opvars)
+    plotter.save_polygons_to_file(filename='x.out')
 
 if __name__ == '__main__':
     main()
