@@ -6,7 +6,7 @@ import SuppFuncUtils
 from DataReader import DataReader
 from Plotter import Plotter
 from PostOperator import PostOperator
-from glpkWrapper import glpkWrapper
+from GlpkWrapper import GlpkWrapper
 
 
 def parse_args():
@@ -42,7 +42,7 @@ def main():
     directions = SuppFuncUtils.generate_directions(direction_type=direction_type,
                                                    dim=sys_dynamics.get_dim())
 
-    lp = glpkWrapper(sys_dynamics.get_dim())
+    lp = GlpkWrapper(sys_dynamics.get_dim())
 
     post_opt = PostOperator()
 

@@ -3,7 +3,7 @@ from ConvexSet.HyperBox import HyperBox
 from ConvexSet.HyperBox import hyperbox_contain
 from ConvexSet.Polyhedron import Polyhedron
 from Hybridisation.Hybridiser import Hybridiser
-from glpkWrapper import glpkWrapper
+from GlpkWrapper import GlpkWrapper
 
 import numpy as np
 
@@ -21,22 +21,22 @@ def compute_support_functions_for_polyhedra(poly, directions, lp):
 def main():
     # ============== setting up ============== #
     tau = 0.01
-    time_horizon = 6.7
+    time_horizon = 3
+    time_frames = int(np.floor(time_horizon / tau))
     direction_type = 0
     dim = 2
-    glpk_wrapper = glpkWrapper(dim)
+    glpk_wrapper = GlpkWrapper(dim)
     directions = SuppFuncUtils.generate_directions(direction_type, dim)
     start_epsilon = 1e-9
     # f: Vanderpol oscillator
     non_linear_dynamics = ['x[1]', '(1-x[0]^2)*x[1]-x[0]']
     is_linear = [True, False]
 
+    # ============== initial state set ==========#
     init_set = HyperBox(np.array([[1.25, 2.3]]*4))
-    # init_set = HyperBox(np.array([[0, 0.7], [0, 0.700001], [0.00001, 0.7], [0.00001, 0.700001]]))
-
+    # init_set = HyperBox(np.array([[0, 0.7], [0, 0.71], [0.1, 0.7], [0.1, 0.71]]))
     init_matrix_X0, init_col_vec_X0 = init_set.to_constraints()
     init_poly = Polyhedron(init_matrix_X0, init_col_vec_X0)
-    time_frames = int(np.floor(time_horizon / tau))
     # ============== setting up done ============== #
 
     # ============== start flowpipe construction. ============== #
@@ -79,8 +79,8 @@ def main():
             hybridiser.P = hybridiser.P_temp
             # print(hybridiser.P)
             sf_mat.append(hybridiser.P)
-
             bbox_mat.append(bbox.to_constraints()[1])
+
             if isalpha:
                 hybridiser.init_X = hybridiser.X
                 isalpha = False

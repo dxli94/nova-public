@@ -39,7 +39,7 @@ class Hybridiser:
         self.variables = sympy.symbols('x,y', real=True)
         x, y = self.variables
         non_linear_dynamics = [y, (1 - x ** 2) * y - x]
-        self.jacobian_func = sympy.Matrix(non_linear_dynamics).jacobian(self.variables)
+        self.sym_jacobian = sympy.Matrix(non_linear_dynamics).jacobian(self.variables)
 
         # the following attributes would be updated along the flowpipe construction
         self.directions = directions
@@ -49,7 +49,6 @@ class Hybridiser:
         self.init_col_X0 = init_col_X0
         self.reach_params = reachParams()
         self.P = np.zeros(len(self.directions))
-        # self.P_temp = np.zeros(len(self.directions))
         self.P_temp = np.array([np.inf, -np.inf]*2)
         self.X = np.zeros(len(self.directions))
         self.init_X = np.zeros(len(self.directions))
@@ -71,7 +70,8 @@ class Hybridiser:
 
         abs_domain_lower_bounds = abs_domain_corners.min(axis=0)
         abs_domain_upper_bounds = abs_domain_corners.max(axis=0)
-        matrix_A = fit_dynamics.fit(abs_domain, abs_domain_centre, 5, [0, 0], self.is_linear)
+
+        matrix_A, b = fit_dynamics.jacobian_linearise(abs_domain_centre, self.sym_jacobian, self.variables)
 
         u_max_array = []
         for i in range(self.dim):
@@ -101,8 +101,9 @@ class Hybridiser:
                 u_max = -minimize(minus_err_func, x, bounds=bound).fun
 
                 # u_max_array.extend([u_max, -u_min])
-                u_max_array.extend([0] * 2)
-
+                u_max_array.extend([b[i], -b[i]])
+                # print(b[i])
+                # u_max_array.extend([0] * 2)
                 # print('\n')
                 # exit()
                 # assuming 2 dimensions, can be easily generalised to n-dimension case
@@ -127,6 +128,7 @@ class Hybridiser:
 
         # poly_U
         poly_U = (generator_2d_matrix, col_vec.reshape(len(col_vec), 1))
+
         return matrix_A, poly_U
 
     def compute_alpha_step(self, lp):
@@ -175,6 +177,7 @@ class Hybridiser:
         for l, sf_val in zip(self.directions, self.X):
             r = np.dot(self.reach_params.delta_tp, l)
             s = self.post_opt.compute_sf_w(r, trans_poly_U, 0, self.tau, lp)
+            # s = 0
             sf_X0 = poly_init.compute_support_function(r, lp)
             sf = sf_X0 + s
             sf_vec.append([sf])

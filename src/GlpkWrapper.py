@@ -1,7 +1,7 @@
 from cvxopt import glpk, mul, spmatrix, matrix
 
 
-class glpkWrapper:
+class GlpkWrapper:
     def __init__(self, sys_dim):
         self.A = spmatrix([], [], [], (0, sys_dim), 'd')
         self.b = matrix(0.0, (0, 1))

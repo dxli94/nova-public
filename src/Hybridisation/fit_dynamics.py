@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.optimize import leastsq
-from ConvexSet.HyperBox import HyperBox
 
 
 def evaluate_exp(nonli_dyn, x, y):
@@ -49,11 +48,11 @@ def _fit_linear(points, values):
     return a_x
 
 
-def _fit_non_linear(points, values):
-    return leastsq(residuals, [0, 0], args=(values, points))[0]
+def _fit_non_linear_least_sqr(points, values, p0):
+    return leastsq(residuals, p0, args=(values, points))[0]
 
 
-def fit(abs_domain, abs_centre, n, p0, islinear):
+def least_sqr_fit(abs_domain, abs_centre, n, p0, islinear):
     points = sampling_around_centre(abs_domain, abs_centre, n)
     y0 = evaluate_exp('', *points.T)
 
@@ -62,10 +61,31 @@ def fit(abs_domain, abs_centre, n, p0, islinear):
         if islinear[i]:
             mat_a.append(_fit_linear(points, y0[i]))
         else:
-            mat_a.append(_fit_non_linear(points, y0[i]))
+            mat_a.append(_fit_non_linear_least_sqr(points, y0[i], p0))
 
+    # print(np.linalg.eig(mat_a)[0])
     return mat_a
 
 
+def jacobian_linearise(abs_centre, jacobian_func, variables):
+    # f(x0, g0) = J(x - x0, y - y0) * [x - x0, y - y0].T + g(x0, y0)
+    mat_a = np.array(jacobian_func.subs(list(zip(variables, abs_centre)))).astype(np.float64)
+    b = evaluate_exp('', *abs_centre) - mat_a.dot(abs_centre)
+
+    return mat_a, b
+
 if __name__ == '__main__':
-    pass
+    from ConvexSet.HyperBox import HyperBox
+    import sympy
+    abs_domain = HyperBox(np.array([[0, 0.7], [0, 0.71], [0.1, 0.7], [0.1, 0.71]]))
+    # print(abs_domain.vertices)
+    abs_centre = np.average(abs_domain.vertices, axis=1)[0]
+    sym_vars = sympy.symbols('x,y', real=True)
+    x, y = sym_vars
+    non_linear_dynamics = [y, (1 - x ** 2) * y - x]
+
+    sym_dyn = sympy.Matrix(non_linear_dynamics).jacobian(sym_vars)
+
+    mat_a, u = jacobian_linearise(abs_centre, sym_dyn, sym_vars)
+
+    print(mat_a, u)
