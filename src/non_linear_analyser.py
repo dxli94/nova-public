@@ -30,11 +30,15 @@ def main():
     start_epsilon = 1e-9
     # f: Vanderpol oscillator
     non_linear_dynamics = ['x[1]', '(1-x[0]^2)*x[1]-x[0]']
+    # non_linear_dynamics = ['x[1]', '-x[0]-x[1]']
     is_linear = [True, False]
 
     # ============== initial state set ==========#
-    init_set = HyperBox(np.array([[1.25, 2.3]]*4))
-    # init_set = HyperBox(np.array([[0, 0.7], [0, 0.71], [0.1, 0.7], [0.1, 0.71]]))
+    # init_set = HyperBox(np.array([[1.25, -2.3]]*4))
+    # large Init
+    init_set = HyperBox(np.array([[1.25, 2.28], [1.55, 2.28], [1.25, 2.32], [1.55, 2.32]]))
+    # larger Init
+    # init_set = HyperBox(np.array([[0, 0.7], [0, 1.7], [1, 1.7], [1, 1.7]]))
     init_matrix_X0, init_col_vec_X0 = init_set.to_constraints()
     init_poly = Polyhedron(init_matrix_X0, init_col_vec_X0)
     # ============== setting up done ============== #
@@ -43,7 +47,9 @@ def main():
     hybridiser = Hybridiser(dim, non_linear_dynamics, tau, directions,
                             init_matrix_X0, init_col_vec_X0, is_linear)
     hybridiser.X = compute_support_functions_for_polyhedra(init_poly, directions, glpk_wrapper)
+    hybridiser.init_X_in_each_domain = hybridiser.X
     hybridiser.init_X = hybridiser.X
+    hybridiser.poly_init = Polyhedron(hybridiser.directions, hybridiser.init_X)
     # B := \bb(X0)
     bbox = HyperBox(init_poly.vertices)
     # (A, V) := L(f, B), s.t. f(x) = (A, V) over-approx. g(x)
@@ -56,13 +62,18 @@ def main():
     # initialise support function matrix, [r], [s]
     sf_mat = []
     bbox_mat = []
+    x_mat = [hybridiser.X]
 
     s_on_each_direction = [0] * len(directions)
     r_on_each_direction = directions
 
+    x_s_on_each_direction = [0] * len(directions)
+
     flag = True  # whether we have a new abstraction domain
     isalpha = False
     epsilon = start_epsilon
+    delta_product = 1
+
     while i < time_frames:
         if flag:
             # P_{i+1} := \alpha(X_{i})
@@ -75,22 +86,27 @@ def main():
             s_temp, r_temp = hybridiser.compute_beta_step(s_on_each_direction, r_on_each_direction, glpk_wrapper)
 
         # if P_{i+1} \subset B
+        # Todo P_temp is not a hyperbox rather an rotated rectangon. Checking the bounding box is sufficient but not necessary. Needs to be refine
         if hyperbox_contain(hybridiser.abs_domain.to_constraints()[1], hybridiser.P_temp):
             hybridiser.P = hybridiser.P_temp
-            # print(hybridiser.P)
+            prev_delta_product = delta_product
+            delta_product = np.dot(delta_product, hybridiser.reach_params.delta_tp)
+
             sf_mat.append(hybridiser.P)
             bbox_mat.append(bbox.to_constraints()[1])
+            x_mat.append(hybridiser.X)
 
             if isalpha:
-                hybridiser.init_X = hybridiser.X
+                hybridiser.init_X_in_each_domain = hybridiser.X
                 isalpha = False
-            hybridiser.compute_gamma_step(glpk_wrapper)
+            x_s_on_each_direction = hybridiser.compute_gamma_step(x_s_on_each_direction, prev_delta_product,
+                                                                  delta_product, glpk_wrapper)
             s_on_each_direction, r_on_each_direction = s_temp, r_temp
             i += 1
             if i % 100 == 0:
                 print(i)
+
             flag = False
-            # print(epsilon)
             epsilon = start_epsilon
         else:
             bbox = hybridiser.refine_domain()
@@ -108,6 +124,10 @@ def main():
     images = hybridiser.post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=bbox_mat)
     plotter = Plotter(images, opvars)
     plotter.save_polygons_to_file(filename='bbox.out')
+
+    images = hybridiser.post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=x_mat)
+    plotter = Plotter(images, opvars)
+    plotter.save_polygons_to_file(filename='x.out')
 
 
 if __name__ == '__main__':

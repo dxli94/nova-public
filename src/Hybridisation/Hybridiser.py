@@ -38,6 +38,7 @@ class Hybridiser:
         # assume 2 dims for now, not hard to generalise
         self.variables = sympy.symbols('x,y', real=True)
         x, y = self.variables
+        # vanderpol dynamics
         non_linear_dynamics = [y, (1 - x ** 2) * y - x]
         self.sym_jacobian = sympy.Matrix(non_linear_dynamics).jacobian(self.variables)
 
@@ -45,6 +46,8 @@ class Hybridiser:
         self.directions = directions
         self.abs_dynamics = None
         self.abs_domain = None
+        self.poly_init = None
+        self.trans_poly_U = None
         self.init_mat_X0 = init_mat_X0
         self.init_col_X0 = init_col_X0
         self.reach_params = reachParams()
@@ -52,6 +55,7 @@ class Hybridiser:
         self.P_temp = np.array([np.inf, -np.inf]*2)
         self.X = np.zeros(len(self.directions))
         self.init_X = np.zeros(len(self.directions))
+        self.init_X_in_each_domain = np.zeros(len(self.directions))
 
     def hybridise(self, bbox, starting_epsilon, lp):
         bbox.bloat(starting_epsilon)
@@ -63,6 +67,9 @@ class Hybridiser:
         self.reach_params.delta_tp = np.transpose(SuppFuncUtils.mat_exp(self.abs_dynamics.matrix_A, self.tau))
         self.set_abs_domain(bbox)
 
+        self.trans_poly_U = TransPoly(self.abs_dynamics.matrix_B, self.abs_dynamics.coeff_matrix_U,
+                                      self.abs_dynamics.col_vec_U)
+
     def gen_abs_dynamics(self, abs_domain):
         vertices = Polyhedron(*abs_domain.to_constraints()).vertices
         abs_domain_corners = np.array(vertices)
@@ -73,6 +80,7 @@ class Hybridiser:
 
         # matrix_A, b = fit_dynamics.jacobian_linearise(abs_domain_centre, self.sym_jacobian, self.variables)
         matrix_A = fit_dynamics.least_sqr_fit(abs_domain, abs_domain_centre, 10, [0, 0], self.is_linear)
+
 
         u_max_array = []
         for i in range(self.dim):
@@ -101,9 +109,11 @@ class Hybridiser:
                 u_min = minimize(err_func, x, bounds=bound).fun
                 u_max = -minimize(minus_err_func, x, bounds=bound).fun
 
+                # print(u_min, u_max)
+
                 # u_max_array.extend([u_max, -u_min])
                 # u_max_array.extend([b[i], -b[i]])
-                # print(b[i])
+
                 u_max_array.extend([0] * 2)
                 # print('\n')
                 # exit()
@@ -124,8 +134,8 @@ class Hybridiser:
                 # print([u_max, u_min])
                 # u_max_array.extend([u_max, u_min])
                 #
+
         col_vec = np.array(u_max_array)
-        # print(col_vec)
 
         # poly_U
         poly_U = (generator_2d_matrix, col_vec.reshape(len(col_vec), 1))
@@ -133,12 +143,9 @@ class Hybridiser:
         return matrix_A, poly_U
 
     def compute_alpha_step(self, lp):
-        poly_init = Polyhedron(self.directions, self.X)
-        trans_poly_U = TransPoly(self.abs_dynamics.matrix_B,
-                                 self.abs_dynamics.coeff_matrix_U,
-                                 self.abs_dynamics.col_vec_U)
-
-        sf_arr = [self.post_opt.compute_initial_sf(self.reach_params.delta_tp, poly_init, trans_poly_U, l,
+        # wrap X_{i} on template directions
+        poly = Polyhedron(self.directions, self.X)
+        sf_arr = [self.post_opt.compute_initial_sf(self.reach_params.delta_tp, poly, self.trans_poly_U, l,
                                                    self.reach_params.alpha, self.tau, lp) for l in self.directions]
         self.P_temp = np.array(sf_arr)
 
@@ -146,17 +153,15 @@ class Hybridiser:
         sf_vec = []
         current_s_array = []
         current_r_array = []
-        poly_init = Polyhedron(self.directions, self.init_X)
-        trans_poly_U = TransPoly(self.abs_dynamics.matrix_B, self.abs_dynamics.coeff_matrix_U,
-                                 self.abs_dynamics.col_vec_U)
+        poly = Polyhedron(self.directions, self.init_X_in_each_domain)
 
         for idx in range(len(r_vec)):
             prev_r = r_vec[idx]
             prev_s = s_vec[idx]
             r = np.dot(self.reach_params.delta_tp, prev_r)
-            s = prev_s + self.post_opt.compute_sf_w(prev_r, trans_poly_U, self.reach_params.beta, self.tau, lp)
+            s = prev_s + self.post_opt.compute_sf_w(prev_r, self.trans_poly_U, self.reach_params.beta, self.tau, lp)
             sf = s + self.post_opt.compute_initial_sf(self.reach_params.delta_tp,
-                                                      poly_init, trans_poly_U,
+                                                      poly, self.trans_poly_U,
                                                       r,
                                                       self.reach_params.alpha,
                                                       self.tau,
@@ -168,23 +173,25 @@ class Hybridiser:
         self.P_temp = np.array(sf_vec)
         return current_s_array, current_r_array
 
-    def compute_gamma_step(self, lp):
+    def compute_gamma_step(self, s_arr, prev_delta_product, delta_product, lp):
         sf_vec = []
-        poly_init = Polyhedron(self.directions, self.X)
-        # print(poly_init.vertices)
-        trans_poly_U = TransPoly(self.abs_dynamics.matrix_B, self.abs_dynamics.coeff_matrix_U,
-                                 self.abs_dynamics.col_vec_U)
+        next_s_arr = []
 
-        for l, sf_val in zip(self.directions, self.X):
-            r = np.dot(self.reach_params.delta_tp, l)
-            s = self.post_opt.compute_sf_w(l, trans_poly_U, self.reach_params.beta, self.tau, lp)
+        for l, prev_s in zip(self.directions, s_arr):
+            r = np.dot(delta_product, l)
+            # todo the first para is wrong. should be previous delta product
+            s = prev_s + self.post_opt.compute_sf_w(np.dot(prev_delta_product, l), self.trans_poly_U,
+                                                    self.reach_params.beta, self.tau, lp)
+
             # s = 0
-            sf_X0 = poly_init.compute_support_function(r, lp)
+            sf_X0 = self.poly_init.compute_support_function(r, lp)
+
             sf = sf_X0 + s
             sf_vec.append([sf])
+            next_s_arr.append(s)
 
         self.X = np.array(sf_vec)
-        # self.X = np.array(sf_vec).reshape(len(self.directions), 1)
+        return next_s_arr
 
     def set_abs_dynamics(self, matrix_A, poly_U):
         abs_dynamics = SysDynamics(dim=self.dim,
@@ -199,10 +206,6 @@ class Hybridiser:
     def set_abs_domain(self, abs_domain):
         self.abs_domain = abs_domain
 
-    def update_init_image(self, init_mat, init_col):
-        self.init_mat_X0 = init_mat
-        self.init_col_X0 = init_col
-
     def refine_domain(self):
         # take the convex hall of P_{i} and P_{i+1}
         bounds = np.maximum(self.P_temp.reshape(len(self.directions), 1),
@@ -213,5 +216,27 @@ class Hybridiser:
 
         return bbox
 
-    def reset_P_temp(self):
-        self.P_temp = np.array([np.inf, -np.inf]*2)
+        # u_max_array.extend([b[i], -b[i]])
+        # print(b[i])
+        # u_max_array.extend([0] * 2)
+        # print('\n')
+        # exit()
+        # assuming 2 dimensions, can be easily generalised to n-dimension case
+        # affine_dynamic = str(matrix_A[i][0]) + '*x[0] + ' + str(matrix_A[i][1]) + '*x[1]'
+        # error_func_str = str(self.nonlin_dyn[i]) + '-(' + affine_dynamic + ')'
+        # try:
+        #     error_func = pyibex.Function("x[%d]" % self.dim, error_func_str)
+        # except RuntimeError:
+        #     print('severe error.')
+        #
+        # xy = pyibex.IntervalVector(
+        #     [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)])
+        # u_max_temp = error_func.eval(xy)
+        # u_max = max(abs(u_max_temp[0]), abs(u_max_temp[1]))
+        # u_min = min(abs(u_max_temp[0]), abs(u_max_temp[1]))
+        # Todo Remember to change this back!!
+        # print([u_max, u_min])
+        # u_max_array.extend([u_max, u_min])
+        #
+# print(u_max_array)
+# exit()
