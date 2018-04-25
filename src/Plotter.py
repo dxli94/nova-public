@@ -1,6 +1,9 @@
 import os
 import numpy as np
 
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
 
 class Plotter:
     images = []
@@ -42,11 +45,8 @@ class Plotter:
 
     @staticmethod
     def plot_polygons(filelist):
-        import matplotlib.pyplot as plt
-        import matplotlib.patches as patches
-
         print('Start reading file...')
-        colors = ['blue', 'red']
+        colors = ['red', 'blue']
         linewidths = [1, 1]
         linestyles = ['solid', 'dashed']
 
@@ -77,15 +77,61 @@ class Plotter:
         print('Showing plot now.')
         plt.show()
 
+    @staticmethod
+    def plot_points(filelist):
+        print('Start reading file...')
+        colors = ['red', 'blue']
+        linewidths = [1, 1]
+        linestyles = ['solid', 'dashed']
+
+        fig = plt.figure(1, dpi=90)
+        ax = fig.add_subplot(111)
+        ax.set_xlabel('$x_{1}$')
+        ax.set_ylabel('$x_{2}$')
+
+        for ipfile_path, color, lw, ls in zip(filelist, colors[:len(filelist)], linewidths[:len(filelist)], linestyles[:len(filelist)]):
+            print(ipfile_path)
+            try:
+                with open(ipfile_path) as ipfile:
+                    content = ipfile.read().strip('\n')
+                    points = content.split('\n\n')
+                    points = list(map(lambda p: p.split('\n')[0], points))
+                    x = []
+                    y = []
+
+                    for p in points:
+                        xy = p.split()
+                        x.append(float(xy[0]))
+                        y.append(float(xy[1]))
+            except FileExistsError:
+                print('File does not exist %s' % ipfile_path)
+            print('Finished. \nStart plotting...')
+
+            # print([x, y])
+            # for vertices in vertices_sorted:
+            #     x, y = [float(elem.split()[0]) for elem in vertices], [float(elem.split()[1]) for elem in vertices]
+            #     mat = np.transpose(np.array([x, y]))
+            #     poly1patch = patches.Polygon(mat, fill=False, edgecolor=color, linewidth=lw, linestyle=ls)
+            #     ax.add_patch(poly1patch)
+        plt.plot(x, y)
+        plt.autoscale(enable=True)
+        print('Showing plot now.')
+        plt.show()
+
 
 if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', type=str, nargs='*', help='path to the input file storing vertex.')
+    parser.add_argument('--type', type=int, help='0 for points, 1 for polygons. If 2, polygon from first; points from second.')
     args = parser.parse_args()
     filelist = args.path if args.path else ['../out/outfile.out']
-    # print(filelist)
-    # exit()
-
-    Plotter.plot_polygons(filelist)
+    data_type = args.type
+    if data_type == 1:
+        Plotter.plot_points(filelist)
+    elif data_type == 2:
+        Plotter.plot_polygons(filelist[0])
+        Plotter.plot_points(filelist[1])
+    else:
+        Plotter.plot_polygons(filelist)
