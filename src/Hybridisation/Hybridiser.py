@@ -8,15 +8,9 @@ from ConvexSet.Polyhedron import Polyhedron
 from ConvexSet.TransPoly import TransPoly
 from Hybridisation import fit_dynamics
 from PostOperator import PostOperator
-from SysDynamics import SysDynamics
+from SysDynamics import AffineDynamics
 
 generator_2d_matrix = np.array([[1, 0], [-1, 0], [0, 1], [0, -1]])
-
-
-def evaluate_exp(nonli_dyn, x, y):
-    # for now just hard-code it
-    # return np.array([y, -1*x-y])
-    return np.array([y, (1 - x * x) * y - x])
 
 
 class reachParams:
@@ -34,13 +28,6 @@ class Hybridiser:
         self.coeff_matrix_B = np.identity(dim)
         self.post_opt = PostOperator()
         self.is_linear = is_linear
-
-        # assume 2 dims for now, not hard to generalise
-        self.variables = sympy.symbols('x,y', real=True)
-        x, y = self.variables
-        # vanderpol dynamics
-        non_linear_dynamics = [y, (1 - x ** 2) * y - x]
-        self.sym_jacobian = sympy.Matrix(non_linear_dynamics).jacobian(self.variables)
 
         # the following attributes would be updated along the flowpipe construction
         self.directions = directions
@@ -79,8 +66,7 @@ class Hybridiser:
         abs_domain_upper_bounds = abs_domain_corners.max(axis=0)
 
         # matrix_A, b = fit_dynamics.jacobian_linearise(abs_domain_centre, self.sym_jacobian, self.variables)
-        matrix_A = fit_dynamics.least_sqr_fit(abs_domain, abs_domain_centre, 10, [0, 0], self.is_linear)
-
+        matrix_A = fit_dynamics.least_sqr_fit(abs_domain, abs_domain_centre, 5, [0, 0], self.is_linear, self.nonlin_dyn.eval)
 
         u_max_array = []
         for i in range(self.dim):
@@ -93,13 +79,13 @@ class Hybridiser:
 
                 def err_func(x):
                     lin_func = np.dot(coeff_vec, x)
-                    non_lin_func = evaluate_exp('', *x)
+                    non_lin_func = self.nonlin_dyn.eval(x)
                     err = non_lin_func[1] - lin_func
                     return err
 
                 def minus_err_func(x):
                     lin_func = np.dot(coeff_vec, x)
-                    non_lin_func = evaluate_exp('', *x)
+                    non_lin_func = self.nonlin_dyn.eval(x)
                     err = lin_func - non_lin_func[1]
                     return err
 
@@ -182,7 +168,6 @@ class Hybridiser:
             # todo the first para is wrong. should be previous delta product
             s = prev_s + self.post_opt.compute_sf_w(np.dot(prev_delta_product, l), self.trans_poly_U,
                                                     self.reach_params.beta, self.tau, lp)
-
             # s = 0
             sf_X0 = self.poly_init.compute_support_function(r, lp)
 
@@ -194,13 +179,13 @@ class Hybridiser:
         return next_s_arr
 
     def set_abs_dynamics(self, matrix_A, poly_U):
-        abs_dynamics = SysDynamics(dim=self.dim,
-                                   init_coeff_matrix_X0=self.init_mat_X0,
-                                   init_col_vec_X0=self.init_col_X0,
-                                   dynamics_matrix_A=matrix_A,
-                                   dynamics_matrix_B=self.coeff_matrix_B,
-                                   dynamics_coeff_matrix_U=poly_U[0],
-                                   dynamics_col_vec_U=poly_U[1])
+        abs_dynamics = AffineDynamics(dim=self.dim,
+                                      init_coeff_matrix_X0=self.init_mat_X0,
+                                      init_col_vec_X0=self.init_col_X0,
+                                      dynamics_matrix_A=matrix_A,
+                                      dynamics_matrix_B=self.coeff_matrix_B,
+                                      dynamics_coeff_matrix_U=poly_U[0],
+                                      dynamics_col_vec_U=poly_U[1])
         self.abs_dynamics = abs_dynamics
 
     def set_abs_domain(self, abs_domain):

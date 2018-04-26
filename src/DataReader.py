@@ -1,6 +1,7 @@
 import numpy as np
+import json
 
-from SysDynamics import SysDynamics
+from SysDynamics import AffineDynamics
 
 
 def read_next_block(ins_file):
@@ -56,13 +57,24 @@ class DataReader:
                     arr = np.array(data).reshape(len(data), 1)
                     self.init_col_vec_X0 = arr
 
-            return SysDynamics(dim=dim,
-                               init_coeff_matrix_X0=self.init_coeff_matrix_X0,
-                               init_col_vec_X0=self.init_col_vec_X0,
-                               dynamics_matrix_A=self.dynamics_matrix_A,
-                               dynamics_matrix_B=self.dynamics_matrix_B,
-                               dynamics_coeff_matrix_U=self.dynamics_coeff_matrix_U,
-                               dynamics_col_vec_U=self.dynamics_col_vec_U)
+            return AffineDynamics(dim=dim,
+                                  init_coeff_matrix_X0=self.init_coeff_matrix_X0,
+                                  init_col_vec_X0=self.init_col_vec_X0,
+                                  dynamics_matrix_A=self.dynamics_matrix_A,
+                                  dynamics_matrix_B=self.dynamics_matrix_B,
+                                  dynamics_coeff_matrix_U=self.dynamics_coeff_matrix_U,
+                                  dynamics_col_vec_U=self.dynamics_col_vec_U)
+
+
+class JsonReader:
+    def __init__(self, path):
+        self.path = path
+
+    def read(self):
+        with open(self.path, 'r') as ipfile:
+            data = json.load(ipfile)
+
+        return data
 
 
 if __name__ == '__main__':

@@ -3,7 +3,9 @@ from ConvexSet.HyperBox import HyperBox
 from ConvexSet.HyperBox import hyperbox_contain
 from ConvexSet.Polyhedron import Polyhedron
 from Hybridisation.Hybridiser import Hybridiser
+from SysDynamics import GeneralDynamics
 from GlpkWrapper import GlpkWrapper
+from DataReader import JsonReader
 
 import numpy as np
 
@@ -19,24 +21,31 @@ def compute_support_functions_for_polyhedra(poly, directions, lp):
 
 
 def main():
-    # ============== setting up ============== #
-    tau = 0.01
-    time_horizon = 7
-    time_frames = int(np.floor(time_horizon / tau))
-    direction_type = 0
-    dim = 2
+    # # ============== setting up ============== #
+    # path = '../instances/non_linear_instances/vanderpol.json'
+    path = '../instances/non_linear_instances/predator_prey.json'
+    data = json_reader = JsonReader(path).read()
+    time_horizon = data['time_horizon']
+    tau = data['sampling_time']
+    direction_type = data['direction_type']
+    dim = data['dim']
+    start_epsilon = data['start_epsilon']
+    non_linear_dynamics = data['dynamics']
+    state_vars = data['state_variables']
+    is_linear = data['is_linear']
+    time_frames = int(np.ceil(time_horizon / tau))
+
     glpk_wrapper = GlpkWrapper(dim)
     directions = SuppFuncUtils.generate_directions(direction_type, dim)
-    start_epsilon = 1e-9
-    # f: Vanderpol oscillator
-    non_linear_dynamics = ['x[1]', '(1-x[0]^2)*x[1]-x[0]']
-    # non_linear_dynamics = ['x[1]', '-x[0]-x[1]']
-    is_linear = [True, False]
-
+    id_to_vars = {}
+    for i, var in enumerate(state_vars):
+        id_to_vars[i] = var
+    non_linear_dynamics = GeneralDynamics(id_to_vars, *non_linear_dynamics)
+    
     # ============== initial state set ==========#
     # init_set = HyperBox(np.array([[1.25, -2.3]]*4))
     # large Init
-    init_set = HyperBox(np.array([[1.25, 2.28], [1.55, 2.28], [1.25, 2.32], [1.55, 2.32]]))
+    init_set = HyperBox(np.array([[1.025, 2.028], [1.055, 2.028], [1.025, 2.032], [1.055, 2.032]]))
     # larger Init
     # init_set = HyperBox(np.array([[0, 0.7], [0, 1.7], [1, 1.7], [1, 1.7]]))
     init_matrix_X0, init_col_vec_X0 = init_set.to_constraints()

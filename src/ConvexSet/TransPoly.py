@@ -50,7 +50,5 @@ class TransPoly(Polyhedron):
         else:
             direction = np.dot(self.trans_matrix_B_tp, direction)
             c = cvx.matrix(-direction, tc='d')
-            # sol = cvx.solvers.lp(c, A, b, solver='glpk')
             return lp.lp(c, self.cvx_coeff_matrix, self.cvx_col_vec)
-            # return direction.dot(sol['x'])[0]
 

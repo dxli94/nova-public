@@ -96,6 +96,12 @@ class Polyhedron:
             # sol = cvx.solvers.lp(c, A, b, solver='glpk')
             # return direction.dot(np.array(sol['x']))[0]
 
+    @staticmethod
+    def compute_support_functions(coeff_mat, direction, b, lp):
+        c = cvx.matrix(-direction, tc='d')
+        coeff_mat = cvx.matrix(coeff_mat, tc='d')
+        return lp.lp(c, coeff_mat, b)
+
     def compute_max_norm(self, lp):
         coeff_matrix = self.coeff_matrix
         dim_for_max_norm = coeff_matrix.shape[1]
@@ -124,39 +130,7 @@ class Polyhedron:
     #     raise NotImplementedError
 
 
-# def lp(c, G, h):
-#     from cvxopt import glpk
-#     # options = kwargs.get('options', globals()['options'])
-#     # glpk.options = options.get('glpk', {})
-#     glpk.options = dict(msg_lev='GLP_MSG_OFF')
-#     n = c.size[0]
-#     A = cvx.spmatrix([], [], [], (0, n), 'd')
-#     #
-#     # p = A.size[0]
-#     b = cvx.matrix(0.0, (0, 1))
-#     status, x, z, y = glpk.lp(-c, G, h, A, b)
-#     # print(np.array(c).reshape(1, len(c)))
-#     return np.array(c).reshape(1, len(c)).dot(np.array(x))[0][0]
-
 if __name__ == '__main__':
     directions = np.array([[1, 0], [2, 0],
                            [-1, 0], [-2, 0],
-                           [1, 1]
-                           ])
-    # A = np.array([[1, 1], [-1, 0], [0, -1]])
-    # col_vec = np.array([[2], [0], [0]])
-    # c = directions[4]
-    # poly = Polyhedron(A, col_vec)
-    # print()
-    # print(poly.compute_support_function(c))
-    # correct_sf = [2, 4, 0, 0, 2]
-    # np.testilp(ng.assert_almost_equal(sf, correct_sf)
-
-    G = cvx.matrix(np.array([[1, 1], [-1, 0], [0, -1]]), tc='d')
-    col_vec = cvx.matrix(np.array([[2], [0], [0]]), tc='d')
-    c = cvx.matrix(directions[4], tc='d')
-    # poly = Polyhedron(A, col_vec)
-
-    print(lp(c=c, G=G, h=col_vec))
-    # correct_sf = [2, 4, 0, 0, 2]
-    # np.testilp(ng.assert_almost_equal(sf, correct_sf)
+                           [1, 1]])

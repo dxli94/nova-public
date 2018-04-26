@@ -52,9 +52,9 @@ def _fit_non_linear_least_sqr(points, values, p0):
     return leastsq(residuals, p0, args=(values, points))[0]
 
 
-def least_sqr_fit(abs_domain, abs_centre, n, p0, islinear):
+def least_sqr_fit(abs_domain, abs_centre, n, p0, islinear, eval_func):
     points = sampling_around_centre(abs_domain, abs_centre, n)
-    y0 = evaluate_exp('', *points.T)
+    y0 = eval_func(points.T)
 
     mat_a = []
     for i in range(len(y0)):
@@ -66,12 +66,12 @@ def least_sqr_fit(abs_domain, abs_centre, n, p0, islinear):
     return mat_a
 
 
-def jacobian_linearise(abs_centre, jacobian_func, variables):
+def jacobian_linearise(abs_centre, jacobian_func, variables, eval_func):
     # f(x0, g0) = J(x - x0, y - y0) * [x - x0, y - y0].T + g(x0, y0)
     mat_a = np.array(jacobian_func.subs(list(zip(variables, abs_centre)))).astype(np.float64)
-    b = evaluate_exp('', *abs_centre) - mat_a.dot(abs_centre)
+    b = eval_func('', *abs_centre) - mat_a.dot(abs_centre)
 
-    mat_a = np.array([[0, 1], [-1, -1]])
+    # mat_a = np.array([[0, 1], [-1, -1]])
     return mat_a, b
 
 if __name__ == '__main__':

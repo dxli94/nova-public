@@ -1,4 +1,8 @@
-class SysDynamics:
+import sympy
+from functools import reduce
+
+
+class AffineDynamics:
     def __init__(self, dim, init_coeff_matrix_X0, init_col_vec_X0, dynamics_matrix_A=None, dynamics_matrix_B=None,
                  dynamics_coeff_matrix_U=None, dynamics_col_vec_U=None):
         # x' = Ax(t) + Bu(t)
@@ -28,3 +32,41 @@ class SysDynamics:
 
     def get_dyn_init_X0(self):
         return self.init_coeff_matrix, self.init_col_vec
+
+
+class GeneralDynamics:
+
+    def __init__(self, id_to_vars, *args):
+        self.vars_dict = id_to_vars
+        dynamics = [sympy.simplify(arg) for arg in args]
+        num_free_vars = len(reduce((lambda x, y: x.union(y)), [d.free_symbols for d in dynamics]))
+        assert len(self.vars_dict) == num_free_vars, \
+            "inconsistent number of variables declared ({}) with used in dynamics ({})".format(len(self.vars_dict), num_free_vars)
+
+        self.state_vars = tuple(sympy.symbols(str(self.vars_dict[key])) for key in self.vars_dict)
+        self.dynamics = sympy.lambdify(self.state_vars, dynamics)
+        self.jacobian_mat = sympy.lambdify(self.state_vars, sympy.Matrix(dynamics).jacobian(self.state_vars))
+
+    def eval(self, vals):
+        assert len(vals) == len(self.state_vars), \
+            "inconsistent number of variables, {} is expected, {} is given".format(len(self.state_vars), len(vals))
+
+        return self.dynamics(*vals)
+
+    def eval_jacobian(self, vals):
+        return self.jacobian_mat(*vals)
+
+
+if __name__ == '__main__':
+    id_to_vars = {0: 'x0',
+                  1: 'x1',
+                  2: 'x2'}
+    gd = GeneralDynamics(id_to_vars, 'x0/x1', 'x1+x2')
+
+    for i in range(0, 500000):
+        if i % 10000 == 0:
+            print(i)
+        gd.eval_jacobian([1, 2, 3])
+
+    pass
+

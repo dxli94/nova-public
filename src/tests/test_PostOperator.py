@@ -5,7 +5,7 @@ import SuppFuncUtils
 from ConvexSet.Polyhedron import Polyhedron
 from ConvexSet.TransPoly import TransPoly
 from PostOperator import PostOperator
-from SysDynamics import SysDynamics
+from SysDynamics import AffineDynamics
 
 dynamics_matrix_A = np.array([[0, 1], [0, 0]])
 dynamics_matrix_B = np.array([[1, 0], [0, 1]])
@@ -18,13 +18,13 @@ dynamics_col_vec_U = np.array([[0], [0], [9.81], [-9.81]])
 
 dynamics_init_coeff_matrix_X0 = np.array([[-1, 0], [1, 0], [0, -1], [0, 1]])
 dynamics_init_col_vec_X0 = np.array([[-10], [10.2], [0], [0]])
-sys_dynamics = SysDynamics(init_coeff_matrix_X0=dynamics_init_coeff_matrix_X0,
-                           init_col_vec_X0=dynamics_init_col_vec_X0,
-                           dynamics_matrix_A=dynamics_matrix_A,
-                           dynamics_matrix_B=dynamics_matrix_B,
-                           dynamics_coeff_matrix_U=dynamics_coeff_matrix_U,
-                           dynamics_col_vec_U=dynamics_col_vec_U,
-                           dim=2)
+sys_dynamics = AffineDynamics(init_coeff_matrix_X0=dynamics_init_coeff_matrix_X0,
+                              init_col_vec_X0=dynamics_init_col_vec_X0,
+                              dynamics_matrix_A=dynamics_matrix_A,
+                              dynamics_matrix_B=dynamics_matrix_B,
+                              dynamics_coeff_matrix_U=dynamics_coeff_matrix_U,
+                              dynamics_col_vec_U=dynamics_col_vec_U,
+                              dim=2)
 directions = SuppFuncUtils.generate_directions(direction_type=0, dim=2)
 post_opt = PostOperator(sys_dynamics, directions)
 

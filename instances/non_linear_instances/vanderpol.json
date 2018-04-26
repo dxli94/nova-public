@@ -1,0 +1,19 @@
+{
+    "dim": 2,
+    "direction_type": 0,
+    "dynamics": [
+        "x1",
+        "(1-x0^2)*x1-x0"
+    ],
+    "is_linear": [
+        true,
+        false
+    ],
+    "sampling_time": 0.01,
+    "start_epsilon": 1e-09,
+    "state_variables": [
+        "x0",
+        "x1"
+    ],
+    "time_horizon": 3
+}
