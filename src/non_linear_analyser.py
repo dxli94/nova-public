@@ -24,7 +24,7 @@ def main():
     # # ============== setting up ============== #
     # path = '../instances/non_linear_instances/vanderpol.json'
     path = '../instances/non_linear_instances/predator_prey.json'
-    data = json_reader = JsonReader(path).read()
+    data = JsonReader(path).read()
     time_horizon = data['time_horizon']
     tau = data['sampling_time']
     direction_type = data['direction_type']
@@ -41,7 +41,7 @@ def main():
     for i, var in enumerate(state_vars):
         id_to_vars[i] = var
     non_linear_dynamics = GeneralDynamics(id_to_vars, *non_linear_dynamics)
-    
+
     # ============== initial state set ==========#
     # init_set = HyperBox(np.array([[1.25, -2.3]]*4))
     # large Init
