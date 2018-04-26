@@ -3,17 +3,17 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - python=3.6
   - matplotlib
   - numpy
   - scipy
+  - sympy
   - pip
-  - python=3.6
   - cython
   - cvxopt=1.1.9
   - cysignals
-  - gmpy2
   - pip:
+    - gmpy2==2.1.0a1 --no-binary ":all:"
     - pycddlib==2.0.0
-    - pyibex
-    - pplpy
+    - pplpy==0.7
 prefix: /anaconda3/envs/HyPyFlow
