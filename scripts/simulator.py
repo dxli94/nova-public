@@ -13,9 +13,17 @@ def van_der_pol_oscillator_deriv(x, t):
     return res
 
 
-ts = np.linspace(0, 3, 80)
+def two_dim_water_tank_deriv(x, t):
+    nx0 = 0.1+0.01*(4-x[1])+0.015*((2*9.81*x[0])**0.5)
+    nx1 = 0.015*(2*9.81*x[0])**0.5-0.015*(2*9.81*x[1])**0.5
 
-xs = odeint(van_der_pol_oscillator_deriv, [1.25, -2.3], ts)
+    res = np.array([nx0, nx1])
+    return res
+
+ts = np.linspace(0, 50, 100)
+
+# xs = odeint(van_der_pol_oscillator_deriv, [1.25, -2.3], ts)
+xs = odeint(two_dim_water_tank_deriv, [0, 8], ts)
 print('\n'.join(str(x) for x in list(enumerate(xs))))
 plt.plot(xs[:, 0], xs[:, 1])
 plt.gca().set_aspect('equal')

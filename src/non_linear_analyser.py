@@ -23,7 +23,8 @@ def compute_support_functions_for_polyhedra(poly, directions, lp):
 def main():
     # # ============== setting up ============== #
     # path = '../instances/non_linear_instances/vanderpol.json'
-    path = '../instances/non_linear_instances/predator_prey.json'
+    # path = '../instances/non_linear_instances/predator_prey.json'
+    path = '../instances/non_linear_instances/2d_water_tank.json'
     data = JsonReader(path).read()
     time_horizon = data['time_horizon']
     tau = data['sampling_time']
@@ -35,6 +36,7 @@ def main():
     is_linear = data['is_linear']
     time_frames = int(np.ceil(time_horizon / tau))
 
+
     glpk_wrapper = GlpkWrapper(dim)
     directions = SuppFuncUtils.generate_directions(direction_type, dim)
     id_to_vars = {}
@@ -44,8 +46,10 @@ def main():
 
     # ============== initial state set ==========#
     # init_set = HyperBox(np.array([[1.25, -2.3]]*4))
-    # large Init
-    init_set = HyperBox(np.array([[1.025, 2.028], [1.055, 2.028], [1.025, 2.032], [1.055, 2.032]]))
+    # large Init: predator-prey / vanderpol
+    # init_set = HyperBox(np.array([[1.025, 2.028], [1.055, 2.028], [1.025, 2.032], [1.055, 2.032]]))
+    # 2d-water-tank
+    init_set = HyperBox(np.array([[0, 7.9], [0, 8.1], [0.2, 7.9], [0.2, 8.1]]))
     # larger Init
     # init_set = HyperBox(np.array([[0, 0.7], [0, 1.7], [1, 1.7], [1, 1.7]]))
     init_matrix_X0, init_col_vec_X0 = init_set.to_constraints()
