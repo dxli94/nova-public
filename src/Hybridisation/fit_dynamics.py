@@ -37,6 +37,7 @@ def _fit_linear(points, values):
         We solve a linear equation instead.
     """
     pairs = list(zip(points, values))
+
     for i in range(len(pairs)):
         for j in range(i, len(pairs)):
             x = [pairs[i][0], pairs[j][0]]
@@ -66,12 +67,16 @@ def least_sqr_fit(abs_domain, abs_centre, n, p0, islinear, eval_func):
     return mat_a
 
 
-def jacobian_linearise(abs_centre, jacobian_func, variables, eval_func):
+def jacobian_linearise(abs_centre, non_linear_dyn):
     # f(x0, g0) = J(x - x0, y - y0) * [x - x0, y - y0].T + g(x0, y0)
-    mat_a = np.array(jacobian_func.subs(list(zip(variables, abs_centre)))).astype(np.float64)
-    b = eval_func('', *abs_centre) - mat_a.dot(abs_centre)
+    mat_a = np.array(non_linear_dyn.eval_jacobian(abs_centre)).astype(np.float64)
+    b = non_linear_dyn.eval(abs_centre) - mat_a.dot(abs_centre)
 
-    # mat_a = np.array([[0, 1], [-1, -1]])
+    # exit()
+    # mat_a = np.array([[0, 1], [0, 0]])
+    # b = [0, -9.81]
+    # print(mat_a, b)
+    # print(np.linalg.eig(mat_a)[0])
     return mat_a, b
 
 if __name__ == '__main__':

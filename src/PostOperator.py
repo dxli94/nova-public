@@ -23,7 +23,6 @@ class PostOperator:
     def compute_sf_w(l, trans_poly_U, beta, tau, lp):
         sf_V = trans_poly_U.compute_support_function(l, lp)
         sf_ball = SuppFuncUtils.support_unitball_infnorm(l)
-
         sf_omega = tau * sf_V + beta * sf_ball
         return sf_omega
 

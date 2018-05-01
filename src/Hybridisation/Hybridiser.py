@@ -65,13 +65,18 @@ class Hybridiser:
         abs_domain_lower_bounds = abs_domain_corners.min(axis=0)
         abs_domain_upper_bounds = abs_domain_corners.max(axis=0)
 
-        # matrix_A, b = fit_dynamics.jacobian_linearise(abs_domain_centre, self.sym_jacobian, self.variables)
-        matrix_A = fit_dynamics.least_sqr_fit(abs_domain, abs_domain_centre, 5, [0, 0], self.is_linear, self.nonlin_dyn.eval)
+        matrix_A, b = fit_dynamics.jacobian_linearise(abs_domain_centre, self.nonlin_dyn)
+        # matrix_A = fit_dynamics.least_sqr_fit(abs_domain, abs_domain_centre, 5, [0] * self.dim, self.is_linear, self.nonlin_dyn.eval)
+        # b = [0, 0]
+
+        # print(matrix_A, b)
+        # exit()
 
         u_max_array = []
         for i in range(self.dim):
             if self.is_linear[i]:
-                u_max_array.extend([0] * 2)
+                u_max_array.extend([b[i], -b[i]])
+                # u_max_array.extend([0] * 2)
             else:
                 # affine_dynamic = str(matrix_A[i][0]) + '*x[0] + ' + str(matrix_A[i][1]) + '*x[1]'
                 x = abs_domain_centre
@@ -98,28 +103,9 @@ class Hybridiser:
                 # print(u_min, u_max)
 
                 # u_max_array.extend([u_max, -u_min])
-                # u_max_array.extend([b[i], -b[i]])
+                u_max_array.extend([b[i], -b[i]])
 
-                u_max_array.extend([0] * 2)
-                # print('\n')
-                # exit()
-                # assuming 2 dimensions, can be easily generalised to n-dimension case
-                # affine_dynamic = str(matrix_A[i][0]) + '*x[0] + ' + str(matrix_A[i][1]) + '*x[1]'
-                # error_func_str = str(self.nonlin_dyn[i]) + '-(' + affine_dynamic + ')'
-                # try:
-                #     error_func = pyibex.Function("x[%d]" % self.dim, error_func_str)
-                # except RuntimeError:
-                #     print('severe error.')
-                #
-                # xy = pyibex.IntervalVector(
-                #     [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)])
-                # u_max_temp = error_func.eval(xy)
-                # u_max = max(abs(u_max_temp[0]), abs(u_max_temp[1]))
-                # u_min = min(abs(u_max_temp[0]), abs(u_max_temp[1]))
-                # Todo Remember to change this back!!
-                # print([u_max, u_min])
-                # u_max_array.extend([u_max, u_min])
-                #
+                # u_max_array.extend([0] * 2)
 
         col_vec = np.array(u_max_array)
 
@@ -166,15 +152,19 @@ class Hybridiser:
         for l, prev_s in zip(self.directions, s_arr):
             r = np.dot(delta_product, l)
             # todo the first para is wrong. should be previous delta product
+            # print("prev_s: " + str(prev_s))
             s = prev_s + self.post_opt.compute_sf_w(np.dot(prev_delta_product, l), self.trans_poly_U,
                                                     self.reach_params.beta, self.tau, lp)
+            # s = prev_s + self.post_opt.compute_sf_w(np.dot(prev_delta_product, l), self.trans_poly_U,
+            #                                         0, self.tau, lp)
             # s = 0
+            print(s)
             sf_X0 = self.poly_init.compute_support_function(r, lp)
 
             sf = sf_X0 + s
             sf_vec.append([sf])
             next_s_arr.append(s)
-
+        # print('====\n')
         self.X = np.array(sf_vec)
         return next_s_arr
 
@@ -200,28 +190,3 @@ class Hybridiser:
         bbox = HyperBox(vertices)
 
         return bbox
-
-        # u_max_array.extend([b[i], -b[i]])
-        # print(b[i])
-        # u_max_array.extend([0] * 2)
-        # print('\n')
-        # exit()
-        # assuming 2 dimensions, can be easily generalised to n-dimension case
-        # affine_dynamic = str(matrix_A[i][0]) + '*x[0] + ' + str(matrix_A[i][1]) + '*x[1]'
-        # error_func_str = str(self.nonlin_dyn[i]) + '-(' + affine_dynamic + ')'
-        # try:
-        #     error_func = pyibex.Function("x[%d]" % self.dim, error_func_str)
-        # except RuntimeError:
-        #     print('severe error.')
-        #
-        # xy = pyibex.IntervalVector(
-        #     [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)])
-        # u_max_temp = error_func.eval(xy)
-        # u_max = max(abs(u_max_temp[0]), abs(u_max_temp[1]))
-        # u_min = min(abs(u_max_temp[0]), abs(u_max_temp[1]))
-        # Todo Remember to change this back!!
-        # print([u_max, u_min])
-        # u_max_array.extend([u_max, u_min])
-        #
-# print(u_max_array)
-# exit()

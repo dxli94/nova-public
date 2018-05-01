@@ -7,6 +7,7 @@ from SysDynamics import GeneralDynamics
 from GlpkWrapper import GlpkWrapper
 from DataReader import JsonReader
 
+import sys
 import numpy as np
 
 
@@ -22,9 +23,14 @@ def compute_support_functions_for_polyhedra(poly, directions, lp):
 
 def main():
     # # ============== setting up ============== #
-    # path = '../instances/non_linear_instances/vanderpol.json'
-    # path = '../instances/non_linear_instances/predator_prey.json'
-    path = '../instances/non_linear_instances/2d_water_tank.json'
+    try:
+        path = sys.argv[1]
+    except IndexError:
+        path = '../instances/non_linear_instances/vanderpol.json'
+        # path = '../instances/non_linear_instances/predator_prey.json'
+        # path = '../instances/non_linear_instances/2d_water_tank.json'
+        # path = '../instances/non_linear_instances/free_ball.json'
+
     data = JsonReader(path).read()
     time_horizon = data['time_horizon']
     tau = data['sampling_time']
@@ -45,11 +51,13 @@ def main():
     non_linear_dynamics = GeneralDynamics(id_to_vars, *non_linear_dynamics)
 
     # ============== initial state set ==========#
-    # init_set = HyperBox(np.array([[1.25, -2.3]]*4))
+    # init_set = HyperBox(np.array([[1.25, 2.28]]*4))
     # large Init: predator-prey / vanderpol
-    # init_set = HyperBox(np.array([[1.025, 2.028], [1.055, 2.028], [1.025, 2.032], [1.055, 2.032]]))
+    init_set = HyperBox(np.array([[1.25, 2.28], [1.28, 2.28], [1.25, 2.32], [1.28, 2.32]]))
+    # init_set = HyperBox(np.array([[1.9, 1.9], [2.1, 1.9], [1.9, 2.1], [2.1, 2.1]]))
+
     # 2d-water-tank
-    init_set = HyperBox(np.array([[0, 7.9], [0, 8.1], [0.2, 7.9], [0.2, 8.1]]))
+    # init_set = HyperBox(np.array([[0, 7.9], [0, 8.1], [0.2, 7.9], [0.2, 8.1]]))
     # larger Init
     # init_set = HyperBox(np.array([[0, 0.7], [0, 1.7], [1, 1.7], [1, 1.7]]))
     init_matrix_X0, init_col_vec_X0 = init_set.to_constraints()
@@ -141,7 +149,6 @@ def main():
     images = hybridiser.post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=x_mat)
     plotter = Plotter(images, opvars)
     plotter.save_polygons_to_file(filename='x.out')
-
 
 if __name__ == '__main__':
     main()
