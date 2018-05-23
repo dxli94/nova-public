@@ -1,12 +1,10 @@
 import argparse
-import cvxopt as cvx
 
 import SuppFuncUtils
-
 from DataReader import DataReader
-from Plotter import Plotter
-from PostOperator import PostOperator
 from GlpkWrapper import GlpkWrapper
+from Plotter import Plotter
+from AffinePostOpt import PostOperator
 
 
 def parse_args():

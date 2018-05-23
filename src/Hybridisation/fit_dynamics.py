@@ -68,11 +68,10 @@ def least_sqr_fit(abs_domain, abs_centre, n, p0, islinear, eval_func):
 
 
 def jacobian_linearise(abs_centre, non_linear_dyn):
-    # f(x0, g0) = J(x - x0, y - y0) * [x - x0, y - y0].T + g(x0, y0)
+    # f(x, y) = J(x - x0, y - y0) * [x - x0, y - y0].T + g(x0, y0)
     mat_a = np.array(non_linear_dyn.eval_jacobian(abs_centre)).astype(np.float64)
     b = non_linear_dyn.eval(abs_centre) - mat_a.dot(abs_centre)
 
-    # exit()
     # mat_a = np.array([[0, 1], [0, 0]])
     # b = [0, -9.81]
     # print(mat_a, b)

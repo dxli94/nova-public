@@ -1,10 +1,9 @@
 import numpy as np
 
 import SuppFuncUtils
-
 from ConvexSet.Polyhedron import Polyhedron
 from ConvexSet.TransPoly import TransPoly
-from PostOperator import PostOperator
+from AffinePostOpt import PostOperator
 from SysDynamics import AffineDynamics
 
 dynamics_matrix_A = np.array([[0, 1], [0, 0]])

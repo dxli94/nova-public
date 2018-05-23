@@ -2,12 +2,12 @@
     "dim": 2,
     "direction_type": 0,
     "dynamics": [
-        "x0-x0*x1",
-        "-x1+x0*x1"
+        "x1",
+        "-9.81"
     ],
     "is_linear": [
-        false,
-        false
+        true,
+        true
     ],
     "sampling_time": 0.01,
     "start_epsilon": 1e-09,

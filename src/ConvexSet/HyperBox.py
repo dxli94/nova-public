@@ -3,10 +3,8 @@ from ppl import Variable, Constraint_System, C_Polyhedron
 from itertools import combinations
 
 
-normalised_factor = 1e9
-
-
 def normalised(n):
+    normalised_factor = 1e9
     return n * normalised_factor
 
 

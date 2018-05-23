@@ -1,7 +1,6 @@
 import numpy as np
 
 import SuppFuncUtils
-
 from ConvexSet.Polyhedron import Polyhedron
 from ConvexSet.TransPoly import TransPoly
 

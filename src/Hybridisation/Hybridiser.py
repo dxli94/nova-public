@@ -1,39 +1,43 @@
 import numpy as np
-import sympy
 from scipy.optimize import minimize
 
 import SuppFuncUtils
+from AffinePostOpt import PostOperator
 from ConvexSet.HyperBox import HyperBox
 from ConvexSet.Polyhedron import Polyhedron
 from ConvexSet.TransPoly import TransPoly
 from Hybridisation import fit_dynamics
-from PostOperator import PostOperator
 from SysDynamics import AffineDynamics
 
 generator_2d_matrix = np.array([[1, 0], [-1, 0], [0, 1], [0, -1]])
 
 
+def compute_support_functions_for_polyhedra(poly, directions, lp):
+    vec = np.array([poly.compute_support_function(l, lp) for l in directions])
+    return vec.reshape(len(vec), 1)
+
+
 class reachParams:
-    def __init__(self, alpha=None, beta=None, delta_tp=None):
+    def __init__(self, alpha=None, beta=None, delta_tp=None, tau=None):
         self.alpha = alpha
         self.beta = beta
         self.delta_tp = delta_tp
+        self.tau = tau
 
 
 class Hybridiser:
-    def __init__(self, dim, nonlin_dyn, tau, directions, init_mat_X0, init_col_X0, is_linear):
+    def __init__(self, dim, nonlin_dyn, tau, directions, init_mat_X0, init_col_X0, is_linear, start_epsilon):
         self.dim = dim
         self.nonlin_dyn = nonlin_dyn
         self.tau = tau
         self.coeff_matrix_B = np.identity(dim)
-        self.post_opt = PostOperator()
         self.is_linear = is_linear
 
         # the following attributes would be updated along the flowpipe construction
         self.directions = directions
         self.abs_dynamics = None
         self.abs_domain = None
-        self.poly_init = None
+        self.init_poly = None
         self.trans_poly_U = None
         self.init_mat_X0 = init_mat_X0
         self.init_col_X0 = init_col_X0
@@ -43,6 +47,8 @@ class Hybridiser:
         self.X = np.zeros(len(self.directions))
         self.init_X = np.zeros(len(self.directions))
         self.init_X_in_each_domain = np.zeros(len(self.directions))
+
+        self.post_opt = PostOperator()
 
     def hybridise(self, bbox, starting_epsilon, lp):
         bbox.bloat(starting_epsilon)
@@ -66,7 +72,8 @@ class Hybridiser:
         abs_domain_upper_bounds = abs_domain_corners.max(axis=0)
 
         matrix_A, b = fit_dynamics.jacobian_linearise(abs_domain_centre, self.nonlin_dyn)
-        # matrix_A = fit_dynamics.least_sqr_fit(abs_domain, abs_domain_centre, 5, [0] * self.dim, self.is_linear, self.nonlin_dyn.eval)
+        # matrix_A = fit_dynamics.least_sqr_fit(abs_domain, abs_domain_centre, 5, [0] * self.dim, self.is_linear,
+        #                                       self.nonlin_dyn.eval)
         # b = [0, 0]
 
         # print(matrix_A, b)
@@ -145,28 +152,39 @@ class Hybridiser:
         self.P_temp = np.array(sf_vec)
         return current_s_array, current_r_array
 
-    def compute_gamma_step(self, s_arr, prev_delta_product, delta_product, lp):
+    def compute_gamma_step(self, n, trans_poly_U_list, beta_list, delta_product, delta_list_without_first_one, lp):
         sf_vec = []
         next_s_arr = []
 
-        for l, prev_s in zip(self.directions, s_arr):
+        trans_poly_U_list.append(self.trans_poly_U)
+        beta_list.append(self.reach_params.beta)
+
+        for l_idx, l in enumerate(self.directions):
             r = np.dot(delta_product, l)
-            # todo the first para is wrong. should be previous delta product
-            # print("prev_s: " + str(prev_s))
-            s = prev_s + self.post_opt.compute_sf_w(np.dot(prev_delta_product, l), self.trans_poly_U,
-                                                    self.reach_params.beta, self.tau, lp)
-            # s = prev_s + self.post_opt.compute_sf_w(np.dot(prev_delta_product, l), self.trans_poly_U,
-            #                                         0, self.tau, lp)
-            # s = 0
-            print(s)
-            sf_X0 = self.poly_init.compute_support_function(r, lp)
+            sf_X0 = self.init_poly.compute_support_function(r, lp)
+
+            # direction_matrix[l_idx].append(r)
+            s = self.compute_sum_sf_w(n, l, delta_list_without_first_one, trans_poly_U_list, beta_list, lp)
 
             sf = sf_X0 + s
             sf_vec.append([sf])
             next_s_arr.append(s)
-        # print('====\n')
+
         self.X = np.array(sf_vec)
+
         return next_s_arr
+
+    def compute_sum_sf_w(self, n, l, delta_list_without_first_one, trans_poly_U_list, beta_list, lp):
+        sum = 0
+
+        for i in range(0, n + 1):
+            direction = np.dot(delta_list_without_first_one[i], l)
+            trans_poly = trans_poly_U_list[i]
+            beta = beta_list[i]
+            sum += self.post_opt.compute_sf_w(direction, trans_poly, beta, self.tau, lp)
+
+            # sum += self.post_opt.compute_sf_w(direction, trans_poly, 0, self.tau, lp)
+        return sum
 
     def set_abs_dynamics(self, matrix_A, poly_U):
         abs_dynamics = AffineDynamics(dim=self.dim,

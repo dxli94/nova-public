@@ -1,14 +1,16 @@
+import sys
+
+import numpy as np
+
 import SuppFuncUtils
+from AffinePostOpt import PostOperator
 from ConvexSet.HyperBox import HyperBox
 from ConvexSet.HyperBox import hyperbox_contain
 from ConvexSet.Polyhedron import Polyhedron
+from DataReader import JsonReader
+from GlpkWrapper import GlpkWrapper
 from Hybridisation.Hybridiser import Hybridiser
 from SysDynamics import GeneralDynamics
-from GlpkWrapper import GlpkWrapper
-from DataReader import JsonReader
-
-import sys
-import numpy as np
 
 
 def generate_bounding_box(poly):
@@ -41,7 +43,8 @@ def main():
     state_vars = data['state_variables']
     is_linear = data['is_linear']
     time_frames = int(np.ceil(time_horizon / tau))
-
+    init_coeff = np.array(data['init_coeff'])
+    init_col = np.array(data['init_col'])
 
     glpk_wrapper = GlpkWrapper(dim)
     directions = SuppFuncUtils.generate_directions(direction_type, dim)
@@ -49,28 +52,17 @@ def main():
     for i, var in enumerate(state_vars):
         id_to_vars[i] = var
     non_linear_dynamics = GeneralDynamics(id_to_vars, *non_linear_dynamics)
-
-    # ============== initial state set ==========#
-    # init_set = HyperBox(np.array([[1.25, 2.28]]*4))
-    # large Init: predator-prey / vanderpol
-    init_set = HyperBox(np.array([[1.25, 2.28], [1.28, 2.28], [1.25, 2.32], [1.28, 2.32]]))
-    # init_set = HyperBox(np.array([[1.9, 1.9], [2.1, 1.9], [1.9, 2.1], [2.1, 2.1]]))
-
-    # 2d-water-tank
-    # init_set = HyperBox(np.array([[0, 7.9], [0, 8.1], [0.2, 7.9], [0.2, 8.1]]))
-    # larger Init
-    # init_set = HyperBox(np.array([[0, 0.7], [0, 1.7], [1, 1.7], [1, 1.7]]))
-    init_matrix_X0, init_col_vec_X0 = init_set.to_constraints()
-    init_poly = Polyhedron(init_matrix_X0, init_col_vec_X0)
+    init_poly = Polyhedron(init_coeff, init_col)
     # ============== setting up done ============== #
 
     # ============== start flowpipe construction. ============== #
     hybridiser = Hybridiser(dim, non_linear_dynamics, tau, directions,
-                            init_matrix_X0, init_col_vec_X0, is_linear)
+                            init_coeff, init_col, is_linear, start_epsilon)
     hybridiser.X = compute_support_functions_for_polyhedra(init_poly, directions, glpk_wrapper)
-    hybridiser.init_X_in_each_domain = hybridiser.X
     hybridiser.init_X = hybridiser.X
-    hybridiser.poly_init = Polyhedron(hybridiser.directions, hybridiser.init_X)
+    hybridiser.init_X_in_each_domain = hybridiser.X
+    hybridiser.init_poly = Polyhedron(hybridiser.directions, hybridiser.init_X)
+
     # B := \bb(X0)
     bbox = HyperBox(init_poly.vertices)
     # (A, V) := L(f, B), s.t. f(x) = (A, V) over-approx. g(x)
@@ -88,12 +80,14 @@ def main():
     s_on_each_direction = [0] * len(directions)
     r_on_each_direction = directions
 
-    x_s_on_each_direction = [0] * len(directions)
+    trans_poly_U_list = []
+    beta_list = []
 
     flag = True  # whether we have a new abstraction domain
     isalpha = False
     epsilon = start_epsilon
     delta_product = 1
+    delta_product_list_without_first_one = [1]
 
     while i < time_frames:
         if flag:
@@ -110,7 +104,12 @@ def main():
         # Todo P_temp is not a hyperbox rather an rotated rectangon. Checking the bounding box is sufficient but not necessary. Needs to be refine
         if hyperbox_contain(hybridiser.abs_domain.to_constraints()[1], hybridiser.P_temp):
             hybridiser.P = hybridiser.P_temp
-            prev_delta_product = delta_product
+            if i != 0:
+                temp = []
+                for elem in delta_product_list_without_first_one:
+                    temp.append(np.dot(elem, hybridiser.reach_params.delta_tp))
+                temp.append(1)
+                delta_product_list_without_first_one = temp
             delta_product = np.dot(delta_product, hybridiser.reach_params.delta_tp)
 
             sf_mat.append(hybridiser.P)
@@ -120,8 +119,11 @@ def main():
             if isalpha:
                 hybridiser.init_X_in_each_domain = hybridiser.X
                 isalpha = False
-            x_s_on_each_direction = hybridiser.compute_gamma_step(x_s_on_each_direction, prev_delta_product,
-                                                                  delta_product, glpk_wrapper)
+
+            hybridiser.compute_gamma_step(i, trans_poly_U_list, beta_list,
+                                          delta_product, delta_product_list_without_first_one,
+                                          glpk_wrapper)
+
             s_on_each_direction, r_on_each_direction = s_temp, r_temp
             i += 1
             if i % 100 == 0:
@@ -149,6 +151,7 @@ def main():
     images = hybridiser.post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=x_mat)
     plotter = Plotter(images, opvars)
     plotter.save_polygons_to_file(filename='x.out')
+
 
 if __name__ == '__main__':
     main()
