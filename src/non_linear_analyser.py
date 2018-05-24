@@ -3,9 +3,10 @@ import sys
 import numpy as np
 
 import SuppFuncUtils
-from DataReader import JsonReader
 from Hybridisation.NonlinPostOpt import NonlinPostOpt
 from SysDynamics import GeneralDynamics
+from utils.DataReader import JsonReader
+import utils.simulator as simu
 
 
 def main():
@@ -30,6 +31,7 @@ def main():
     init_coeff = np.array(data['init_coeff'])
     init_col = np.array(data['init_col'])
     opvars = data['opvars']
+    simu_model = 'vanderpol'
 
     directions = SuppFuncUtils.generate_directions(direction_type, dim)
     id_to_vars = {}
@@ -44,9 +46,11 @@ def main():
     sf_mat = nonlin_post_opt.compute_post()
     images = nonlin_post_opt.lin_post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=sf_mat)
 
-    from Plotter import Plotter
+    from utils.Plotter import Plotter
     plotter = Plotter(images, opvars)
     plotter.save_polygons_to_file()
+
+    run_simulate(time_horizon, simu_model, init_coeff, init_col)
 
     # images = nonlin_post_opt.lin_post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=bbox_mat)
     # plotter = Plotter(images, opvars)
@@ -55,6 +59,14 @@ def main():
     # images = nonlin_post_opt.lin_post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=x_mat)
     # plotter = Plotter(images, opvars)
     # plotter.save_polygons_to_file(filename='x.out')
+
+
+def run_simulate(time_horizon, model, init_coeff, init_col):
+    x, y = simu.simulate(time_horizon, model, init_coeff, init_col)
+    with open('../out/simu.out', 'w') as simu_op:
+        for elem in zip(x, y):
+            simu_op.write(str(elem[0]) + ' ' + str(elem[1]) + '\n')
+    return x, y
 
 
 if __name__ == '__main__':

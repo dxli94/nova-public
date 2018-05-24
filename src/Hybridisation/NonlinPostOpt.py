@@ -1,14 +1,13 @@
 import numpy as np
-from scipy.optimize import minimize
 
 import SuppFuncUtils
 from AffinePostOpt import PostOperator
 from ConvexSet.HyperBox import HyperBox, hyperbox_contain
 from ConvexSet.Polyhedron import Polyhedron
 from ConvexSet.TransPoly import TransPoly
-from GlpkWrapper import GlpkWrapper
 from Hybridisation.Linearizer import Linearizer
 from SysDynamics import AffineDynamics
+from utils.GlpkWrapper import GlpkWrapper
 
 
 def compute_support_functions_for_polyhedra(poly, directions, lp):
