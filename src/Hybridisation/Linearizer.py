@@ -5,7 +5,7 @@ from scipy.optimize import minimize
 generator_2d_matrix = np.array([[1, 0], [-1, 0], [0, 1], [0, -1]])
 
 
-class Abstractor:
+class Linearizer:
     def __init__(self, dim, nonlin_dyn, is_linear):
         self.dim = dim
         self.nonlin_dyn = nonlin_dyn
