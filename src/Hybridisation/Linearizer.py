@@ -11,6 +11,28 @@ class Linearizer:
         self.nonlin_dyn = nonlin_dyn
         self.is_linear = is_linear
 
+    # maximize (ax+b-g(x)) is equiv. to -minimize(g(x)-(ax+b)) todo double-check, seems to always return x0
+    def err_func(self, x, *args):
+        coeff_vec = args[0]
+        bias = args[1]
+        i = args[2]
+
+        lin_func = np.dot(coeff_vec, x) + bias
+        non_lin_func = self.nonlin_dyn.eval(x)
+        err = non_lin_func[i] - lin_func
+        return err
+
+    # maxmize (g(x)-(ax+b)) is equiv. to -minimize(ax+b-g(x)) todo double-check, seems to always return x0
+    def minus_err_func(self, x, *args):
+        coeff_vec = args[0]
+        bias = args[1]
+        i = args[2]
+
+        lin_func = np.dot(coeff_vec, x) + bias
+        non_lin_func = self.nonlin_dyn.eval(x)
+        err = lin_func - non_lin_func[i]
+        return err
+
     def gen_abs_dynamics(self, abs_domain):
         vertices = Polyhedron(*abs_domain.to_constraints()).vertices
         abs_domain_corners = np.array(vertices)
@@ -25,30 +47,18 @@ class Linearizer:
         u_max_array = []
         for i in range(self.dim):
             # affine_dynamic = str(matrix_A[i][0]) + '*x[0] + ' + str(matrix_A[i][1]) + '*x[1]'
-            x = abs_domain_centre
+            x0 = abs_domain_centre
             coeff_vec = matrix_A[i]
             bias = b[i]
-
-            # maximize (ax+b-g(x)) is equiv. to -minimize(g(x)-(ax+b))
-            def err_func(x):
-                lin_func = np.dot(coeff_vec, x) + bias
-                non_lin_func = self.nonlin_dyn.eval(x)
-                err = non_lin_func[i] - lin_func
-                # print(err)
-                return err
-
-            # maxmize (g(x)-(ax+b)) is equiv. to -minimize(ax+b-g(x))
-            def minus_err_func(x):
-                lin_func = np.dot(coeff_vec, x) + bias
-                non_lin_func = self.nonlin_dyn.eval(x)
-                err = lin_func - non_lin_func[i]
-                return err
-
-            # get_err_func([1, 1], x)
             bound = [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)]
 
-            u_min = -minimize(err_func, x, bounds=bound).fun
-            u_max = -minimize(minus_err_func, x, bounds=bound).fun
+            args = (coeff_vec, bias, i)
+            resmin = minimize(self.err_func, x0, bounds=bound, tol=1e-25, args=args)
+            resmax = minimize(self.minus_err_func, x0, bounds=bound, tol=1e-25, args=args)
+
+            u_min = -resmin.fun
+            u_max = -resmax.fun
+
             u_max_array.extend([b[i]+u_max, -b[i]+u_min])
             # u_max_array.extend([b[i], -b[i]])
 
