@@ -5,6 +5,7 @@ import numpy as np
 import SuppFuncUtils
 from Hybridisation.NonlinPostOpt import NonlinPostOpt
 from SysDynamics import GeneralDynamics
+from utils.Plotter import Plotter
 from utils.DataReader import JsonReader
 import utils.simulator as simu
 
@@ -46,7 +47,6 @@ def main():
     sf_mat = nonlin_post_opt.compute_post()
     images = nonlin_post_opt.lin_post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=sf_mat)
 
-    from utils.Plotter import Plotter
     plotter = Plotter(images, opvars)
     plotter.save_polygons_to_file()
 
