@@ -5,9 +5,45 @@
         "x1",
         "-9.81"
     ],
+    "init_coeff": [
+        [
+            1,
+            0
+        ],
+        [
+            -1,
+            0
+        ],
+        [
+            0,
+            1
+        ],
+        [
+            0,
+            -1
+        ]
+    ],
+    "init_col": [
+        [
+            10.2
+        ],
+        [
+            -10
+        ],
+        [
+            0
+        ],
+        [
+            0
+        ]
+    ],
     "is_linear": [
         true,
         true
+    ],
+    "opvars": [
+        0,
+        1
     ],
     "sampling_time": 0.01,
     "start_epsilon": 1e-09,
@@ -15,5 +51,5 @@
         "x0",
         "x1"
     ],
-    "time_horizon": 5
+    "time_horizon": 1
 }
