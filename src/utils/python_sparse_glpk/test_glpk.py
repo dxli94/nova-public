@@ -97,7 +97,7 @@ def test_underconstrained():
     lp.add_rows_less_equal(b_ub)
 
     lp.set_constraints_csr(a_csr)
-
+    lp.print_lp()
     res_glpk = lp.minimize(direction)
 
     assert abs(res_glpk[0] - (-1) < 1e-6)
@@ -126,3 +126,34 @@ def test_tricky():
 
 
     compare_opt(a_ub, b_ub, c)
+
+def test_add_constraints():
+    'test incrementally adding constraints'
+
+    a1_mat = np.array([[-1, 0], [1, 0], [0, -1], [0, 1]])
+    a1_vec = np.array([-10, 10.2, 0, 0])
+
+    a1_csr = csr_matrix(np.array(a1_mat, dtype=float))
+
+    lp = LpInstance()
+    lp.add_cols(a1_csr.shape[1])
+    lp.add_rows_less_equal(a1_vec)
+    lp.set_constraints_csr(a1_csr)
+
+    direction = [1, 0]
+
+    a2_mat = np.array([[-1, 0], [1, 0], [0, -1], [0, 1]], dtype=float)
+    a2_vec = np.array([0, 0, 9.81, -9.81], dtype=float)
+
+    zero_mat = np.zeros((4, 2))
+    a_csc = csc_matrix(np.vstack((zero_mat, a2_mat)))
+
+    lp.add_cols(a_csc.shape[1])
+    lp.add_rows_less_equal(a2_vec)
+
+    lp.set_constraints_csc(a_csc, offset=(0, 2))
+    direction = [1, 0, 0, 0]
+
+    res = lp.minimize(direction)
+
+    assert res is not None

@@ -56,6 +56,11 @@ class LpInstance(Freezable):
             LpInstance._del_lp.restype = None
             LpInstance._del_lp.argtypes = [ctypes.c_void_p]
 
+            # void resetLp(glp_prob* lp)
+            LpInstance._reset_lp = lib.resetLp
+            LpInstance._reset_lp.restype = None
+            LpInstance._reset_lp.argtypes = [ctypes.c_void_p]
+
             #void printLp(glp_prob* lp)
             LpInstance._print_lp = lib.printLp
             LpInstance._print_lp.restype = None
@@ -135,6 +140,11 @@ class LpInstance(Freezable):
         'print the LP to stdout (useful for debugging small instances)'
 
         LpInstance._print_lp(self.lp_data)
+
+    def reset_lp(self):
+        'reset the lp statuses'
+
+        LpInstance._reset_lp(self.lp_data)
 
     def add_cols(self, num):
         'add a certain number of columns to the LP'

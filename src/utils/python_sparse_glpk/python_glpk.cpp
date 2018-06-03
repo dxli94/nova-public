@@ -95,10 +95,12 @@ void printLp(glp_prob* lp)
 
 void addCols(glp_prob* lp, int num)
 {
+    int numCols = glp_get_num_cols(lp);
+
     glp_add_cols(lp, num);
 
     for (int i = 0; i < num; ++i)
-        glp_set_col_bnds(lp, i + 1, GLP_FR, 0, 0);  // free variable (bounds -inf to inf)
+        glp_set_col_bnds(lp, numCols + i + 1, GLP_FR, 0, 0);  // free variable (bounds -inf to inf)
 }
 
 // add '<=' constraints
