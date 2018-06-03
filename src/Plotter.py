@@ -29,7 +29,7 @@ class Plotter:
 
         return list(map(lambda ca: (ca[0], ca[1]), cornersWithAngles))
 
-    def save_polygons_to_file(self, dirpath='../../out/', filename='outfile.out'):
+    def save_polygons_to_file(self, dirpath='../out/', filename='outfile.out'):
         if not os.path.exists(dirpath):
             os.makedirs(dirpath)
 
@@ -124,16 +124,15 @@ if __name__ == '__main__':
     parser.add_argument('--type', type=int, help='0 for points, 1 for polygons. If 2, polygon from first; points from '
                                                  'second.')
     args = parser.parse_args()
-    filelist = args.path if args.path else ['../../out/outfile.out']
+    filelist = args.path if args.path else ['../out/outfile.out']
     data_type = args.type
     if data_type == 1:
         Plotter.plot_points(filelist)
     elif data_type == 2:
-        Plotter.plot_polygons(filelist[0])
-        Plotter.plot_points(filelist[1])
-    else:
         Plotter.plot_polygons(filelist)
         Plotter.plot_points(['../out/simu.out'])
+    else:
+        Plotter.plot_polygons(filelist)
 
         print('Showing plot now.')
         plt.show()
