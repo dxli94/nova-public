@@ -97,12 +97,14 @@ def test():
     # direction = np.array([0, 1])
 
     start = time.time()
-    for i in range(3000):
-        c = np.hstack(([0.0]*6*(i+1), -direction))
+    for i in range(7000):
+        # lp.get_num_cols() - sys_dynamics.dim
+        # c = np.hstack(([0.0]*6*(i+1), -direction))
         # print(c)
         add_bloating_constraints(lp, sys_dynamics, beta)
         add_input_constraints(lp, sys_dynamics, tau)
         add_equality_constraints(lp, sys_dynamics, delta)
+        c = np.hstack((np.zeros(lp.get_num_cols() - sys_dynamics.dim), -direction))
         val = -np.dot(lp.minimize(c), c)
         if i % 100 == 0 and i != 0:
             print('100 iterations in {} secs, in total {} iterations.'.format(time.time()-start, i))
