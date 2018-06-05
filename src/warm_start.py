@@ -1,9 +1,9 @@
-from scipy.sparse import csr_matrix, csc_matrix
-from utils.python_sparse_glpk.python_sparse_glpk import LpInstance
-
 import numpy as np
-import SuppFuncUtils as SuppFuncUtils
+import time
+from scipy.sparse import csr_matrix, csc_matrix
 
+import SuppFuncUtils as SuppFuncUtils
+from utils.python_sparse_glpk.python_sparse_glpk import LpInstance
 from utils.DataReader import DataReader
 from utils.GlpkWrapper import GlpkWrapper
 
@@ -77,11 +77,9 @@ def test():
     sys_dynamics = data_reader.read_data()
 
     dyn_coeff_mat = sys_dynamics.get_dyn_coeff_matrix_A()
-
     init_coeff_mat = sys_dynamics.init_coeff_matrix
     init_coeff_col = sys_dynamics.init_col_vec
     init_coeff_col = init_coeff_col.reshape(1, len(init_coeff_col)).flatten()
-    init_csr = csr_matrix(np.array(init_coeff_mat), dtype=float)
 
     tau = 0.01
     delta = SuppFuncUtils.mat_exp(dyn_coeff_mat, tau)
@@ -89,16 +87,9 @@ def test():
     # alfa = SuppFuncUtils.compute_alpha(sys_dynamics, tau, temp_lp)
     beta = SuppFuncUtils.compute_beta(sys_dynamics, tau, mylp)
 
-    # import time
-    # start = time.time()
-
     lp = LpInstance()
 
-    lp.add_cols(init_csr.shape[1])
-    lp.add_rows_less_equal(init_coeff_col)
-    lp.set_constraints_csr(init_csr)
-
-    import time
+    add_init_constraints(lp, init_coeff_mat, init_coeff_col)
 
     direction = np.array([1, 0])
     # direction = np.array([-1, 0])
@@ -106,7 +97,7 @@ def test():
     # direction = np.array([0, 1])
 
     start = time.time()
-    for i in range(2000):
+    for i in range(3000):
         c = np.hstack(([0.0]*6*(i+1), -direction))
         # print(c)
         add_bloating_constraints(lp, sys_dynamics, beta)
