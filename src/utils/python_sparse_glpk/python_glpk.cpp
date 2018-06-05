@@ -306,6 +306,21 @@ void resetLp(glp_prob* lp)
         glp_set_col_stat(lp, c + 1, GLP_NF);
 }
 
+// added by dxli
+// get the current number of the constraints (rows)
+int getNumRows(glp_prob* lp)
+{
+    return glp_get_num_rows(lp);
+}
+
+
+// edited by dxli
+// get the current number of variables (columns)
+int getNumCols(glp_prob* lp)
+{
+    return glp_get_num_cols(lp);
+}
+
 // function used for getting the result of simplex
 // returns 0 on success
 // returns 1 on unsat

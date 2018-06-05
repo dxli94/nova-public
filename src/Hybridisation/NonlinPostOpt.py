@@ -1,6 +1,7 @@
 import numpy as np
 
 import SuppFuncUtils
+import warm_start as ws
 from AffinePostOpt import PostOperator
 from ConvexSet.HyperBox import HyperBox, hyperbox_contain
 from ConvexSet.Polyhedron import Polyhedron
@@ -8,6 +9,7 @@ from ConvexSet.TransPoly import TransPoly
 from Hybridisation.Linearizer import Linearizer
 from SysDynamics import AffineDynamics
 from utils.GlpkWrapper import GlpkWrapper
+from utils.python_sparse_glpk.python_sparse_glpk import LpInstance
 
 
 def compute_support_functions_for_polyhedra(poly, directions, lp):
@@ -24,7 +26,8 @@ class reachParams:
 
 
 class NonlinPostOpt:
-    def __init__(self, dim, nonlin_dyn, time_horizon, tau, directions, init_mat_X0, init_col_X0, is_linear, start_epsilon):
+    def __init__(self, dim, nonlin_dyn, time_horizon, tau, directions, init_mat_X0, init_col_X0, is_linear,
+                 start_epsilon):
         self.dim = dim
         self.nonlin_dyn = nonlin_dyn
         self.time_horizon = time_horizon
@@ -51,6 +54,12 @@ class NonlinPostOpt:
         self.lin_post_opt = PostOperator()
         self.lp_solver = GlpkWrapper(dim)
         self.dyn_linearizer = Linearizer(dim, nonlin_dyn, is_linear)
+
+        self.warm_start_lp_list = []
+        for _ in range(len(directions)):
+            lp = LpInstance()
+            ws.add_init_constraints(lp, self.init_mat_X0, self.init_col_X0)
+            self.warm_start_lp_list.append(lp)
 
     def compute_post(self):
         time_frames = int(np.ceil(self.time_horizon / self.tau))
@@ -102,13 +111,13 @@ class NonlinPostOpt:
             # Todo P_temp is not a hyperbox rather an rotated rectangon. Checking the bounding box is sufficient but not necessary. Needs to be refine
             if hyperbox_contain(self.abs_domain.to_constraints()[1], self.P_temp):
                 self.P = self.P_temp
-                if i != 0:
-                    temp = []
-                    for elem in delta_product_list_without_first_one:
-                        temp.append(np.dot(elem, self.reach_params.delta_tp))
-                    temp.append(1)
-                    delta_product_list_without_first_one = temp
-                delta_product = np.dot(delta_product, self.reach_params.delta_tp)
+                # if i != 0:
+                    # temp = []
+                #     for elem in delta_product_list_without_first_one:
+                #         temp.append(np.dot(elem, self.reach_params.delta_tp))
+                #     temp.append(1)
+                #     delta_product_list_without_first_one = temp
+                # delta_product = np.dot(delta_product, self.reach_params.delta_tp)
 
                 sf_mat.append(self.P)
                 bbox_mat.append(bbox.to_constraints()[1])
@@ -118,8 +127,9 @@ class NonlinPostOpt:
                     self.init_X_in_each_domain = self.X
                     isalpha = False
 
-                self.compute_gamma_step(i, trans_poly_U_list, beta_list,
-                                        delta_product, delta_product_list_without_first_one)
+                # self.compute_gamma_step(i, trans_poly_U_list, beta_list,
+                #                         delta_product, delta_product_list_without_first_one)
+                self.compute_gamma_step_warm_start()
 
                 s_on_each_direction, r_on_each_direction = s_temp, r_temp
                 i += 1
@@ -153,7 +163,8 @@ class NonlinPostOpt:
         # wrap X_{i} on template directions
         poly = Polyhedron(self.directions, self.X)
         sf_arr = [self.lin_post_opt.compute_initial_sf(self.reach_params.delta_tp, poly, self.trans_poly_U, l,
-                                                       self.reach_params.alpha, self.tau, self.lp_solver) for l in self.directions]
+                                                       self.reach_params.alpha, self.tau, self.lp_solver) for l in
+                  self.directions]
         self.P_temp = np.array(sf_arr)
 
     def compute_beta_step(self, s_vec, r_vec):
@@ -166,7 +177,8 @@ class NonlinPostOpt:
             prev_r = r_vec[idx]
             prev_s = s_vec[idx]
             r = np.dot(self.reach_params.delta_tp, prev_r)
-            s = prev_s + self.lin_post_opt.compute_sf_w(prev_r, self.trans_poly_U, self.reach_params.beta, self.tau, self.lp_solver)
+            s = prev_s + self.lin_post_opt.compute_sf_w(prev_r, self.trans_poly_U, self.reach_params.beta, self.tau,
+                                                        self.lp_solver)
             sf = s + self.lin_post_opt.compute_initial_sf(self.reach_params.delta_tp,
                                                           poly, self.trans_poly_U,
                                                           r,
@@ -197,6 +209,68 @@ class NonlinPostOpt:
             sf = sf_X0 + s
             sf_vec.append([sf])
             next_s_arr.append(s)
+
+        self.X = np.array(sf_vec)
+
+        return next_s_arr
+
+    def compute_gamma_step_warm_start(self):
+        import time
+
+        overall_start = time.time()
+        sf_vec = []
+        next_s_arr = []
+
+        for l_idx, l in enumerate(self.directions):
+            delta = self.reach_params.delta_tp.T
+            local_lp = self.warm_start_lp_list[l_idx]
+
+            if l_idx == 1:
+                start = time.time()
+
+            ws.add_constraints(local_lp, self.abs_dynamics, self.tau,
+                               self.reach_params.beta, delta)
+            temp_l = np.hstack((np.zeros(local_lp.get_num_cols() - self.dim), -l))
+
+            if l_idx == 1:
+                print('time for add constraints: {}'.format(time.time() - start))
+
+            if l_idx == 1:
+                print(l)
+                start = time.time()
+
+            sf = -np.dot(local_lp.minimize(temp_l), temp_l)
+
+            if l_idx == 1:
+                print('time for opt: {}'.format(time.time() - start))
+
+            # if l_idx == 0:
+            #     print(temp_l)
+            #     print(sf)
+                # local_lp.print_lp()
+                # print('\n\n\n')
+
+            sf_vec.append([sf])
+            next_s_arr.append(0)  # todo ??? do not make sense right now do we need it
+
+        print('overall tine: {}'.format(time.time()-overall_start))
+        print('\n')
+        # end = time.time()
+        # print(end - start)
+
+        # trans_poly_U_list.append(self.trans_poly_U)
+        # beta_list.append(self.reach_params.beta)
+        #
+        # for l_idx, l in enumerate(self.directions):
+        #     r = np.dot(delta_product, l)
+        #     sf_X0 = self.init_poly.compute_support_function(r, self.lp_solver)
+        #
+        #     # direction_matrix[l_idx].append(r)
+        #     s = self.compute_sum_sf_w(n, l, delta_list_without_first_one, trans_poly_U_list, beta_list)
+        #
+        #     sf = sf_X0 + s
+        #     sf_vec.append([sf])
+        #     next_s_arr.append(s)
 
         self.X = np.array(sf_vec)
 

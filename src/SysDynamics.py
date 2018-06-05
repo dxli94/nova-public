@@ -35,13 +35,13 @@ class AffineDynamics:
 
 
 class GeneralDynamics:
-
     def __init__(self, id_to_vars, *args):
         self.vars_dict = id_to_vars
         dynamics = [sympy.simplify(arg) for arg in args]
         num_free_vars = len(reduce((lambda x, y: x.union(y)), [d.free_symbols for d in dynamics]))
         assert len(self.vars_dict) >= num_free_vars, \
-            "inconsistent number of variables declared ({}) with used in dynamics ({})".format(len(self.vars_dict), num_free_vars)
+            "inconsistent number of variables declared ({}) with used in dynamics ({})" \
+                .format(len(self.vars_dict), num_free_vars)
 
         self.state_vars = tuple(sympy.symbols(str(self.vars_dict[key])) for key in self.vars_dict)
         self.dynamics = sympy.lambdify(self.state_vars, dynamics)
@@ -69,4 +69,3 @@ if __name__ == '__main__':
         gd.eval_jacobian([1, 2, 3])
 
     pass
-

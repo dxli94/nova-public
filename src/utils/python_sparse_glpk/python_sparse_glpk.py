@@ -119,6 +119,15 @@ class LpInstance(Freezable):
             LpInstance._test.restype = ctypes.c_int
             LpInstance._test.argtypes = []
 
+            # edited by dxli
+            LpInstance._get_num_rows = lib.getNumRows
+            LpInstance._get_num_rows.restype = ctypes.c_int
+            LpInstance._get_num_rows.argtypes = [ctypes.c_void_p]
+
+            # edited by dxli
+            LpInstance._get_num_cols = lib.getNumCols
+            LpInstance._get_num_cols.restype = ctypes.c_int
+            LpInstance._get_num_cols.argtypes = [ctypes.c_void_p]
 
     def __init__(self):
         LpInstance._init_static()
@@ -145,6 +154,8 @@ class LpInstance(Freezable):
         'reset the lp statuses'
 
         LpInstance._reset_lp(self.lp_data)
+
+
 
     def add_cols(self, num):
         'add a certain number of columns to the LP'
@@ -232,6 +243,12 @@ class LpInstance(Freezable):
             result_vec = None
 
         return result_vec
+
+    def get_num_rows(self):
+        return self._get_num_rows(self.lp_data)
+
+    def get_num_cols(self):
+        return self._get_num_cols(self.lp_data)
 
     @staticmethod
     def test():
