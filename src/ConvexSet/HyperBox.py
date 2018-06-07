@@ -1,5 +1,5 @@
 import numpy as np
-from ppl import Variable, Constraint_System, C_Polyhedron
+# from ppl import Variable, Constraint_System, C_Polyhedron
 from itertools import combinations
 
 
@@ -52,15 +52,15 @@ class HyperBox:
     def bloat(self, epsilon):
         self.bounds = np.array([[bd[0] - epsilon, bd[1] + epsilon] for bd in self.bounds])
 
-    def to_ppl(self):
-        cs = Constraint_System()
-        variables = [Variable(idx) for idx in range(self.dim)]
-
-        for idx, bd in zip(range(len(self.bounds)), self.bounds):
-            cs.insert(normalised(variables[idx]) >= normalised(bd[0]))
-            cs.insert(normalised(variables[idx]) <= normalised(bd[1]))
-
-        return C_Polyhedron(cs)
+    # def to_ppl(self):
+    #     cs = Constraint_System()
+    #     variables = [Variable(idx) for idx in range(self.dim)]
+    #
+    #     for idx, bd in zip(range(len(self.bounds)), self.bounds):
+    #         cs.insert(normalised(variables[idx]) >= normalised(bd[0]))
+    #         cs.insert(normalised(variables[idx]) <= normalised(bd[1]))
+    #
+    #     return C_Polyhedron(cs)
 
     def to_constraints(self):
         """ Todo:

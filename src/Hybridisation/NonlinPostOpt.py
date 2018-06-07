@@ -111,13 +111,13 @@ class NonlinPostOpt:
             # Todo P_temp is not a hyperbox rather an rotated rectangon. Checking the bounding box is sufficient but not necessary. Needs to be refine
             if hyperbox_contain(self.abs_domain.to_constraints()[1], self.P_temp):
                 self.P = self.P_temp
-                # if i != 0:
-                    # temp = []
-                #     for elem in delta_product_list_without_first_one:
-                #         temp.append(np.dot(elem, self.reach_params.delta_tp))
-                #     temp.append(1)
-                #     delta_product_list_without_first_one = temp
-                # delta_product = np.dot(delta_product, self.reach_params.delta_tp)
+                if i != 0:
+                    temp = []
+                    for elem in delta_product_list_without_first_one:
+                        temp.append(np.dot(elem, self.reach_params.delta_tp))
+                    temp.append(1)
+                    delta_product_list_without_first_one = temp
+                delta_product = np.dot(delta_product, self.reach_params.delta_tp)
 
                 sf_mat.append(self.P)
                 bbox_mat.append(bbox.to_constraints()[1])
@@ -127,9 +127,9 @@ class NonlinPostOpt:
                     self.init_X_in_each_domain = self.X
                     isalpha = False
 
-                # self.compute_gamma_step(i, trans_poly_U_list, beta_list,
-                #                         delta_product, delta_product_list_without_first_one)
-                self.compute_gamma_step_warm_start()
+                self.compute_gamma_step(i, trans_poly_U_list, beta_list,
+                                        delta_product, delta_product_list_without_first_one)
+                # self.compute_gamma_step_warm_start()
 
                 s_on_each_direction, r_on_each_direction = s_temp, r_temp
                 i += 1
