@@ -7,7 +7,7 @@ Project by ANU Hybrid System Group.
 First, clone PyFlow-assignment into your workplace by
 
 ```
-git clone git@gitlab.com:dxli1005/PyFlow-assignment.git
+git clone git@gitlab.com:dxli-private/HyPyFlow.git
 ```
 
 ### Installing dependencies
@@ -16,12 +16,12 @@ The easiest way to install all the dependencies is by creating a virtual environ
 
 After installing Anaconda,
 ```
-cd PyFlow-assignment
-conda env create --name PyFlow-assignment --file environment.yml
+cd HyPyFlow/
+conda env create --name HyPy --file environment.yml
 ```
 then activate the virtual environment by
 ```
-source activate PyFlow-assignment
+source activate HyPy
 ```
 You will see your prompt is now prefixed with "PyFlow-assignment", which is the virtual environment with dependencies installed.
 
