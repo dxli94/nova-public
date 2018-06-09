@@ -129,10 +129,10 @@ if __name__ == '__main__':
     if data_type == 1:
         Plotter.plot_points(filelist)
     elif data_type == 2:
-        Plotter.plot_polygons(filelist)
+        # Plotter.plot_polygons(filelist)
         Plotter.plot_points(['../out/simu.out'])
     else:
         Plotter.plot_polygons(filelist)
-
+        Plotter.plot_points(['../out/simu.out'])
         print('Showing plot now.')
         plt.show()
