@@ -56,16 +56,16 @@ python Plotter.py --path ../out/outfile.out
 
 Try nonlinear analyzer (dev.),
  
-1. choose the path to instance in main() of non_linear_analyzer.py; e.g. 
+Choose the path to instance in main() of non_linear_analyzer.py; e.g. 
 ```
  ../instances/non_linear_instances/vanderpol.json
 ```
-2. change time horizon, sampling time, direction type, initial states, etc. in the corresponding json file.
-3. try
+change time horizon, sampling time, direction type, initial states, etc. in the corresponding json file.
+Try
 ```
 python non_linear_analyzer.py
 ```
-4. Plot from outfile.out:
+Plot from outfile.out:
 ```
 python Plotter.py --path ../out/outfile.out
 ```
