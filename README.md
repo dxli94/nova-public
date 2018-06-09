@@ -37,15 +37,15 @@ In case Anaconda does not work as expected, you need to install the following pa
 
 ### Running
 
-See options:
+Try affine analyzer, see options
 ```
-cd dir/src
-python main.py --help
+cd HyPyFlow/src
+python affine_analyzer.py --help
 ```
 
 For example:
 ```
-python main.py --path ../instances/free_ball.txt --dt 0 --horizon 1 --sf 0.1 --opvars 0 1
+python affine_analyzer.py --path ../instances/single_mode_affine_instances/free_ball.txt --dt 0 --horizon 1 --sampling_time 0.1 --opvars 0 1
 
 ```
 
@@ -54,5 +54,21 @@ Plot from outfile.out:
 python Plotter.py --path ../out/outfile.out
 ```
 
+Try nonlinear analyzer (dev.),
+ 
+1. choose the path to instance in main() of non_linear_analyzer.py; e.g. 
+```
+ ../instances/non_linear_instances/vanderpol.json
+```
+2. change time horizon, sampling time, direction type, initial states, etc. in the corresponding json file.
+3. try
+```
+python non_linear_analyzer.py
+```
+4. Plot from outfile.out:
+```
+python Plotter.py --path ../out/outfile.out
+```
+ 
 
 Tested on Ubuntu 16.04.2 LTS Xenial and macOS High Sierra (10.13.3).

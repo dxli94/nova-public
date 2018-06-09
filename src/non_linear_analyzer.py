@@ -15,10 +15,10 @@ def main():
     try:
         path = sys.argv[1]
     except IndexError:
-        # path = '../instances/non_linear_instances/vanderpol.json'
+        path = '../instances/non_linear_instances/vanderpol.json'
         # path = '../instances/non_linear_instances/predator_prey.json'
         # path = '../instances/non_linear_instances/2d_water_tank.json'
-        path = '../instances/non_linear_instances/free_ball.json'
+        # path = '../instances/non_linear_instances/free_ball.json'
 
     data = JsonReader(path).read()
     time_horizon = data['time_horizon']
