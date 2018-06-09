@@ -13,6 +13,5 @@ dependencies:
   - cvxopt=1.1.9
   - cysignals
   - pip:
-    - gmpy2==2.1.0a1 --no-binary ":all:"
     - pycddlib==2.0.0
 prefix: /anaconda3/envs/HyPyFlow
