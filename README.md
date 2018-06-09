@@ -26,7 +26,7 @@ source activate HyPy
 You will see your prompt is now prefixed with "PyFlow-assignment", which is the virtual environment with dependencies installed.
 
 #### Option 2
-In case Anaconda does not work as expected, you need to install the following packages manually.
+In case Anaconda is not available or does not work as expected, you could install the following packages manually.
 
 - [SciPy](https://www.scipy.org/) (1.0.0)
 - [NumPy](http://www.numpy.org/) (1.14.2)
@@ -34,6 +34,9 @@ In case Anaconda does not work as expected, you need to install the following pa
 - [matplotlib](https://matplotlib.org/) (2.2.0)
 - [CVXOPT](http://cvxopt.org/install/index.html) (1.1.9)
 - [pycddlib](http://pycddlib.readthedocs.io/en/latest/) (2.0.0)
+- [sympy](http://docs.sympy.org/latest/install.html) (1.1.1)
+
+They should all be available if you are using pip.
 
 ### Running
 
