@@ -52,20 +52,6 @@ def add_input_constraints(lp, sys_dyn, beta, tau):
     lp.set_constraints_csc(a_csc, offset=(0, num_col))
 
 
-def add_bloating_constraints(lp, sys_dyn, beta):
-    num_row = lp.get_num_rows()
-    num_col = lp.get_num_cols()
-
-    coeff_mat = [[1, 0], [-1, 0], [0, 1], [0, -1]]
-    col_vec = [beta] * sys_dyn.dim * 2
-    zero_mat = np.zeros((num_row, sys_dyn.dim))
-    a_csc = csc_matrix(np.vstack((zero_mat, coeff_mat)))
-
-    lp.add_cols(a_csc.shape[1])
-    lp.add_rows_less_equal(col_vec)
-    lp.set_constraints_csc(a_csc, offset=(0, num_col))
-
-
 def update_first_n_col(lp, sys_dynamics, tau, delta_list):
     dyn_coeff_mat = sys_dynamics.get_dyn_coeff_matrix_A()
     # if we want to be general, in the non-linear case, delta depends on
@@ -73,25 +59,15 @@ def update_first_n_col(lp, sys_dynamics, tau, delta_list):
     # or pass it as a param. Instead, recompute it every time.
     delta = SuppFuncUtils.mat_exp(dyn_coeff_mat, tau)
 
-    # todo for better efficiency, we could try to rewrite the following lines using numpy broadcast
-    temp_delta_list = []
     if len(delta_list) == 0:
-        temp_delta_list.append(delta)
+        delta_list = np.array([delta])
+    else:
+        delta_list = np.tensordot(delta, delta_list, axes=((1),(1))).swapaxes(0,1)
+    delta_list = np.vstack((delta_list, [np.eye(sys_dynamics.dim)]))
 
-    for x in delta_list:
-        temp_delta_list.append(np.dot(delta, x))
-    temp_delta_list.append(np.eye(sys_dynamics.dim))
-    delta_list = temp_delta_list
+    temp = delta_list.transpose(1, 0, 2).reshape(2, -1)
+    temp = np.hstack((-np.eye(sys_dynamics.dim), temp))
 
-    # todo can be better written using reduce
-    tail = None
-    for x in delta_list:
-        if tail is not None:
-            tail = np.hstack((tail, -x))
-        else:
-            tail = -x
-
-    temp = np.hstack((np.eye(sys_dynamics.dim), tail))
     temp_csr = csr_matrix(temp)
     lp.set_constraints_csr(temp_csr)
 
@@ -101,45 +77,62 @@ def update_first_n_col(lp, sys_dynamics, tau, delta_list):
 def test():
     data_reader = DataReader(path2instance="../instances/single_mode_affine_instances/free_ball.txt")
     sys_dynamics = data_reader.read_data()
+    tau = 0.01
+    mylp = GlpkWrapper(sys_dynamics.dim)
+    beta = SuppFuncUtils.compute_beta(sys_dynamics, tau, mylp)
 
     delta_list = []
 
     init_coeff_mat = sys_dynamics.init_coeff_matrix
     init_coeff_col = sys_dynamics.init_col_vec
-    init_coeff_col = init_coeff_col.reshape(1, len(init_coeff_col)).flatten()
-
-    tau = 0.01
-    mylp = GlpkWrapper(sys_dynamics.dim)
-    beta = SuppFuncUtils.compute_beta(sys_dynamics, tau, mylp)
+    init_coeff_col = init_coeff_col.T.reshape(1, len(init_coeff_col)).flatten()
 
     lp = LpInstance()
 
     add_init_constraints(lp, sys_dynamics, init_coeff_mat, init_coeff_col)
 
-    # direction = np.array([1, 0])
+    direction = np.array([1, 0])
     # direction = np.array([-1, 0])
     # direction = np.array([0, -1])
-    direction = np.array([0, 1])
+    # direction = np.array([0, 1])
 
     start = time.time()
-    for i in range(100):
-        add_input_constraints(lp, sys_dynamics, beta, tau)
-        delta_list = update_first_n_col(lp, sys_dynamics, tau, delta_list)
+    start_copy = time.time()
+    iters = 7000
 
-        # lp.reset_lp()
+    iter_matrix_exp_time = 0
+    total_matrix_exp_time = 0
+
+    for i in range(iters):
+        add_input_constraints(lp, sys_dynamics, beta, tau)
+
+        temp_time = time.time()
+        # delta_list = update_first_n_col(lp, sys_dynamics, tau, delta_list)
+        delta_list = update_first_n_col(lp, sys_dynamics, tau, delta_list)
+        time_usage = time.time() - temp_time
+        iter_matrix_exp_time += time_usage
+        total_matrix_exp_time += time_usage
+
+        # lp.print_lp()
 
         c = np.hstack((-direction, np.zeros(lp.get_num_cols() - sys_dynamics.dim)))
         val = -np.dot(lp.minimize(c), c)
-        print(val)
+        # print(val)
 
         if i % 100 == 0 and i != 0:
-            print('100 iterations in {} secs, in total {} iterations.'.format(time.time()-start, i))
+            print('100 iterations in {} secs, in total {} iterations.'\
+                  'matrix exp time is {} secs'.format(time.time()-start, i, iter_matrix_exp_time))
             start = time.time()
+            iter_matrix_exp_time = 0
+
+    print('{} iterations finished, in total {} secs. matrix exp time is {} secs'
+          .format(iters, time.time()-start_copy, total_matrix_exp_time))
 
 
 def main():
     # test()
     test()
+    # test_broadcast()
 
 if __name__ == '__main__':
     main()
