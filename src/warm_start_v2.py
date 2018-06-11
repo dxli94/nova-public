@@ -8,13 +8,7 @@ from utils.DataReader import DataReader
 from utils.GlpkWrapper import GlpkWrapper
 
 
-head = None
-delta_list = None
-
-
 def add_init_constraints(lp, sys_dyn, init_coeff_mat, init_col_vec):
-    global head
-
     # n columns for state variables
     lp.add_cols(sys_dyn.dim)
     lp.add_rows_equal_zero(sys_dyn.dim)
@@ -31,8 +25,7 @@ def add_init_constraints(lp, sys_dyn, init_coeff_mat, init_col_vec):
     lp.set_constraints_csr(init_csr, offset=(sys_dyn.dim, 0))
 
     eye = np.eye(sys_dyn.dim)
-    head = eye
-    eye_csr = csr_matrix(head)
+    eye_csr = csr_matrix(eye)
     lp.set_constraints_csr(eye_csr)
 
 
@@ -73,10 +66,7 @@ def add_bloating_constraints(lp, sys_dyn, beta):
     lp.set_constraints_csc(a_csc, offset=(0, num_col))
 
 
-def update_first_n_col(lp, sys_dynamics, tau):
-    global head
-    global delta_list
-
+def update_first_n_col(lp, sys_dynamics, tau, delta_list):
     dyn_coeff_mat = sys_dynamics.get_dyn_coeff_matrix_A()
     # if we want to be general, in the non-linear case, delta depends on
     # matrix A, which changes over time. So here do not pre-compute delta
@@ -101,14 +91,14 @@ def update_first_n_col(lp, sys_dynamics, tau):
         else:
             tail = -x
 
-    temp = np.hstack((head, tail))
+    temp = np.hstack((np.eye(sys_dynamics.dim), tail))
     temp_csr = csr_matrix(temp)
     lp.set_constraints_csr(temp_csr)
 
+    return delta_list
+
 
 def test():
-    global delta_list
-
     data_reader = DataReader(path2instance="../instances/single_mode_affine_instances/free_ball.txt")
     sys_dynamics = data_reader.read_data()
 
@@ -134,7 +124,7 @@ def test():
     start = time.time()
     for i in range(100):
         add_input_constraints(lp, sys_dynamics, beta, tau)
-        update_first_n_col(lp, sys_dynamics, tau)
+        delta_list = update_first_n_col(lp, sys_dynamics, tau, delta_list)
 
         # lp.reset_lp()
 
@@ -149,7 +139,6 @@ def test():
 
 def main():
     # test()
-    global delta_list
     test()
 
 if __name__ == '__main__':
