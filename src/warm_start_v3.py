@@ -6,6 +6,7 @@ from ConvexSet.Polyhedron import Polyhedron
 from utils.DataReader import DataReader
 from utils.GlpkWrapper import GlpkWrapper
 
+from timerutil import Timers
 
 def update_delta_list(sys_dynamics, tau, delta_list):
     dyn_coeff_mat = sys_dynamics.get_dyn_coeff_matrix_A()
@@ -50,7 +51,7 @@ def test():
 
     max_iters = 2000
 
-    overall_start = time.time()
+    Timers.tic('total')
 
     total_val = 0
 
@@ -62,21 +63,49 @@ def test():
         input_lb, input_ub = update_input_bounds(input_ub, input_lb, next_ub, next_lb)
         factors = delta_list.transpose(1, 0, 2).reshape(2, -1)
 
+        Timers.tic('accumulate loop')
+        
         for j in range(factors.shape[0]):
-            max_point = [input_ub[idx] if k >= 0 else input_lb[idx] for idx, k in enumerate(factors[j, :])]
-            min_point = [input_lb[idx] if k >= 0 else input_ub[idx] for idx, k in enumerate(factors[j, :])]
+            #Timers.tic('list comprehension') # ~ 6.4 sec, np.dot also takes time
+            #max_point = [input_ub[idx] if k >= 0 else input_lb[idx] for idx, k in enumerate(factors[j, :])]
+            #min_point = [input_lb[idx] if k >= 0 else input_ub[idx] for idx, k in enumerate(factors[j, :])]
+            #Timers.toc('list comprehension')
 
-            maxval = np.dot(factors[j, :], max_point)
-            minval = np.dot(factors[j, :], min_point)
+            Timers.tic('make min/max points') # ~ 4 seconds, np.dot much faster
+            row = factors[j, :]
+            max_point = np.empty(len(row))
+            min_point = np.empty(len(row))
+
+            for idx in range(len(row)):
+                k = row[idx]
+
+                if k >= 0:
+                    max_point[idx] = input_ub[idx]
+                    min_point[idx] = input_lb[idx]
+                else:
+                    max_point[idx] = input_lb[idx]
+                    min_point[idx] = input_ub[idx]
+                    
+            Timers.toc('make min/max points')
+
+            Timers.tic('np.dot')
+            maxval = np.dot(row, max_point)
+            minval = np.dot(row, min_point)
+            Timers.toc('np.dot')
 
             if j == 0:
                 total_val += maxval
+
+        Timers.toc('accumulate loop')
 
         if i % 100 == 0:
             print('100 iterations in {} secs, in total {} iterations.'.format(time.time()-start, i))
             start = time.time()
 
-    print('Overall time is {} secs, in total {} iterations.'.format(time.time()-overall_start, max_iters))
+    # original 9.1 seconds, -1280053.0497008062
+    Timers.toc('total')
+    Timers.print_stats()
+    print('in total {} iterations.'.format(max_iters))
     print(total_val)
 
 def main():
