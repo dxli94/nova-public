@@ -101,10 +101,12 @@ def test():
 
     start = time.time()
     start_copy = time.time()
-    iters = 1000
+    iters = 2000
 
     iter_matrix_exp_time = 0
     total_matrix_exp_time = 0
+
+    total_val = 0
 
     for i in range(iters):
         add_input_constraints(lp, sys_dynamics, beta, tau)
@@ -120,6 +122,9 @@ def test():
 
         c = np.hstack((-direction, np.zeros(lp.get_num_cols() - sys_dynamics.dim)))
         val = -np.dot(lp.minimize(c), c)
+        total_val += val
+
+        # print(lp.minimize(c))
         # print(val)
 
         if i % 100 == 0 and i != 0:
@@ -128,12 +133,12 @@ def test():
             start = time.time()
             iter_matrix_exp_time = 0
 
-        if i == iters - 1:
-            add_plot(lp)
+        # if i == iters - 1:
+        #     add_plot(lp)
 
     print('{} iterations finished, in total {} secs. matrix exp time is {} secs'
           .format(iters, time.time()-start_copy, total_matrix_exp_time))
-
+    print(total_val)
     plt.show()
 
 def main():
