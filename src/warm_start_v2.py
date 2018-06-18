@@ -7,6 +7,9 @@ from utils.python_sparse_glpk.python_sparse_glpk import LpInstance
 from utils.DataReader import DataReader
 from utils.GlpkWrapper import GlpkWrapper
 
+from plotutil import add_plot
+
+import matplotlib.pyplot as plt
 
 def add_init_constraints(lp, sys_dyn, init_coeff_mat, init_col_vec):
     # n columns for state variables
@@ -98,7 +101,7 @@ def test():
 
     start = time.time()
     start_copy = time.time()
-    iters = 7000
+    iters = 1000
 
     iter_matrix_exp_time = 0
     total_matrix_exp_time = 0
@@ -125,9 +128,13 @@ def test():
             start = time.time()
             iter_matrix_exp_time = 0
 
+        if i == iters - 1:
+            add_plot(lp)
+
     print('{} iterations finished, in total {} secs. matrix exp time is {} secs'
           .format(iters, time.time()-start_copy, total_matrix_exp_time))
 
+    plt.show()
 
 def main():
     # test()
