@@ -71,27 +71,42 @@ def test():
             #min_point = [input_lb[idx] if k >= 0 else input_ub[idx] for idx, k in enumerate(factors[j, :])]
             #Timers.toc('list comprehension')
 
-            Timers.tic('make min/max points') # ~ 4 seconds, np.dot much faster
+            # Timers.tic('make min/max points') # ~ 4 seconds, np.dot much faster
             row = factors[j, :]
-            max_point = np.empty(len(row))
-            min_point = np.empty(len(row))
+            # max_point = np.empty(len(row))
+            # min_point = np.empty(len(row))
+            #
+            # # for idx in range(len(row)):
+            # #     k = row[idx]
+            # #
+            # #     if k >= 0:
+            # #         max_point[idx] = input_ub[idx]
+            # #         min_point[idx] = input_lb[idx]
+            # #     else:
+            # #         max_point[idx] = input_lb[idx]
+            # #         min_point[idx] = input_ub[idx]
 
-            for idx in range(len(row)):
-                k = row[idx]
-
-                if k >= 0:
-                    max_point[idx] = input_ub[idx]
-                    min_point[idx] = input_lb[idx]
-                else:
-                    max_point[idx] = input_lb[idx]
-                    min_point[idx] = input_ub[idx]
-                    
-            Timers.toc('make min/max points')
+            Timers.tic('np.clip')
+            pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
+            neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
+            Timers.toc('np.clip')
 
             Timers.tic('np.dot')
-            maxval = np.dot(row, max_point)
-            minval = np.dot(row, min_point)
+            maxval = pos_clip.dot(input_ub) + neg_clip.dot(input_lb)
+            minval = neg_clip.dot(input_ub) + pos_clip.dot(input_lb)
             Timers.toc('np.dot')
+
+            Timers.toc('make min/max points')
+            #
+            # Timers.tic('np.dot')
+            # maxval = np.dot(row, max_point)
+            # minval = np.dot(row, min_point)
+            # Timers.toc('np.dot')
+
+            # print('maxval_new is {}, maxval is {}.'.format(maxval_new, maxval))
+            # print('minval_new is {}, minval is {}.'.format(minval_new, minval))
+            #
+            # exit()
 
             if j == 0:
                 total_val += maxval
