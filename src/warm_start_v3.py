@@ -13,7 +13,9 @@ def update_delta_list(sys_dynamics, tau, delta_list):
     # if we want to be general, in the non-linear case, delta depends on
     # matrix A, which changes over time. So here do not pre-compute delta
     # or pass it as a param. Instead, recompute it every time.
+    Timers.tic('mat exp')
     delta = SuppFuncUtils.mat_exp(dyn_coeff_mat, tau)
+    Timers.toc('mat exp')
 
     if len(delta_list) == 0:
         delta_list = np.array([delta])
@@ -49,7 +51,7 @@ def test():
     input_ub = init_ub
     input_lb = init_lb
 
-    max_iters = 2000
+    max_iters = 20000
 
     Timers.tic('total')
 
@@ -89,6 +91,9 @@ def test():
             Timers.tic('np.clip')
             pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
             neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
+            # does not speed too much
+            # neg_clip = row - pos_clip
+
             Timers.toc('np.clip')
 
             Timers.tic('np.dot')
