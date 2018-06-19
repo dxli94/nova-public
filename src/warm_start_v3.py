@@ -96,7 +96,7 @@ def test():
             minval = neg_clip.dot(input_ub) + pos_clip.dot(input_lb)
             Timers.toc('np.dot')
 
-            Timers.toc('make min/max points')
+            # Timers.toc('make min/max points')
             #
             # Timers.tic('np.dot')
             # maxval = np.dot(row, max_point)
