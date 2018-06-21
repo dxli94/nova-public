@@ -1,20 +1,11 @@
 import numpy as np
 
 import SuppFuncUtils
-import warm_start as ws
-from AffinePostOpt import PostOperator
-from ConvexSet.HyperBox import HyperBox, hyperbox_contain
+from ConvexSet.HyperBox import HyperBox, hyperbox_contain_by_bounds
 from ConvexSet.Polyhedron import Polyhedron
-from ConvexSet.TransPoly import TransPoly
 from Hybridisation.Linearizer import Linearizer
 from SysDynamics import AffineDynamics
 from utils.GlpkWrapper import GlpkWrapper
-from utils.python_sparse_glpk.python_sparse_glpk import LpInstance
-
-
-def compute_support_functions_for_polyhedra(poly, directions, lp):
-    vec = np.array([poly.compute_support_function(l, lp) for l in directions])
-    return vec.reshape(len(vec), 1)
 
 
 class reachParams:
@@ -35,103 +26,92 @@ class NonlinPostOpt:
         self.coeff_matrix_B = np.identity(dim)
         self.is_linear = is_linear
         self.start_epsilon = start_epsilon
-
-        # the following attributes would be updated along the flowpipe construction
-        self.directions = directions
-        self.abs_dynamics = None
-        self.abs_domain = None
-        self.init_poly = None
-        self.trans_poly_U = None
         self.init_mat_X0 = init_mat_X0
         self.init_col_X0 = init_col_X0
-        self.reach_params = reachParams()
-        self.P = np.zeros(len(self.directions))
-        self.P_temp = np.array([np.inf, -np.inf] * 2)
-        self.X = np.zeros(len(self.directions))
-        self.init_X = np.zeros(len(self.directions))
-        self.init_X_in_each_domain = np.zeros(len(self.directions))
+        self.directions = directions
 
-        self.lin_post_opt = PostOperator()
+        # the following attributes would be updated along the flowpipe construction
+        self.abs_dynamics = None
+        self.abs_domain = None
+        self.poly_U = None
+        self.reach_params = reachParams()
+
+        # self.lin_post_opt = PostOperator()
         self.lp_solver = GlpkWrapper(dim)
         self.dyn_linearizer = Linearizer(dim, nonlin_dyn, is_linear)
-
-        self.warm_start_lp_list = []
-        for _ in range(len(directions)):
-            lp = LpInstance()
-            ws.add_init_constraints(lp, self.init_mat_X0, self.init_col_X0)
-            self.warm_start_lp_list.append(lp)
 
     def compute_post(self):
         time_frames = int(np.ceil(self.time_horizon / self.tau))
         init_poly = Polyhedron(self.init_mat_X0, self.init_col_X0)
 
-        self.X = compute_support_functions_for_polyhedra(init_poly, self.directions, self.lp_solver)
-        self.init_X = self.X
-        self.init_X_in_each_domain = self.X
-        self.init_poly = Polyhedron(self.directions, self.init_X)
+        vertices = init_poly.vertices
+        init_set_ub = np.amax(vertices, axis=0)
+        init_set_lb = np.amin(vertices, axis=0)
+
+        # reachable states in dense time
+        tube_ub = init_set_ub
+        tube_lb = init_set_lb
+        # initial reachable set in discrete time in the current abstract domain
+        # changes when the abstract domain is large enough to contain next image in alfa step
+        current_init_set_ub = init_set_ub
+        current_init_set_lb = init_set_lb
+        # initial reachable set in discrete time in the next abstract domain
+        # changes when dynamics is changed
+        next_init_set_ub = init_set_ub
+        next_init_set_lb = init_set_lb
+
+        input_lb_seq = init_set_lb
+        input_ub_seq = init_set_ub
 
         # B := \bb(X0)
-        bbox = HyperBox(self.init_poly.vertices)
-        # (A, V) := L(f, B), s.t. f(x) = (A, V) over-approx. g(x)
-        self.hybridise(bbox, 1e-6)
-        # P_{0} := \alpha(X_{0})
-        self.P_temp = self.X
-        self.P = self.X
+        bbox = HyperBox(init_poly.vertices)
+        # (A, V) := L(f, B), such that f(x) = (A, V) over-approx. g(x)
+        current_input_lb, current_input_ub = self.hybridize(bbox, 1e-6)
+        # input_lb_seq, input_ub_seq = self.update_input_bounds_seq(input_ub_seq, input_lb_seq,
+        #                                                           current_input_ub, current_input_lb)
+
+        delta_list = []
+
         i = 0
 
-        # initialise support function matrix, [r], [s]
-        sf_mat = []
-        bbox_mat = []
-        x_mat = [self.X]
-
-        s_on_each_direction = [0] * len(self.directions)
-        r_on_each_direction = self.directions
-
-        trans_poly_U_list = []
-        beta_list = []
+        sf_mat = np.zeros((time_frames, 2*self.dim))
+        print(sf_mat)
 
         flag = True  # whether we have a new abstraction domain
         isalpha = False
         epsilon = self.start_epsilon
-        delta_product = 1
-        delta_product_list_without_first_one = [1]
+        # delta_product = 1
+        # delta_product_list_without_first_one = [1]
 
         while i < time_frames:
             if flag:
                 # P_{i+1} := \alpha(X_{i})
-                self.compute_alpha_step()
-                s_temp = [0] * len(self.directions)
-                r_temp = self.directions
+                temp_tube_lb, temp_tube_ub = self.compute_alpha_step(current_init_set_lb,
+                                                                     current_init_set_ub,
+                                                                     current_input_lb,
+                                                                     current_input_ub)
                 isalpha = True
             else:
                 # P_{i+1} := \beta(P_{i})
-                s_temp, r_temp = self.compute_beta_step(s_on_each_direction, r_on_each_direction)
+                temp_tube_lb, temp_tube_ub = self.compute_beta_step(tube_lb, tube_ub,
+                                                                    current_input_lb,
+                                                                    current_input_ub)
 
             # if P_{i+1} \subset B
-            # Todo P_temp is not a hyperbox rather an rotated rectangon. Checking the bounding box is sufficient but not necessary. Needs to be refine
-            if hyperbox_contain(self.abs_domain.to_constraints()[1], self.P_temp):
-                self.P = self.P_temp
-                if i != 0:
-                    temp = []
-                    for elem in delta_product_list_without_first_one:
-                        temp.append(np.dot(elem, self.reach_params.delta_tp))
-                    temp.append(1)
-                    delta_product_list_without_first_one = temp
-                delta_product = np.dot(delta_product, self.reach_params.delta_tp)
-
-                sf_mat.append(self.P)
-                bbox_mat.append(bbox.to_constraints()[1])
-                x_mat.append(self.X)
+            if hyperbox_contain_by_bounds(self.abs_domain.bounds, [temp_tube_lb, temp_tube_ub]):
+                tube_lb, tube_ub = temp_tube_lb, temp_tube_ub
+                sf_mat[i] = np.append(tube_lb, tube_ub)
 
                 if isalpha:
-                    self.init_X_in_each_domain = self.X
+                    current_init_set_lb, current_init_set_ub = next_init_set_lb, next_init_set_ub
                     isalpha = False
 
-                self.compute_gamma_step(i, trans_poly_U_list, beta_list,
-                                        delta_product, delta_product_list_without_first_one)
-                # self.compute_gamma_step_warm_start()
+                delta_list = self.update_delta_list(delta_list)
+                input_lb_seq, input_ub_seq = self.update_input_bounds(input_ub_seq, input_lb_seq,
+                                                                      current_input_ub, current_input_lb)
+                next_init_set_lb, next_init_set_ub = self.compute_gamma_step(input_ub_seq, input_lb_seq,
+                                                                             delta_list)
 
-                s_on_each_direction, r_on_each_direction = s_temp, r_temp
                 i += 1
                 if i % 100 == 0:
                     print(i)
@@ -139,14 +119,15 @@ class NonlinPostOpt:
                 flag = False
                 epsilon = self.start_epsilon
             else:
-                bbox = self.refine_domain()
-                self.hybridise(bbox, epsilon)
+                bbox = self.refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_lb)
+
+                current_input_lb, current_input_ub = self.hybridize(bbox, epsilon)
                 epsilon *= 2
                 flag = True
 
         return sf_mat
 
-    def hybridise(self, bbox, starting_epsilon):
+    def hybridize(self, bbox, starting_epsilon):
         bbox.bloat(starting_epsilon)
         matrix_A, poly_U = self.dyn_linearizer.gen_abs_dynamics(abs_domain=bbox)
 
@@ -156,137 +137,101 @@ class NonlinPostOpt:
         self.reach_params.delta_tp = np.transpose(SuppFuncUtils.mat_exp(self.abs_dynamics.matrix_A, self.tau))
         self.set_abs_domain(bbox)
 
-        self.trans_poly_U = TransPoly(self.abs_dynamics.matrix_B, self.abs_dynamics.coeff_matrix_U,
-                                      self.abs_dynamics.col_vec_U)
+        self.poly_U = Polyhedron(self.abs_dynamics.coeff_matrix_U, self.abs_dynamics.col_vec_U)
 
-    def compute_alpha_step(self):
-        # wrap X_{i} on template directions
-        poly = Polyhedron(self.directions, self.X)
-        sf_arr = [self.lin_post_opt.compute_initial_sf(self.reach_params.delta_tp, poly, self.trans_poly_U, l,
-                                                       self.reach_params.alpha, self.tau, self.lp_solver) for l in
-                  self.directions]
-        self.P_temp = np.array(sf_arr)
+        vertices = self.poly_U.vertices
+        err_lb = np.amin(vertices, axis=0)
+        err_ub = np.amax(vertices, axis=0)
 
-    def compute_beta_step(self, s_vec, r_vec):
-        sf_vec = []
-        current_s_array = []
-        current_r_array = []
-        poly = Polyhedron(self.directions, self.init_X_in_each_domain)
+        return err_lb, err_ub
 
-        for idx in range(len(r_vec)):
-            prev_r = r_vec[idx]
-            prev_s = s_vec[idx]
-            r = np.dot(self.reach_params.delta_tp, prev_r)
-            s = prev_s + self.lin_post_opt.compute_sf_w(prev_r, self.trans_poly_U, self.reach_params.beta, self.tau,
-                                                        self.lp_solver)
-            sf = s + self.lin_post_opt.compute_initial_sf(self.reach_params.delta_tp,
-                                                          poly, self.trans_poly_U,
-                                                          r,
-                                                          self.reach_params.alpha,
-                                                          self.tau,
-                                                          self.lp_solver)
-            sf_vec.append(sf)
-            current_s_array.append(s)
-            current_r_array.append(r)
+    def compute_alpha_step(self, init_lb, init_ub, input_lb, input_ub):
+        reach_tube_lb = np.empty(self.dim)
+        reach_tube_ub = np.empty(self.dim)
 
-        self.P_temp = np.array(sf_vec)
-        return current_s_array, current_r_array
+        # input and bloated term W_α = τV ⊕ α_τ·B,
+        # using inf norm, B is a square of width 2 at origin
+        input_lb = input_lb * self.tau - self.reach_params.alpha
+        input_ub = input_ub * self.tau + self.reach_params.alpha
 
-    def compute_gamma_step(self, n, trans_poly_U_list, beta_list, delta_product, delta_list_without_first_one):
-        sf_vec = []
-        next_s_arr = []
+        factors = self.reach_params.delta_tp
+        for j in range(factors.shape[0]):
+            row = factors[j, :]
 
-        trans_poly_U_list.append(self.trans_poly_U)
-        beta_list.append(self.reach_params.beta)
+            pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
+            neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
 
-        for l_idx, l in enumerate(self.directions):
-            r = np.dot(delta_product, l)
-            sf_X0 = self.init_poly.compute_support_function(r, self.lp_solver)
+            # e^At · X ⊕ τV ⊕ α_τ·B
+            maxval = pos_clip.dot(init_ub) + neg_clip.dot(init_lb) + input_ub[j]
+            minval = neg_clip.dot(init_ub) + pos_clip.dot(init_lb) + input_lb[j]
 
-            # direction_matrix[l_idx].append(r)
-            s = self.compute_sum_sf_w(n, l, delta_list_without_first_one, trans_poly_U_list, beta_list)
+            reach_tube_lb[j] = minval
+            reach_tube_ub[j] = maxval
 
-            sf = sf_X0 + s
-            sf_vec.append([sf])
-            next_s_arr.append(s)
+        # Ω0 = CH(X0, e^At · X ⊕ τV ⊕ α_τ·B)
+        reach_tube_lb = np.amin([init_lb, reach_tube_lb], axis=0)
+        reach_tube_ub = np.amax([init_ub, reach_tube_ub], axis=0)
 
-        self.X = np.array(sf_vec)
+        return reach_tube_lb, reach_tube_ub
 
-        return next_s_arr
+    def compute_beta_step(self, reach_tube_lb, reach_tube_ub, input_lb, input_ub):
+        # Ω_{i+1} = e^At · Ω_{i} ⊕ τV ⊕ β_τ·B
+        res_lb = np.empty(self.dim)
+        res_ub = np.empty(self.dim)
 
-    def compute_gamma_step_warm_start(self):
-        import time
+        # input and bloated term W_β = τV ⊕ β_τ·B
+        input_lb = input_lb * self.tau - self.reach_params.beta
+        input_ub = input_ub * self.tau + self.reach_params.beta
 
-        overall_start = time.time()
-        sf_vec = []
-        next_s_arr = []
+        factors = self.reach_params.delta_tp
+        for j in range(factors.shape[0]):
+            row = factors[j, :]
 
-        for l_idx, l in enumerate(self.directions):
-            delta = self.reach_params.delta_tp.T
-            local_lp = self.warm_start_lp_list[l_idx]
+            pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
+            neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
 
-            if l_idx == 1:
-                start = time.time()
+            # e^At · Ω_{i} ⊕ τV ⊕ α_τ·B
+            maxval = pos_clip.dot(reach_tube_ub) + neg_clip.dot(reach_tube_lb) + input_ub[j]
+            minval = neg_clip.dot(reach_tube_ub) + pos_clip.dot(reach_tube_lb) + input_lb[j]
 
-            ws.add_constraints(local_lp, self.abs_dynamics, self.tau,
-                               self.reach_params.beta, delta)
-            temp_l = np.hstack((np.zeros(local_lp.get_num_cols() - self.dim), -l))
+            res_lb[j] = minval
+            res_ub[j] = maxval
 
-            if l_idx == 1:
-                print('time for add constraints: {}'.format(time.time() - start))
+        return res_lb, res_ub
 
-            if l_idx == 1:
-                print(l)
-                start = time.time()
+    def compute_gamma_step(self, input_ub_seq, input_lb_seq, delta_list):
+        res_lb = np.empty(self.dim)
+        res_ub = np.empty(self.dim)
 
-            sf = -np.dot(local_lp.minimize(temp_l), temp_l)
+        factors = delta_list.transpose(1, 0, 2).reshape(2, -1)
+        for j in range(factors.shape[0]):
+            row = factors[j, :]
 
-            if l_idx == 1:
-                print('time for opt: {}'.format(time.time() - start))
+            pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
+            neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
 
-            # if l_idx == 0:
-            #     print(temp_l)
-            #     print(sf)
-                # local_lp.print_lp()
-                # print('\n\n\n')
+            maxval = pos_clip.dot(input_ub_seq) + neg_clip.dot(input_lb_seq)
+            minval = neg_clip.dot(input_ub_seq) + pos_clip.dot(input_lb_seq)
 
-            sf_vec.append([sf])
-            next_s_arr.append(0)  # todo ??? do not make sense right now do we need it
+            res_lb[j] = minval
+            res_ub[j] = maxval
 
-        print('overall tine: {}'.format(time.time()-overall_start))
-        print('\n')
-        # end = time.time()
-        # print(end - start)
+        return res_lb, res_ub
 
-        # trans_poly_U_list.append(self.trans_poly_U)
-        # beta_list.append(self.reach_params.beta)
-        #
-        # for l_idx, l in enumerate(self.directions):
-        #     r = np.dot(delta_product, l)
-        #     sf_X0 = self.init_poly.compute_support_function(r, self.lp_solver)
-        #
-        #     # direction_matrix[l_idx].append(r)
-        #     s = self.compute_sum_sf_w(n, l, delta_list_without_first_one, trans_poly_U_list, beta_list)
-        #
-        #     sf = sf_X0 + s
-        #     sf_vec.append([sf])
-        #     next_s_arr.append(s)
+    def update_delta_list(self, delta_list):
+        dyn_coeff_mat = self.abs_dynamics.get_dyn_coeff_matrix_A()
+        delta = SuppFuncUtils.mat_exp(dyn_coeff_mat, self.tau)
 
-        self.X = np.array(sf_vec)
+        if len(delta_list) == 0:
+            delta_list = np.array([delta])
+        else:
+            delta_list = np.tensordot(delta, delta_list, axes=((1), (1))).swapaxes(0, 1)
+        delta_list = np.vstack((delta_list, [np.eye(self.dim)]))
 
-        return next_s_arr
+        return delta_list
 
-    def compute_sum_sf_w(self, n, l, delta_list_without_first_one, trans_poly_U_list, beta_list):
-        sum = 0
-
-        for i in range(0, n + 1):
-            direction = np.dot(delta_list_without_first_one[i], l)
-            trans_poly = trans_poly_U_list[i]
-            beta = beta_list[i]
-            sum += self.lin_post_opt.compute_sf_w(direction, trans_poly, beta, self.tau, self.lp_solver)
-
-            # sum += self.post_opt.compute_sf_w(direction, trans_poly, 0, self.tau, lp)
-        return sum
+    def update_input_bounds(self, ub, lb, next_ub, next_lb):
+        return np.append(lb, next_lb), np.append(ub, next_ub)
 
     def set_abs_dynamics(self, matrix_A, poly_U):
         abs_dynamics = AffineDynamics(dim=self.dim,
@@ -301,12 +246,15 @@ class NonlinPostOpt:
     def set_abs_domain(self, abs_domain):
         self.abs_domain = abs_domain
 
-    def refine_domain(self):
-        # take the convex hall of P_{i} and P_{i+1}
-        bounds = np.maximum(self.P_temp.reshape(len(self.directions), 1),
-                            self.P.reshape(len(self.directions), 1))
-
-        vertices = Polyhedron(self.directions, bounds).vertices
-        bbox = HyperBox(vertices)
+    def refine_domain(self, tube_lb, tube_ub, temp_tube_lb, temp_tube_ub):
+        bbox_lb = np.amin([tube_lb, temp_tube_lb], axis=0)
+        bbox_ub = np.amax([tube_ub, temp_tube_ub], axis=0)
+        bbox = HyperBox([bbox_lb, bbox_ub])
 
         return bbox
+
+    def update_input_bounds_seq(self, ub, lb, next_ub, next_lb):
+        return np.append(lb, next_lb), np.append(ub, next_ub)
+
+    def get_projections(self, directions, opdims, sf_mat):
+        pass

@@ -45,7 +45,7 @@ def main():
     nonlin_post_opt = NonlinPostOpt(dim, non_linear_dynamics, time_horizon, tau, directions,
                                     init_coeff, init_col, is_linear, start_epsilon)
     sf_mat = nonlin_post_opt.compute_post()
-    images = nonlin_post_opt.lin_post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=sf_mat)
+    images = nonlin_post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=sf_mat)
 
     plotter = Plotter(images, opvars)
     plotter.save_polygons_to_file()
@@ -64,7 +64,7 @@ def main():
 def run_simulate(time_horizon, model, init_coeff, init_col):
     x, y = simu.simulate(time_horizon, model, init_coeff, init_col)
     with open('../out/simu.out', 'w') as simu_op:
-        for elem in zip(x, y):
+        # for elem in zip(x, y):
             simu_op.write(str(elem[0]) + ' ' + str(elem[1]) + '\n')
     return x, y
 

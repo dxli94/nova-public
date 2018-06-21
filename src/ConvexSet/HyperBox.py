@@ -21,26 +21,50 @@ def hyperbox_contain(sf_1, sf_2):
     return True
 
 
+def hyperbox_contain_by_bounds(bd1, bd2):
+    lb1, ub1 = bd1
+    lb2, ub2 = bd2
+
+    return np.less(lb1, lb2).all() and np.less(ub2, ub1).all()
+
 class HyperBox:
-    def __init__(self, vertices):
-        self.dim = len(vertices[0])
-        if len(vertices) > 0:
-            lower_bounds = [1e9] * self.dim
-            upper_bounds = [-1e9] * self.dim
-        else:
-            raise RuntimeError('Emtpy vertex set.')
+    def __init__(self, arg, opt=0):
+        if opt == 0:
+            # constructor with vertices
+            self.dim = len(arg[0])
+            if len(arg) > 0:
+                lower_bounds = [1e9] * self.dim
+                upper_bounds = [-1e9] * self.dim
+            else:
+                raise RuntimeError('Emtpy vertex set.')
 
 
-        # print(vertices)
-        for v in vertices:
-            for idx in range(len(v)):
-                if v[idx] < lower_bounds[idx]:
-                    lower_bounds[idx] = v[idx]
-                if v[idx] > upper_bounds[idx]:
-                    upper_bounds[idx] = v[idx]
+            # print(vertices)
+            for v in arg:
+                for idx in range(len(v)):
+                    if v[idx] < lower_bounds[idx]:
+                        lower_bounds[idx] = v[idx]
+                    if v[idx] > upper_bounds[idx]:
+                        upper_bounds[idx] = v[idx]
 
-        self.bounds = np.array([[lower_bounds[idx], upper_bounds[idx]] for idx in range(len(upper_bounds))])
-        self.vertices = list(combinations(self.bounds, self.dim))
+            self.bounds = np.array([[lower_bounds[idx], upper_bounds[idx]] for idx in range(len(upper_bounds))])
+            self.vertices = list(combinations(self.bounds, self.dim))
+
+        if opt == 1:
+            # constructor with bounds
+            lb = arg[0]
+            ub = arg[1]
+
+            if lb.isinstance(np.ndarray):
+                assert ub.shape[0] == lb.shape[0]
+                self.dim = lb.shape[0]
+            elif lb.isinstance(list):
+                assert len(ub) == len(lb)
+                self.dim = len(lb)
+            else:
+                raise ValueError("unsupported bound type, require list or numpy.ndarray, found {}.".format(type(lb)))
+            self.bounds = np.array([lb, ub])
+            self.vertices = list(combinations(self.bounds, self.dim))
 
     def __str__(self):
         str_repr = ''
@@ -79,7 +103,12 @@ class HyperBox:
 
 
 if __name__ == '__main__':
-    sf_1 = [-1, 2, -4, 5]
-    sf_2 = [-1, 2, -4, 5]
+    bd1 = [[0, 1], [2, 3]]
+    bd2 = [[1, 2], [1, 2]]
 
-    print(hyperbox_contain(sf_1, sf_2))
+    lb1, ub1 = bd1
+    lb2, ub2 = bd2
+
+    print(np.less(lb1, lb2).all())
+    print(np.less(ub2, ub1).all())
+    print(hyperbox_contain_by_bounds(bd1, bd2))
