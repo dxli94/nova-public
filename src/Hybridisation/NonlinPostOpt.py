@@ -12,7 +12,7 @@ class reachParams:
     def __init__(self, alpha=None, beta=None, delta_tp=None, tau=None):
         self.alpha = alpha
         self.beta = beta
-        self.delta_tp = delta_tp
+        self.delta = delta_tp
         self.tau = tau
 
 
@@ -75,7 +75,6 @@ class NonlinPostOpt:
         i = 0
 
         sf_mat = np.zeros((time_frames, 2*self.dim))
-        print(sf_mat)
 
         flag = True  # whether we have a new abstraction domain
         isalpha = False
@@ -134,7 +133,7 @@ class NonlinPostOpt:
         self.set_abs_dynamics(matrix_A, poly_U)
         self.reach_params.alpha = SuppFuncUtils.compute_alpha(self.abs_dynamics, self.tau, self.lp_solver)
         self.reach_params.beta = SuppFuncUtils.compute_beta(self.abs_dynamics, self.tau, self.lp_solver)
-        self.reach_params.delta_tp = np.transpose(SuppFuncUtils.mat_exp(self.abs_dynamics.matrix_A, self.tau))
+        self.reach_params.delta = SuppFuncUtils.mat_exp(self.abs_dynamics.matrix_A, self.tau)
         self.set_abs_domain(bbox)
 
         self.poly_U = Polyhedron(self.abs_dynamics.coeff_matrix_U, self.abs_dynamics.col_vec_U)
@@ -154,7 +153,7 @@ class NonlinPostOpt:
         input_lb = input_lb * self.tau - self.reach_params.alpha
         input_ub = input_ub * self.tau + self.reach_params.alpha
 
-        factors = self.reach_params.delta_tp
+        factors = self.reach_params.delta
         for j in range(factors.shape[0]):
             row = factors[j, :]
 
@@ -183,7 +182,7 @@ class NonlinPostOpt:
         input_lb = input_lb * self.tau - self.reach_params.beta
         input_ub = input_ub * self.tau + self.reach_params.beta
 
-        factors = self.reach_params.delta_tp
+        factors = self.reach_params.delta
         for j in range(factors.shape[0]):
             row = factors[j, :]
 
@@ -257,4 +256,14 @@ class NonlinPostOpt:
         return np.append(lb, next_lb), np.append(ub, next_ub)
 
     def get_projections(self, directions, opdims, sf_mat):
-        pass
+        " sloppy implementation, change later on"
+
+        directions = np.array([[-1, 0], [0, -1], [1, 0], [0, 1]])
+        ret = []
+
+        for sf_row in sf_mat:
+            sf_row = np.multiply(sf_row, [-1, -1, 1, 1]).reshape(sf_row.shape[0], 1)
+
+            print(sf_row)
+            ret.append(Polyhedron(directions, sf_row))
+        return ret
