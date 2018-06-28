@@ -34,7 +34,7 @@ class Linearizer:
         return err
 
     def gen_abs_dynamics(self, abs_domain):
-        vertices = Polyhedron(*abs_domain.to_constraints()).vertices
+        vertices = abs_domain.vertices
         abs_domain_corners = np.array(vertices)
         abs_domain_centre = np.average(abs_domain_corners, axis=0)
 
