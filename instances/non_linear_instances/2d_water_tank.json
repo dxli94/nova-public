@@ -15,5 +15,6 @@
         "x0",
         "x1"
     ],
-    "time_horizon": 50
+    "time_horizon": 50,
+    "simu_model": "2d_water_tank"
 }

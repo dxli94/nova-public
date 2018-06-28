@@ -29,11 +29,23 @@ def two_dim_water_tank_deriv(x, t):
     return res
 
 
+def free_ball_deriv(x, t):
+    nx0 = x[1]
+    nx1 = -9.81
+
+    res = np.array([nx0, nx1])
+    return res
+
+
 def simulate_one_run(horizon, model, init_point):
     ts = np.linspace(0, horizon, horizon*200)
 
     if model == 'vanderpol':
         xs = odeint(van_der_pol_oscillator_deriv, init_point, ts)
+    elif model == 'free_ball':
+        xs = odeint(free_ball_deriv, init_point, ts)
+    elif model == 'predator_prev':
+        xs = odeint(predator_prey_deriv, init_point, ts)
     else:
         raise ValueError('Simulate eigen: invalid model name!')
     return xs[:, 0], xs[:, 1]
