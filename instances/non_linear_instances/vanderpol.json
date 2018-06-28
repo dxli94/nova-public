@@ -52,5 +52,5 @@
         "x0",
         "x1"
     ],
-    "time_horizon": 3
+    "time_horizon": 0.2
 }

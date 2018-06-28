@@ -5,6 +5,7 @@ from ConvexSet.HyperBox import HyperBox, hyperbox_contain_by_bounds
 from ConvexSet.Polyhedron import Polyhedron
 from Hybridisation.Linearizer import Linearizer
 from SysDynamics import AffineDynamics
+from timerutil import Timers
 from utils.GlpkWrapper import GlpkWrapper
 
 
@@ -17,8 +18,8 @@ class reachParams:
 
 
 class NonlinPostOpt:
-    def __init__(self, dim, nonlin_dyn, time_horizon, tau, directions, init_mat_X0, init_col_X0, is_linear,
-                 start_epsilon):
+    def __init__(self, dim, nonlin_dyn, time_horizon, tau, directions,
+                 init_mat_X0, init_col_X0, is_linear, start_epsilon):
         self.dim = dim
         self.nonlin_dyn = nonlin_dyn
         self.time_horizon = time_horizon
@@ -82,6 +83,8 @@ class NonlinPostOpt:
         # delta_product = 1
         # delta_product_list_without_first_one = [1]
 
+        Timers.tic('total')
+        j = 0
         while i < time_frames:
             if flag:
                 # P_{i+1} := \alpha(X_{i})
@@ -98,6 +101,9 @@ class NonlinPostOpt:
 
             # if P_{i+1} \subset B
             if hyperbox_contain_by_bounds(self.abs_domain.bounds, [temp_tube_lb, temp_tube_ub]):
+                print(i)
+                # exit()
+
                 tube_lb, tube_ub = temp_tube_lb, temp_tube_ub
                 sf_mat[i] = np.append(tube_lb, tube_ub)
 
@@ -106,8 +112,8 @@ class NonlinPostOpt:
                     isalpha = False
 
                 delta_list = self.update_delta_list(delta_list)
-                input_lb_seq, input_ub_seq = self.update_input_bounds(input_ub_seq, input_lb_seq,
-                                                                      current_input_ub, current_input_lb)
+                input_lb_seq, input_ub_seq = self.update_wb_seq(input_ub_seq, input_lb_seq,
+                                                                current_input_ub, current_input_lb)
                 next_init_set_lb, next_init_set_ub = self.compute_gamma_step(input_ub_seq, input_lb_seq,
                                                                              delta_list)
 
@@ -119,11 +125,14 @@ class NonlinPostOpt:
                 epsilon = self.start_epsilon
             else:
                 bbox = self.refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_lb)
-
+                Timers.tic('hybridize')
                 current_input_lb, current_input_ub = self.hybridize(bbox, epsilon)
+                Timers.toc('hybridize')
                 epsilon *= 2
                 flag = True
 
+        Timers.toc('total')
+        Timers.print_stats()
         return sf_mat
 
     def hybridize(self, bbox, starting_epsilon):
@@ -144,14 +153,28 @@ class NonlinPostOpt:
 
         return err_lb, err_ub
 
-    def compute_alpha_step(self, init_lb, init_ub, input_lb, input_ub):
+    def compute_alpha_step(self, Xi_lb, Xi_ub, Vi_lb, Vi_ub):
+        """
+        When we have a new abstraction domain, the dynamic changes. To
+        preserve the conservativeness, we cannot simply repeat beta step
+        on the dense time reachable tube. Instead, we need to take the
+        discrete time reachable SET at the time point when the domain
+        is constructed (e.g. t_new), and then do alpha step to bloat it
+        to the dense time tube indicating reachable states between
+        time interval [t_new, t_new + τ].
+        :param Xi_lb: lower bounds of discrete reachable set at t_new in the current (i-th) domain
+        :param Xi_ub: upper bounds of discrete reachable set at t_new in the current (i-th) domain
+        :param Vi_lb: lower bounds of input set in the current (i-th) domain (linearization error)
+        :param Vi_ub: upper bounds of input set in the current (i-th) domain (linearization error)
+        :return:
+        """
         reach_tube_lb = np.empty(self.dim)
         reach_tube_ub = np.empty(self.dim)
 
         # input and bloated term W_α = τV ⊕ α_τ·B,
         # using inf norm, B is a square of width 2 at origin
-        input_lb = input_lb * self.tau - self.reach_params.alpha
-        input_ub = input_ub * self.tau + self.reach_params.alpha
+        W_alpha_lb = Vi_lb * self.tau - self.reach_params.alpha
+        W_alpha_ub = Vi_ub * self.tau + self.reach_params.alpha
 
         factors = self.reach_params.delta
         for j in range(factors.shape[0]):
@@ -161,15 +184,15 @@ class NonlinPostOpt:
             neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
 
             # e^At · X ⊕ τV ⊕ α_τ·B
-            maxval = pos_clip.dot(init_ub) + neg_clip.dot(init_lb) + input_ub[j]
-            minval = neg_clip.dot(init_ub) + pos_clip.dot(init_lb) + input_lb[j]
+            maxval = pos_clip.dot(Xi_ub) + neg_clip.dot(Xi_lb) + W_alpha_ub[j]
+            minval = neg_clip.dot(Xi_ub) + pos_clip.dot(Xi_lb) + W_alpha_lb[j]
 
             reach_tube_lb[j] = minval
             reach_tube_ub[j] = maxval
 
         # Ω0 = CH(X0, e^At · X ⊕ τV ⊕ α_τ·B)
-        reach_tube_lb = np.amin([init_lb, reach_tube_lb], axis=0)
-        reach_tube_ub = np.amax([init_ub, reach_tube_ub], axis=0)
+        reach_tube_lb = np.amin([Xi_lb, reach_tube_lb], axis=0)
+        reach_tube_ub = np.amax([Xi_ub, reach_tube_ub], axis=0)
 
         return reach_tube_lb, reach_tube_ub
 
@@ -229,7 +252,10 @@ class NonlinPostOpt:
 
         return delta_list
 
-    def update_input_bounds(self, ub, lb, next_ub, next_lb):
+    def update_wb_seq(self, ub, lb, next_ub, next_lb):
+        next_lb = next_lb * self.tau - self.reach_params.beta
+        next_ub = next_ub * self.tau + self.reach_params.beta
+
         return np.append(lb, next_lb), np.append(ub, next_ub)
 
     def set_abs_dynamics(self, matrix_A, poly_U):
@@ -263,7 +289,5 @@ class NonlinPostOpt:
 
         for sf_row in sf_mat:
             sf_row = np.multiply(sf_row, [-1, -1, 1, 1]).reshape(sf_row.shape[0], 1)
-
-            print(sf_row)
             ret.append(Polyhedron(directions, sf_row))
         return ret

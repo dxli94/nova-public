@@ -64,7 +64,7 @@ def main():
 def run_simulate(time_horizon, model, init_coeff, init_col):
     x, y = simu.simulate(time_horizon, model, init_coeff, init_col)
     with open('../out/simu.out', 'w') as simu_op:
-        # for elem in zip(x, y):
+        for elem in zip(x, y):
             simu_op.write(str(elem[0]) + ' ' + str(elem[1]) + '\n')
     return x, y
 
