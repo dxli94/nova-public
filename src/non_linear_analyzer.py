@@ -15,10 +15,10 @@ def main():
     try:
         path = sys.argv[1]
     except IndexError:
-        path = '../instances/non_linear_instances/vanderpol.json'
+        # path = '../instances/non_linear_instances/vanderpol.json'
         # path = '../instances/non_linear_instances/predator_prey.json'
         # path = '../instances/non_linear_instances/2d_water_tank.json'
-        # path = '../instances/non_linear_instances/free_ball.json'
+        path = '../instances/non_linear_instances/free_ball.json'
 
     data = JsonReader(path).read()
     time_horizon = data['time_horizon']
@@ -32,7 +32,7 @@ def main():
     init_coeff = np.array(data['init_coeff'])
     init_col = np.array(data['init_col'])
     opvars = data['opvars']
-    simu_model = 'vanderpol'
+    simu_model = data['simu_model']
 
     directions = SuppFuncUtils.generate_directions(direction_type, dim)
     id_to_vars = {}
