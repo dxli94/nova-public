@@ -35,14 +35,15 @@ class Linearizer:
 
     def gen_abs_dynamics(self, abs_domain):
         vertices = abs_domain.vertices
+
         abs_domain_corners = np.array(vertices)
         abs_domain_centre = np.average(abs_domain_corners, axis=0)
 
-        abs_domain_lower_bounds = abs_domain_corners.min(axis=0)
-        abs_domain_upper_bounds = abs_domain_corners.max(axis=0)
+        abs_domain_lower_bounds = abs_domain.bounds[0]
+        abs_domain_upper_bounds = abs_domain.bounds[1]
 
-        # matrix_A, b = self.jacobian_linearize(abs_domain_centre, self.nonlin_dyn)
-        matrix_A, b = self.jacobian_linearize_without_b(abs_domain_centre, self.nonlin_dyn)
+        matrix_A, b = self.jacobian_linearize(abs_domain_centre, self.nonlin_dyn)
+        # matrix_A, b = self.jacobian_linearize_without_b(abs_domain_centre, self.nonlin_dyn)
 
         u_max_array = []
         for i in range(self.dim):

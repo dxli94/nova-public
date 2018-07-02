@@ -68,6 +68,8 @@ class NonlinPostOpt:
         # input_lb_seq, input_ub_seq = self.update_input_bounds_seq(input_ub_seq, input_lb_seq,
         #                                                           current_input_ub, current_input_lb)
 
+        #
+
         phi_list = []
 
         i = 0
@@ -88,23 +90,15 @@ class NonlinPostOpt:
                                                                      current_init_set_ub,
                                                                      current_input_lb,
                                                                      current_input_ub)
+
                 last_alpha_iter = i
-                isalfa = True
-                isbeta = False
             else:
                 temp_tube_lb, temp_tube_ub = self.compute_beta_step(tube_lb, tube_ub,
                                                                     input_lb_seq, input_ub_seq,
                                                                     phi_list, i, last_alpha_iter)
-                isalfa = False
-                isbeta = True
 
             # if P_{i+1} \subset B
             if hyperbox_contain_by_bounds(self.abs_domain.bounds, [temp_tube_lb, temp_tube_ub]):
-                if isalfa:
-                    print('alfa')
-                elif isbeta:
-                    print('beta')
-
                 tube_lb, tube_ub = temp_tube_lb, temp_tube_ub
 
                 phi_list = self.update_phi_list(phi_list)
@@ -116,8 +110,6 @@ class NonlinPostOpt:
                 current_init_set_lb, current_init_set_ub = next_init_set_lb, next_init_set_ub
 
                 sf_mat[i] = np.append(tube_lb, tube_ub)
-
-                # sf_mat[i] = np.append(next_init_set_lb, next_init_set_ub)
 
                 i += 1
                 if i % 100 == 0:

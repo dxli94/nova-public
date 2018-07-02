@@ -22,6 +22,8 @@ def hyperbox_contain_by_bounds(bd1, bd2):
 
 class HyperBox:
     def __init__(self, arg, opt=0):
+        self.vertices = []
+
         if opt == 0:
             # constructor with vertices
             self.dim = len(arg[0])
@@ -41,9 +43,9 @@ class HyperBox:
 
             # self.bounds = np.array([[lower_bounds[idx], upper_bounds[idx]] for idx in range(len(upper_bounds))])
             self.bounds = np.array([lower_bounds, upper_bounds])
-            self.vertices = np.transpose([np.tile(lower_bounds, len(upper_bounds)),
-                                          np.repeat(upper_bounds, len(lower_bounds))])
-
+            self.update_vertices()
+            # print('vertices are :')
+            # print(self.vertices)
 
         if opt == 1:
             # constructor with bounds
@@ -59,20 +61,31 @@ class HyperBox:
             else:
                 raise ValueError("unsupported bound type, require list or numpy.ndarray, found {}.".format(type(lb)))
             self.bounds = np.array([lb, ub])
-            lower_bounds = self.bounds[0]
-            upper_bounds = self.bounds[1]
-            self.vertices = np.transpose([np.tile(lower_bounds, len(upper_bounds)),
-                                          np.repeat(upper_bounds, len(lower_bounds))])
+            self.update_vertices()
 
     def __str__(self):
         str_repr = ''
         for idx, elem in zip(range(len(self.bounds)), self.bounds):
-            str_repr += 'dimension ' + str(idx) + ': ' + str(elem) + '\n'
+            name = 'lower bounds' if idx == 0 else 'upper bounds'
+            str_repr += '{} : '.format(name) + str(elem) + '\n'
 
         return str_repr
 
     def bloat(self, epsilon):
         self.bounds = np.array([np.subtract(self.bounds[0], epsilon, dtype=float), np.add(self.bounds[1], epsilon)])
+        self.update_vertices()
+
+    def update_vertices(self):
+        self.vertices = []
+
+        bounds = self.bounds.T
+
+        lower_bounds = bounds[0]
+        upper_bounds = bounds[1]
+
+        for lb in lower_bounds:
+            for ub in upper_bounds:
+                self.vertices.append([lb, ub])
 
 
 if __name__ == '__main__':
