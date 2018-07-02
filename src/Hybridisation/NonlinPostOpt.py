@@ -10,10 +10,10 @@ from utils.GlpkWrapper import GlpkWrapper
 
 
 class reachParams:
-    def __init__(self, alpha=None, beta=None, delta_tp=None, tau=None):
+    def __init__(self, alpha=None, beta=None, delta=None, tau=None):
         self.alpha = alpha
         self.beta = beta
-        self.delta = delta_tp
+        self.delta = delta
         self.tau = tau
 
 
@@ -56,10 +56,6 @@ class NonlinPostOpt:
         # changes when the abstract domain is large enough to contain next image in alfa step
         current_init_set_ub = init_set_ub
         current_init_set_lb = init_set_lb
-        # initial reachable set in discrete time in the next abstract domain
-        # changes when dynamics is changed
-        next_init_set_ub = init_set_ub
-        next_init_set_lb = init_set_lb
 
         input_lb_seq = init_set_lb
         input_ub_seq = init_set_ub
@@ -75,12 +71,11 @@ class NonlinPostOpt:
         phi_list = []
 
         i = 0
-        last_alpha_iter = -1
+        last_alpha_iter = 0
 
         sf_mat = np.zeros((time_frames, 2*self.dim))
 
         flag = True  # whether we have a new abstraction domain
-        isalpha = False
         epsilon = self.start_epsilon
         # delta_product = 1
         # delta_product_list_without_first_one = [1]
@@ -94,33 +89,35 @@ class NonlinPostOpt:
                                                                      current_input_lb,
                                                                      current_input_ub)
                 last_alpha_iter = i
-                isalpha = True
+                isalfa = True
+                isbeta = False
             else:
-                # P_{i+1} := \beta(P_{i})
-                # temp_tube_lb, temp_tube_ub = self.compute_alpha_step(current_init_set_lb,
-                #                                                      current_init_set_ub,
-                #                                                      current_input_lb,
-                #                                                      current_input_ub)
-                print('length of phi_list is {} '.format(len(phi_list)))
-
                 temp_tube_lb, temp_tube_ub = self.compute_beta_step(tube_lb, tube_ub,
                                                                     input_lb_seq, input_ub_seq,
                                                                     phi_list, i, last_alpha_iter)
+                isalfa = False
+                isbeta = True
 
             # if P_{i+1} \subset B
             if hyperbox_contain_by_bounds(self.abs_domain.bounds, [temp_tube_lb, temp_tube_ub]):
-                tube_lb, tube_ub = temp_tube_lb, temp_tube_ub
-                # sf_mat[i] = np.append(tube_lb, tube_ub)
+                if isalfa:
+                    print('alfa')
+                elif isbeta:
+                    print('beta')
 
-                if isalpha:
-                    current_init_set_lb, current_init_set_ub = next_init_set_lb, next_init_set_ub
-                    isalpha = False
+                tube_lb, tube_ub = temp_tube_lb, temp_tube_ub
 
                 phi_list = self.update_phi_list(phi_list)
                 input_lb_seq, input_ub_seq = self.update_wb_seq(input_lb_seq, input_ub_seq,
                                                                 current_input_lb, current_input_ub)
+
                 next_init_set_lb, next_init_set_ub = self.compute_gamma_step(input_lb_seq, input_ub_seq, phi_list)
-                sf_mat[i] = np.append(next_init_set_lb, next_init_set_ub)
+                # initial reachable set in discrete time
+                current_init_set_lb, current_init_set_ub = next_init_set_lb, next_init_set_ub
+
+                sf_mat[i] = np.append(tube_lb, tube_ub)
+
+                # sf_mat[i] = np.append(next_init_set_lb, next_init_set_ub)
 
                 i += 1
                 if i % 100 == 0:
@@ -293,13 +290,13 @@ class NonlinPostOpt:
         The reccurrency relation:
            X_{i} = e^Aτ · X_{i-1} ⊕ τV_{i-1} ⊕ β_{i-1}·B
                   is unfolded as
-           X_{i} = Φ_{n} ... Φ_{1} X0
+           X_{n} = Φ_{n} ... Φ_{1} X0
                    ⊕ Φ_{n} ... Φ_{2} W_{1}
                    ⊕ Φ_{n} ... Φ_{3} W_{2}
                    ⊕ ...
                    ⊕ Φ_{n} W_{n-1}
                    ⊕ W_{n},
-        where W_{i} = τV_{i} ⊕ β_{i}·τ·B
+        where W_{i} = τV_{i} ⊕ β_{i}·B
 
         :param input_ub_seq: upper bounds of the sequence {X0, W_{1}, ..., W_{n-1}, W_{n}}
         :param input_lb_seq: lower bounds of the sequence {X0, W_{1}, ..., W_{n-1}, W_{n}}
