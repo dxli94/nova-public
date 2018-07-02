@@ -65,10 +65,6 @@ class NonlinPostOpt:
         # (A, V) := L(f, B), such that f(x) = (A, V) over-approx. g(x)
         bbox.bloat(1e-6)
         current_input_lb, current_input_ub = self.hybridize(bbox)
-        # input_lb_seq, input_ub_seq = self.update_input_bounds_seq(input_ub_seq, input_lb_seq,
-        #                                                           current_input_ub, current_input_lb)
-
-        #
 
         phi_list = []
 
@@ -79,10 +75,8 @@ class NonlinPostOpt:
 
         flag = True  # whether we have a new abstraction domain
         epsilon = self.start_epsilon
-        # delta_product = 1
-        # delta_product_list_without_first_one = [1]
 
-        Timers.tic('total')
+        # Timers.tic('total')
         while i < time_frames:
             if flag:
                 # P_{i+1} := \alpha(X_{i})
@@ -121,13 +115,13 @@ class NonlinPostOpt:
                 bbox = self.refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_lb)
                 bbox.bloat(epsilon)
 
-                Timers.tic('hybridize')
+                # Timers.tic('hybridize')
                 current_input_lb, current_input_ub = self.hybridize(bbox)
-                Timers.toc('hybridize')
+                # Timers.toc('hybridize')
                 epsilon *= 2
                 flag = True
 
-        Timers.toc('total')
+        # Timers.toc('total')
         Timers.print_stats()
         return sf_mat
 
@@ -135,16 +129,23 @@ class NonlinPostOpt:
         matrix_A, poly_U = self.dyn_linearizer.gen_abs_dynamics(abs_domain=bbox)
 
         self.set_abs_dynamics(matrix_A, poly_U)
+        # 15.9%
         self.reach_params.alpha = SuppFuncUtils.compute_alpha(self.abs_dynamics, self.tau, self.lp_solver)
+        # 6.8 %
         self.reach_params.beta = SuppFuncUtils.compute_beta(self.abs_dynamics, self.tau, self.lp_solver)
+        # 13.2 %
         self.reach_params.delta = SuppFuncUtils.mat_exp(self.abs_dynamics.matrix_A, self.tau)
+
         self.set_abs_domain(bbox)
+        # self.poly_U = Polyhedron(self.abs_dynamics.coeff_matrix_U, self.abs_dynamics.col_vec_U)
 
-        self.poly_U = Polyhedron(self.abs_dynamics.coeff_matrix_U, self.abs_dynamics.col_vec_U)
+        # vertices = self.poly_U.vertices
 
-        vertices = self.poly_U.vertices
-        err_lb = np.amin(vertices, axis=0)
-        err_ub = np.amax(vertices, axis=0)
+        # err_lb = np.amin(vertices, axis=0)
+        # err_ub = np.amax(vertices, axis=0)
+
+        err_lb = poly_U[0]
+        err_ub = poly_U[1]
 
         return err_lb, err_ub
 
@@ -246,32 +247,6 @@ class NonlinPostOpt:
             res_ub[j] = maxval
 
         return res_lb, res_ub
-
-
-
-        # Ω_{i+1} = e^At · Ω_{i} ⊕ τV ⊕ β_τ·B
-        # res_lb = np.empty(self.dim)
-        # res_ub = np.empty(self.dim)
-        #
-        # # input and bloated term W_β = τV ⊕ β_τ·B
-        # input_lb = input_lb * self.tau - self.reach_params.beta
-        # input_ub = input_ub * self.tau + self.reach_params.beta
-        #
-        # factors = self.reach_params.delta
-        # for j in range(factors.shape[0]):
-        #     row = factors[j, :]
-        #
-        #     pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
-        #     neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
-        #
-        #     # e^At · Ω_{i} ⊕ τV ⊕ α_τ·B
-        #     maxval = pos_clip.dot(omega_ub) + neg_clip.dot(omega_lb) + input_ub[j]
-        #     minval = neg_clip.dot(omega_ub) + pos_clip.dot(omega_lb) + input_lb[j]
-        #
-        #     res_lb[j] = minval
-        #     res_ub[j] = maxval
-        #
-        # return res_lb, res_ub
 
     def compute_gamma_step(self, input_lb_seq, input_ub_seq, phi_list):
         """
