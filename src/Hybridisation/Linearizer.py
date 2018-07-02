@@ -34,18 +34,21 @@ class Linearizer:
         return err
 
     def gen_abs_dynamics(self, abs_domain):
-        vertices = abs_domain.vertices
+        # Timers.tic('total')
 
-        abs_domain_corners = np.array(vertices)
-        abs_domain_centre = np.average(abs_domain_corners, axis=0)
+        # Somehow this is faster than taking mean/average directly
+        abs_domain_centre = np.sum(abs_domain.bounds, axis=0) / 2
 
         abs_domain_lower_bounds = abs_domain.bounds[0]
         abs_domain_upper_bounds = abs_domain.bounds[1]
 
+        # Timers.tic('jacobian_linearize')
         matrix_A, b = self.jacobian_linearize(abs_domain_centre, self.nonlin_dyn)
+        # Timers.toc('jacobian_linearize')
         # matrix_A, b = self.jacobian_linearize_without_b(abs_domain_centre, self.nonlin_dyn)
 
-        u_max_array = []
+        u_bounds = []
+        # Timers.tic('loop')
         for i in range(self.dim):
             # affine_dynamic = str(matrix_A[i][0]) + '*x[0] + ' + str(matrix_A[i][1]) + '*x[1]'
             x0 = abs_domain_centre
@@ -60,10 +63,11 @@ class Linearizer:
             u_min = -resmin.fun
             u_max = -resmax.fun
 
-            u_max_array.extend([b[i]+u_max, -b[i]+u_min])
-            # u_max_array.extend([b[i], -b[i]])
+            u_bounds.extend([b[i]+u_max, -b[i]+u_min])
+            # u_bounds.extend([b[i], -b[i]])
+        # Timers.toc('loop')
 
-        col_vec = np.array(u_max_array)
+        col_vec = np.array(u_bounds)
 
         # poly_U
         poly_U = (generator_2d_matrix, col_vec.reshape(len(col_vec), 1))
