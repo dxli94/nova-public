@@ -137,15 +137,12 @@ class NonlinPostOpt:
         self.reach_params.delta = SuppFuncUtils.mat_exp(self.abs_dynamics.matrix_A, self.tau)
 
         self.set_abs_domain(bbox)
-        # self.poly_U = Polyhedron(self.abs_dynamics.coeff_matrix_U, self.abs_dynamics.col_vec_U)
+        self.poly_U = Polyhedron(self.abs_dynamics.coeff_matrix_U, self.abs_dynamics.col_vec_U)
 
-        # vertices = self.poly_U.vertices
+        vertices = self.poly_U.vertices
 
-        # err_lb = np.amin(vertices, axis=0)
-        # err_ub = np.amax(vertices, axis=0)
-
-        err_lb = poly_U[0]
-        err_ub = poly_U[1]
+        err_lb = np.amin(vertices, axis=0)
+        err_ub = np.amax(vertices, axis=0)
 
         return err_lb, err_ub
 
