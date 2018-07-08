@@ -24,16 +24,16 @@
     ],
     "init_col": [
         [
-            1.25
+            5.1
         ],
         [
-            -1.24
+            -4.9
         ],
         [
-            2.28
+            2.1
         ],
         [
-            -2.27
+            -1.9
         ]
     ],
     "opvars": [
@@ -44,12 +44,12 @@
         false,
         false
     ],
-    "sampling_time": 0.01,
-    "start_epsilon": 1e-09,
+    "sampling_time": 0.001,
+    "start_epsilon": 1e-04,
     "state_variables": [
         "x0",
         "x1"
     ],
-    "time_horizon": 5,
+    "time_horizon": 2,
     "simu_model": "predator_prev"
 }
