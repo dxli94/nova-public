@@ -15,10 +15,10 @@ def main():
     try:
         path = sys.argv[1]
     except IndexError:
-        # path = '../instances/non_linear_instances/vanderpol.json'
+        path = '../instances/non_linear_instances/vanderpol.json'
         # path = '../instances/non_linear_instances/predator_prey.json'
         # path = '../instances/non_linear_instances/2d_water_tank.json'
-        path = '../instances/non_linear_instances/free_ball.json'
+        # path = '../instances/non_linear_instances/free_ball.json'
 
     data = JsonReader(path).read()
     time_horizon = data['time_horizon']
@@ -42,6 +42,7 @@ def main():
     # ============== setting up done ============== #
 
     # ============== start flowpipe construction. ============== #
+    # np.set_printoptions(precision=100)
     nonlin_post_opt = NonlinPostOpt(dim, non_linear_dynamics, time_horizon, tau, directions,
                                     init_coeff, init_col, is_linear, start_epsilon)
     sf_mat = nonlin_post_opt.compute_post()

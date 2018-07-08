@@ -62,7 +62,7 @@ def simulate(horizon, model, init_coeff, init_col):
 def main(horizon):
     ts = np.linspace(0, horizon, horizon*100)
 
-    xs = odeint(van_der_pol_oscillator_deriv, [1.25, 2.3], ts)
+    xs = odeint(van_der_pol_oscillator_deriv, [1.25, 2.28], ts)
     # xs = odeint(two_dim_water_tank_deriv, [0, 8], ts)
     # xs = odeint(predator_prey_deriv, [3.44, 2.3], ts)
     # print('\n'.join(str(x) for x in list(enumerate(xs))))
@@ -71,3 +71,6 @@ def main(horizon):
     # plt.savefig('vanderpol_oscillator.png')
     plt.autoscale()
     plt.show()
+
+if __name__ == '__main__':
+    main(10)
