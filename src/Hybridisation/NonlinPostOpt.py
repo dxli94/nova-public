@@ -30,6 +30,7 @@ class NonlinPostOpt:
         self.init_mat_X0 = init_mat_X0
         self.init_col_X0 = init_col_X0
         self.directions = directions
+        self.directions_transposed = self.directions.T
 
         # the following attributes would be updated along the flowpipe construction
         self.abs_dynamics = None
@@ -71,7 +72,7 @@ class NonlinPostOpt:
         i = 0
         last_alpha_iter = 0
 
-        sf_mat = np.zeros((time_frames, 2*self.dim))
+        sf_mat = np.zeros((time_frames, self.directions.shape[0]))
 
         flag = True  # whether we have a new abstraction domain
         epsilon = self.start_epsilon
@@ -84,6 +85,11 @@ class NonlinPostOpt:
                                                                      current_init_set_ub,
                                                                      current_input_lb,
                                                                      current_input_ub)
+
+                sf = self.compute_alpha_step_on_all_directions(current_init_set_lb,
+                                                               current_init_set_ub,
+                                                               current_input_lb,
+                                                               current_input_ub)
 
                 last_alpha_iter = i
             else:
@@ -103,7 +109,8 @@ class NonlinPostOpt:
                 # initial reachable set in discrete time
                 current_init_set_lb, current_init_set_ub = next_init_set_lb, next_init_set_ub
 
-                sf_mat[i] = np.append(tube_lb, tube_ub)
+                # sf_mat[i] = np.append(tube_lb, tube_ub)
+                sf_mat[i] = sf
 
                 i += 1
                 if i % 100 == 0:
@@ -122,7 +129,7 @@ class NonlinPostOpt:
                 flag = True
 
         # Timers.toc('total')
-        Timers.print_stats()
+        # Timers.print_stats()
         return sf_mat
 
     def hybridize(self, bbox):
@@ -145,6 +152,44 @@ class NonlinPostOpt:
         err_ub = np.amax(vertices, axis=0)
 
         return err_lb, err_ub
+
+    def compute_alpha_step_on_all_directions(self, Xi_lb, Xi_ub, Vi_lb, Vi_ub):
+        delta_T = self.reach_params.delta.T
+        delta_T_l = delta_T.dot(self.directions_transposed)
+
+        signs_delta_T_l = np.where(delta_T_l > 0, 1, 0)  # put 1 for positive elem, 0 for non-positive ones.
+        signs_l = np.where(self.directions_transposed > 0, 1, 0)
+
+        Xi_bounds = np.array([Xi_lb, Xi_ub]).T
+        Vi_bounds = np.array([Vi_lb, Vi_ub]).T
+        ball_bounds = np.array([[-1, 1]] * self.dim)
+
+        # could be optimized?
+        for i in range(self.dim):
+            optm_Xi_index = signs_delta_T_l[i]
+            optm_Vi_index = signs_l[i]
+            if i == 0:
+                optm_Xi = Xi_bounds[i][optm_Xi_index]
+                optm_Vi = Vi_bounds[i][optm_Vi_index]
+                optm_ball = ball_bounds[i][optm_Vi_index]
+            else:
+                optm_Xi = np.vstack((optm_Xi, Xi_bounds[i][optm_Xi_index]))
+                optm_Vi = np.vstack((optm_Vi, Vi_bounds[i][optm_Vi_index]))
+                optm_ball = np.vstack((optm_ball, ball_bounds[i][optm_Vi_index]))
+
+        # Seems to be even slower (because small dimensionality?)
+        # optm_Xi = Xi_bounds[np.arange(signs_delta_T_l.shape[0])[:, np.newaxis], signs_delta_T_l]
+        # optm_Vi = Vi_bounds[np.arange(signs_l.shape[0])[:, np.newaxis], signs_l]
+        # optm_ball = ball_bounds[np.arange(signs_l.shape[0])[:, np.newaxis], signs_l]
+
+        # e^Aτ · Xi ⊕ τV ⊕ α_τ·B
+        temp_sf = np.einsum('ij,ij->j', delta_T_l, optm_Xi) \
+                  + self.tau * np.einsum('ij,ij->j', self.directions_transposed, optm_Vi)\
+                  + self.reach_params.alpha * np.einsum('ij,ij->j', self.directions_transposed, optm_ball)
+        Xi_sf = np.einsum('ij,ij->j', self.directions_transposed, optm_Xi)
+        sf = np.amax([temp_sf, Xi_sf], axis=0)
+
+        return sf
 
     def compute_alpha_step(self, Xi_lb, Xi_ub, Vi_lb, Vi_ub):
         """
@@ -223,10 +268,10 @@ class NonlinPostOpt:
         res_ub = np.empty(self.dim)
 
         # as we care only about the current domain
-        offset = last_alpha_iter-i-1
+        offset = last_alpha_iter - i - 1
         sub_phi_list = phi_list[offset:]
-        input_lb_seq = np.hstack((omega_lb, input_lb_seq[self.dim*(offset+1):]))
-        input_ub_seq = np.hstack((omega_ub, input_ub_seq[self.dim*(offset+1):]))
+        input_lb_seq = np.hstack((omega_lb, input_lb_seq[self.dim * (offset + 1):]))
+        input_ub_seq = np.hstack((omega_ub, input_ub_seq[self.dim * (offset + 1):]))
 
         # print(len(sub_phi_list), len(input_lb_seq), len(input_ub_seq))
 
