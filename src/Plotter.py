@@ -40,7 +40,7 @@ class Plotter:
                 y.append(y[0])
 
                 for xx, yy in zip(x, y):
-                    opfile.write('%.5f %.5f' % (xx, yy) + '\n')
+                    opfile.write('%.15f %.15f' % (xx, yy) + '\n')
                 opfile.write('\n')
 
     @staticmethod
