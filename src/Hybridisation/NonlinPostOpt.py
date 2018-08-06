@@ -356,10 +356,7 @@ class NonlinPostOpt:
 
         sf_vec = np.empty(self.directions.shape[0])
 
-        # input_bounds = np.array([input_lb_seq, input_ub_seq]).transpose(1, 2, 0)
         input_bounds = np.array([input_lb_seq, input_ub_seq]).T
-        # print(input_bounds)
-        # print('\n')
 
         for idx, l in enumerate(self.directions):
             delta_T_l = phi_list.dot(l).reshape(-1, 1)
@@ -370,7 +367,6 @@ class NonlinPostOpt:
             sf_val = np.einsum('ij,ij->j', delta_T_l, optm_input)
             sf_vec[idx] = sf_val
 
-        # print(sf_vec)
         return sf_vec
 
     def update_phi_list(self, phi_list):

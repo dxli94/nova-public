@@ -112,6 +112,17 @@ def generate_directions(direction_type, dim):
                     direction[j] = -1
                     direction_generator.append(direction)
 
+    elif direction_type == 2:  # uniform
+        assert dim == 2  # for now only supports 2D, n-D is a bit trickier
+
+        n = 8  # set as a user option later
+
+        direction_generator = []
+        theta = 2 * np.pi / n
+        for k in range(n):
+            l = np.array([np.cos(k*theta), np.sin(k*theta)])
+            direction_generator.append(l)
+
         return np.array(direction_generator)
 
 
