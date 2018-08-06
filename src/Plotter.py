@@ -67,11 +67,14 @@ class Plotter:
                 print('File does not exist %s' % ipfile_path)
             print('Finished. \nStart plotting...')
 
+            i = 0
             for vertices in vertices_sorted:
                 x, y = [float(elem.split()[0]) for elem in vertices], [float(elem.split()[1]) for elem in vertices]
-                mat = np.transpose(np.array([x, y]))
-                poly1patch = patches.Polygon(mat, fill=False, edgecolor=color, linewidth=lw, linestyle=ls)
-                ax.add_patch(poly1patch)
+                if i % 5 == 0:
+                    mat = np.transpose(np.array([x, y]))
+                    poly1patch = patches.Polygon(mat, fill=False, edgecolor=color, linewidth=lw, linestyle=ls)
+                    ax.add_patch(poly1patch)
+                i+=1
 
         plt.autoscale(enable=True)
         return plt
@@ -127,7 +130,7 @@ if __name__ == '__main__':
     filelist = args.path if args.path else ['../out/outfile.out']
     data_type = args.type
     if data_type == 1:
-        Plotter.plot_points(filelist)
+        Plotter.plot_polygons(filelist)
     elif data_type == 2:
         # Plotter.plot_polygons(filelist)
         Plotter.plot_points(['../out/simu.out'])
@@ -135,4 +138,4 @@ if __name__ == '__main__':
         Plotter.plot_polygons(filelist)
         Plotter.plot_points(['../out/simu.out'])
         print('Showing plot now.')
-        plt.show()
+    plt.show()
