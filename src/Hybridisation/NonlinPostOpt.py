@@ -22,9 +22,9 @@ def get_canno_dir_indices(directions):
     lb_indices = []
 
     for idx, d in enumerate(directions):
-        if np.sum(d) == 1:
+        if np.isclose(np.sum(d), 1):  # due to the way of generating directions, exact equality is not proper.
             ub_indices.append(idx)
-        elif np.sum(d) == -1:
+        elif np.isclose(np.sum(d), -1):
             lb_indices.append(idx)
         else:
             continue
