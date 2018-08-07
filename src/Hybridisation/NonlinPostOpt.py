@@ -358,16 +358,74 @@ class NonlinPostOpt:
 
         input_bounds = np.array([input_lb_seq, input_ub_seq]).T
 
+        print('phi_list: {}'.format(phi_list))
         for idx, l in enumerate(self.directions):
             delta_T_l = phi_list.dot(l).reshape(-1, 1)
             signs_delta_T_l = np.where(delta_T_l > 0, 1, 0)
 
             optm_input = input_bounds[np.arange(signs_delta_T_l.shape[0])[:, np.newaxis], signs_delta_T_l]
-
             sf_val = np.einsum('ij,ij->j', delta_T_l, optm_input)
+
+            # optm_input = np.empty(signs_delta_T_l.shape)
+            # for idx_, elem in enumerate(signs_delta_T_l):
+            #     if elem == 0:
+            #         optm_input[idx_] = input_bounds[idx_][0]
+            #     else:
+            #         optm_input[idx_] = input_bounds[idx_][1]
+
+            # sf_val = np.dot(delta_T_l, optm_input)
+
+            print('direction: {}'.format(l))
+            print('input bounds: {}'.format(input_bounds))
+            print('delta_T_l: {}'.format(delta_T_l))
+            print('optm_input: {}'.format(optm_input))
+            print('sf_val: {}'.format(sf_val))
+            print('\n')
             sf_vec[idx] = sf_val
 
+        # ================ DEPRECATED ===================== #
+        # res_lb = np.empty(self.dim)
+        # res_ub = np.empty(self.dim)
+        #
+        # factors = phi_list.transpose(1, 0, 2).reshape(2, -1)
+        #
+        # print('factors: {}'.format(factors))
+        # for j in range(factors.shape[0]):
+        #     row = factors[j, :]
+        #
+        #     pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
+        #     neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
+        #
+        #     maxval = pos_clip.dot(input_ub_seq) + neg_clip.dot(input_lb_seq)
+        #     minval = neg_clip.dot(input_ub_seq) + pos_clip.dot(input_lb_seq)
+        #
+        #     res_lb[j] = minval
+        #     res_ub[j] = maxval
+        # print('\n')
+        # print(res_lb, res_ub)
+        # print(sf_vec)
+
         return sf_vec
+
+    # res_lb = np.empty(self.dim)
+    # res_ub = np.empty(self.dim)
+    #
+    # factors = phi_list.transpose(1, 0, 2).reshape(2, -1)
+    # for j in range(factors.shape[0]):
+    #     row = factors[j, :]
+    #
+    #     pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
+    #     neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
+    #
+    #     maxval = pos_clip.dot(input_ub_seq) + neg_clip.dot(input_lb_seq)
+    #     minval = neg_clip.dot(input_ub_seq) + pos_clip.dot(input_lb_seq)
+    #
+    #     res_lb[j] = minval
+    #     res_ub[j] = maxval
+    #
+    # return res_lb, res_ub
+
+
 
     def update_phi_list(self, phi_list):
         """
