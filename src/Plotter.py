@@ -47,7 +47,7 @@ class Plotter:
     def plot_polygons(filelist):
         print('Start reading file...')
         colors = ['red', 'blue']
-        linewidths = [1, 1]
+        linewidths = [0.5, 0.5]
         linestyles = ['solid', 'dashed']
 
 
@@ -70,7 +70,7 @@ class Plotter:
             i = 0
             for vertices in vertices_sorted:
                 x, y = [float(elem.split()[0]) for elem in vertices], [float(elem.split()[1]) for elem in vertices]
-                if i % 50 == 0:
+                if i % 100 == 0:
                     mat = np.transpose(np.array([x, y]))
                     poly1patch = patches.Polygon(mat, fill=False, edgecolor=color, linewidth=lw, linestyle=ls)
                     ax.add_patch(poly1patch)
