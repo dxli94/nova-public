@@ -123,7 +123,7 @@ def generate_directions(direction_type, dim):
             l = np.array([np.cos(k*theta), np.sin(k*theta)])
             direction_generator.append(l)
 
-        return np.array(direction_generator)
+    return np.array(direction_generator)
 
 
 if __name__ == '__main__':
