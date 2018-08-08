@@ -112,7 +112,7 @@ class NonlinPostOpt:
                 flag = False
                 epsilon = self.start_epsilon
             else:
-                bbox = self.refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_lb)
+                bbox = self.refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_ub)
                 bbox.bloat(epsilon)
 
                 # Timers.tic('hybridize')
