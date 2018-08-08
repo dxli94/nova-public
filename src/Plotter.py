@@ -50,7 +50,6 @@ class Plotter:
         linewidths = [1, 1]
         linestyles = ['solid', 'dashed']
 
-
         fig = plt.figure(1, dpi=90)
         ax = fig.add_subplot(111)
         ax.set_xlabel('$x_{1}$')
@@ -67,11 +66,14 @@ class Plotter:
                 print('File does not exist %s' % ipfile_path)
             print('Finished. \nStart plotting...')
 
+            i = 0
             for vertices in vertices_sorted:
-                x, y = [float(elem.split()[0]) for elem in vertices], [float(elem.split()[1]) for elem in vertices]
-                mat = np.transpose(np.array([x, y]))
-                poly1patch = patches.Polygon(mat, fill=False, edgecolor=color, linewidth=lw, linestyle=ls)
-                ax.add_patch(poly1patch)
+                if i % 50 == 0:
+                    x, y = [float(elem.split()[0]) for elem in vertices], [float(elem.split()[1]) for elem in vertices]
+                    mat = np.transpose(np.array([x, y]))
+                    poly1patch = patches.Polygon(mat, fill=False, edgecolor=color, linewidth=lw, linestyle=ls)
+                    ax.add_patch(poly1patch)
+                i+=1
 
         plt.autoscale(enable=True)
         return plt
