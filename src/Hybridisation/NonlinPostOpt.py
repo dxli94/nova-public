@@ -127,6 +127,7 @@ class NonlinPostOpt:
             # if P_{i+1} \subset B
             if hyperbox_contain_by_bounds(self.abs_domain.bounds, [temp_tube_lb, temp_tube_ub]):
                 tube_lb, tube_ub = temp_tube_lb, temp_tube_ub
+                # print('input_lb: {}, input_ub: {}'.format(current_input_lb, current_input_ub))
 
                 phi_list = self.update_phi_list(phi_list)
                 input_lb_seq, input_ub_seq = self.update_wb_seq(input_lb_seq, input_ub_seq,
@@ -358,7 +359,7 @@ class NonlinPostOpt:
 
         input_bounds = np.array([input_lb_seq, input_ub_seq]).T
 
-        print('phi_list: {}'.format(phi_list))
+        # print('phi_list: {}'.format(phi_list))
         for idx, l in enumerate(self.directions):
             delta_T_l = phi_list.dot(l).reshape(-1, 1)
             signs_delta_T_l = np.where(delta_T_l > 0, 1, 0)
@@ -374,13 +375,13 @@ class NonlinPostOpt:
             #         optm_input[idx_] = input_bounds[idx_][1]
 
             # sf_val = np.dot(delta_T_l, optm_input)
-
-            print('direction: {}'.format(l))
-            print('input bounds: {}'.format(input_bounds))
-            print('delta_T_l: {}'.format(delta_T_l))
-            print('optm_input: {}'.format(optm_input))
-            print('sf_val: {}'.format(sf_val))
-            print('\n')
+            #
+            # print('direction: {}'.format(l))
+            # print('input bounds: {}'.format(input_bounds))
+            # print('delta_T_l: {}'.format(delta_T_l))
+            # print('optm_input: {}'.format(optm_input))
+            # print('sf_val: {}'.format(sf_val))
+            # print('\n')
             sf_vec[idx] = sf_val
 
         # ================ DEPRECATED ===================== #
