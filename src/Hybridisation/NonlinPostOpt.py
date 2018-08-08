@@ -103,13 +103,20 @@ class NonlinPostOpt:
                 # initial reachable set in discrete time
                 current_init_set_lb, current_init_set_ub = next_init_set_lb, next_init_set_ub
 
-                sf_mat[i] = np.append(tube_lb, tube_ub)
+                sf_mat[i] = np.append(next_init_set_lb, next_init_set_ub)
 
                 i += 1
                 if i % 100 == 0:
                     print(i)
 
                 flag = False
+                # if self.start_epsilon > epsilon/2:
+                #     epsilon = self.start_epsilon
+                #     print('start eps')
+                # else:
+                #     epsilon = epsilon / 2
+                #     print('32')
+
                 epsilon = self.start_epsilon
             else:
                 bbox = self.refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_ub)
@@ -123,6 +130,8 @@ class NonlinPostOpt:
 
         # Timers.toc('total')
         # Timers.print_stats()
+        # np.set_printoptions(precision=15)
+        # print(sf_mat)
         return sf_mat
 
     def hybridize(self, bbox):
