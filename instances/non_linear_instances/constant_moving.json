@@ -1,0 +1,56 @@
+{
+    "dim": 2,
+    "direction_type": 0,
+    "dynamics": [
+        "0.01",
+        "0"
+    ],
+    "init_coeff": [
+        [
+            1,
+            0
+        ],
+        [
+            -1,
+            0
+        ],
+        [
+            0,
+            1
+        ],
+        [
+            0,
+            -1
+        ]
+    ],
+    "init_col": [
+        [
+            10.2
+        ],
+        [
+            -10
+        ],
+        [
+            0
+        ],
+        [
+            0
+        ]
+    ],
+    "is_linear": [
+        true,
+        false
+    ],
+    "opvars": [
+        0,
+        1
+    ],
+    "sampling_time": 0.01,
+    "start_epsilon": 1e-09,
+    "state_variables": [
+        "x0",
+        "x1"
+    ],
+    "time_horizon": 0.05,
+    "simu_model": "constant_moving"
+}

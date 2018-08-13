@@ -37,6 +37,14 @@ def free_ball_deriv(x, t):
     return res
 
 
+def constant_moving(x, t):
+    nx0 = 1
+    nx1 = 0
+
+    res = np.array([nx0, nx1])
+    return res
+
+
 def simulate_one_run(horizon, model, init_point):
     ts = np.linspace(0, horizon, horizon*200)
 
@@ -46,6 +54,8 @@ def simulate_one_run(horizon, model, init_point):
         xs = odeint(free_ball_deriv, init_point, ts)
     elif model == 'predator_prev':
         xs = odeint(predator_prey_deriv, init_point, ts)
+    elif model == 'constant_moving':
+        xs = odeint(constant_moving, init_point, ts)
     else:
         raise ValueError('Simulate eigen: invalid model name!')
     return xs[:, 0], xs[:, 1]

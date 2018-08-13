@@ -19,6 +19,7 @@ def main():
         # path = '../instances/non_linear_instances/predator_prey.json'
         # path = '../instances/non_linear_instances/2d_water_tank.json'
         # path = '../instances/non_linear_instances/free_ball.json'
+        # path = '../instances/non_linear_instances/constant_moving.json'
 
     data = JsonReader(path).read()
     time_horizon = data['time_horizon']
