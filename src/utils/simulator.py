@@ -39,7 +39,7 @@ def free_ball_deriv(x, t):
 
 def constant_moving(x, t):
     nx0 = 1
-    nx1 = 0
+    nx1 = 1
 
     res = np.array([nx0, nx1])
     return res

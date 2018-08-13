@@ -2,8 +2,8 @@
     "dim": 2,
     "direction_type": 0,
     "dynamics": [
-        "0.01",
-        "0"
+        "1",
+        "1"
     ],
     "init_coeff": [
         [
@@ -25,13 +25,13 @@
     ],
     "init_col": [
         [
-            10.2
-        ],
-        [
-            -10
+            2
         ],
         [
             0
+        ],
+        [
+            2
         ],
         [
             0
@@ -45,12 +45,12 @@
         0,
         1
     ],
-    "sampling_time": 0.01,
+    "sampling_time": 0.1,
     "start_epsilon": 1e-09,
     "state_variables": [
         "x0",
         "x1"
     ],
-    "time_horizon": 0.05,
+    "time_horizon": 1,
     "simu_model": "constant_moving"
 }
