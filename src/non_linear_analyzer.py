@@ -2,6 +2,7 @@ import sys
 
 import numpy as np
 
+from AffinePostOpt import PostOperator as AffinePostOperator
 import SuppFuncUtils
 from Hybridisation.NonlinPostOpt import NonlinPostOpt
 from SysDynamics import GeneralDynamics
@@ -43,20 +44,19 @@ def main():
     # ============== setting up done ============== #
 
     # ============== start flowpipe construction. ============== #
-    # np.set_printoptions(precision=100)
+    np.set_printoptions(precision=100)
     nonlin_post_opt = NonlinPostOpt(dim, non_linear_dynamics, time_horizon, tau, directions,
                                     init_coeff, init_col, is_linear, start_epsilon)
-    sf_mat = nonlin_post_opt.compute_post()
-    images = nonlin_post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=sf_mat)
+    sf_mat, bound_mat = nonlin_post_opt.compute_post()
+    # images = nonlin_post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=bound_mat)
+    # plotter = Plotter(images, opvars)
+    # plotter.save_polygons_to_file()
 
+    images = AffinePostOperator.get_projections(directions=directions, opdims=opvars, sf_mat=sf_mat)
     plotter = Plotter(images, opvars)
     plotter.save_polygons_to_file()
-
     run_simulate(time_horizon, simu_model, init_coeff, init_col)
 
-    # images = nonlin_post_opt.lin_post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=bbox_mat)
-    # plotter = Plotter(images, opvars)
-    # plotter.save_polygons_to_file(filename='bbox.out')
     #
     # images = nonlin_post_opt.lin_post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=x_mat)
     # plotter = Plotter(images, opvars)

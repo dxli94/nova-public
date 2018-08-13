@@ -47,7 +47,7 @@ class Plotter:
     def plot_polygons(filelist):
         print('Start reading file...')
         colors = ['red', 'blue']
-        linewidths = [1, 1]
+        linewidths = [0.5, 0.5]
         linestyles = ['solid', 'dashed']
 
         fig = plt.figure(1, dpi=90)
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     filelist = args.path if args.path else ['../out/outfile.out']
     data_type = args.type
     if data_type == 1:
-        Plotter.plot_points(filelist)
+        Plotter.plot_polygons(filelist)
     elif data_type == 2:
         # Plotter.plot_polygons(filelist)
         Plotter.plot_points(['../out/simu.out'])
@@ -137,4 +137,4 @@ if __name__ == '__main__':
         Plotter.plot_polygons(filelist)
         Plotter.plot_points(['../out/simu.out'])
         print('Showing plot now.')
-        plt.show()
+    plt.show()
