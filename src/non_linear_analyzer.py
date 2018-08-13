@@ -16,9 +16,11 @@ def main():
     try:
         path = sys.argv[1]
     except IndexError:
-        path = '../instances/non_linear_instances/vanderpol.json'
+        # path = '../instances/non_linear_instances/vanderpol.json'
         # path = '../instances/non_linear_instances/predator_prey.json'
         # path = '../instances/non_linear_instances/2d_water_tank.json'
+        # path = '../instances/non_linear_instances/brusselator.json'
+        path = '../instances/non_linear_instances/jet_engine.json'
         # path = '../instances/non_linear_instances/free_ball.json'
         # path = '../instances/non_linear_instances/constant_moving.json'
 
@@ -55,7 +57,7 @@ def main():
     images = AffinePostOperator.get_projections(directions=directions, opdims=opvars, sf_mat=sf_mat)
     plotter = Plotter(images, opvars)
     plotter.save_polygons_to_file()
-    run_simulate(time_horizon, simu_model, init_coeff, init_col)
+    # run_simulate(time_horizon, simu_model, init_coeff, init_col)
 
     #
     # images = nonlin_post_opt.lin_post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=x_mat)

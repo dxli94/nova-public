@@ -2,8 +2,8 @@
     "dim": 2,
     "direction_type": 0,
     "dynamics": [
-        "1+x0^2*x1-1.5*x0-x0",
-        "1.5*x0-x0^2*x1"
+        "-x1-1.5*x0^2-0.5*x0^3-0.5",
+        "3*x0-x1"
 
     ],
     "init_coeff": [
@@ -26,16 +26,16 @@
     ],
     "init_col": [
         [
-            0.85
+            1.2
         ],
         [
             -0.8
         ],
         [
-            0.05
+            1.2
         ],
         [
-            0
+            -0.8
         ]
     ],
     "is_linear": [
@@ -46,12 +46,12 @@
         0,
         1
     ],
-    "sampling_time": 0.03,
+    "sampling_time": 0.01,
     "start_epsilon": 1e-09,
     "state_variables": [
         "x0",
         "x1"
     ],
-    "time_horizon": 15,
-    "simu_model": "brusselator"
+    "time_horizon": 10,
+    "simu_model": "jet_engine"
 }
