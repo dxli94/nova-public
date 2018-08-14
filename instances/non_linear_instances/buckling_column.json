@@ -1,0 +1,57 @@
+{
+    "dim": 2,
+    "direction_type": 0,
+    "dynamics": [
+        "x1",
+        "2*x0-x0^3-0.2*x1+0.1"
+
+    ],
+    "init_coeff": [
+        [
+            1,
+            0
+        ],
+        [
+            -1,
+            0
+        ],
+        [
+            0,
+            1
+        ],
+        [
+            0,
+            -1
+        ]
+    ],
+    "init_col": [
+        [
+            -0.4
+        ],
+        [
+            0.5
+        ],
+        [
+            -0.4
+        ],
+        [
+            0.5
+        ]
+    ],
+    "is_linear": [
+        true,
+        false
+    ],
+    "opvars": [
+        0,
+        1
+    ],
+    "sampling_time": 0.03,
+    "start_epsilon": 1e-09,
+    "state_variables": [
+        "x0",
+        "x1"
+    ],
+    "time_horizon": 10,
+    "simu_model": "buckling_col"
+}
