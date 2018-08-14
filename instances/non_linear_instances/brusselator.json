@@ -26,13 +26,13 @@
     ],
     "init_col": [
         [
-            0.85
+            1
         ],
         [
             -0.8
         ],
         [
-            0.05
+            0.2
         ],
         [
             0
@@ -46,7 +46,7 @@
         0,
         1
     ],
-    "sampling_time": 0.03,
+    "sampling_time": 0.01,
     "start_epsilon": 1e-09,
     "state_variables": [
         "x0",

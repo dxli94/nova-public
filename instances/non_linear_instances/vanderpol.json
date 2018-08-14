@@ -26,16 +26,16 @@
     ],
     "init_col": [
         [
-            1.25
+            1.55
         ],
         [
-            -1.24
+            -1.25
         ],
         [
-            2.28
+            2.32
         ],
         [
-            -2.27
+            -2.28
         ]
     ],
     "is_linear": [
@@ -46,12 +46,12 @@
         0,
         1
     ],
-    "sampling_time": 0.001,
-    "start_epsilon": 1e-04,
+    "sampling_time": 0.01,
+    "start_epsilon": 1e-09,
     "state_variables": [
         "x0",
         "x1"
     ],
-    "time_horizon": 3,
+    "time_horizon": 7,
     "simu_model": "vanderpol"
 }
