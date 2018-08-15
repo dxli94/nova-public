@@ -96,7 +96,6 @@ class NonlinPostOpt:
             self.lp_solver_on_pseudo_dim = GlpkWrapper(self.dim)
 
     def compute_post(self):
-        Timers.tic('total')
         time_frames = int(np.ceil(self.time_horizon / self.tau))
 
         init_poly = Polyhedron(self.init_mat_X0, self.init_col_X0)
@@ -128,37 +127,30 @@ class NonlinPostOpt:
 
         i = 0
 
-        total_time = 0
-        start_time = time.time()
+        total_walltime = 0
+        start_walltime = time.time()
         while i < time_frames:
             bbox = self.refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_ub)
             bbox.bloat(epsilon)
 
-            Timers.tic('hybridize')
             current_input_lb, current_input_ub = self.hybridize(bbox)
-            Timers.toc('hybridize')
             epsilon *= 2
 
             # P_{i+1} := \alpha(X_{i})
-            Timers.tic('alfa 1')
             temp_tube_lb, temp_tube_ub = self.compute_alpha_step(current_init_set_lb,
                                                                  current_init_set_ub,
                                                                  current_input_lb,
                                                                  current_input_ub)
-            Timers.toc('alfa 1')
 
             # if P_{i+1} \subset B
             if hyperbox_contain_by_bounds(self.abs_domain.bounds, [temp_tube_lb, temp_tube_ub]):
                 tube_lb, tube_ub = temp_tube_lb, temp_tube_ub
-                Timers.tic('update_phi_list')
+
                 phi_list = self.update_phi_list(phi_list)
-                Timers.toc('update_phi_list')
                 input_lb_seq, input_ub_seq = self.update_wb_seq(input_lb_seq, input_ub_seq,
                                                                 current_input_lb, current_input_ub)
 
-                Timers.tic('gamma step')
                 next_init_sf = self.compute_gamma_step(input_lb_seq, input_ub_seq, phi_list)
-                Timers.toc('gamma step')
                 next_init_set_lb, next_init_set_ub = extract_bounds_from_sf(next_init_sf, self.canno_dir_indices)
                 if self.pseudo_var:
                     next_init_set_lb = np.hstack((next_init_set_lb, 1))
@@ -173,16 +165,15 @@ class NonlinPostOpt:
                 i += 1
                 if i % 100 == 0:
                     now = time.time()
-                    time_elapsed = now - start_time
-                    total_time += time_elapsed
+                    walltime_elapsed = now - start_walltime
+                    total_walltime += walltime_elapsed
                     print('{} / {} steps ({:.2f}%) completed in {:.2f} secs. '
-                          'Total time elapsed: {:.2f}'.format(i, time_frames, 100 * i / time_frames, time_elapsed, total_time))
-                    start_time = now
+                          'Total time elapsed: {:.2f} secs'.format(i, time_frames, 100 * i / time_frames, walltime_elapsed, total_walltime))
+                    start_walltime = now
 
                 epsilon = self.start_epsilon
 
-        Timers.toc('total')
-        Timers.print_stats()
+        print('Completed flowpipe computation in {:.2f} secs.'.format(total_walltime))
         return sf_mat
 
     def hybridize(self, bbox):
