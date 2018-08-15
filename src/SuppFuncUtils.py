@@ -37,10 +37,10 @@ def compute_alpha(sys_dynamics, tau, lp):
     dyn_col_vec_U = sys_dynamics.get_dyn_col_vec_U()
     dyn_matrix_init = sys_dynamics.get_dyn_init_X0()
 
-    # norm_a = np.linalg.norm(dyn_matrix_A, np.inf)
+    norm_a = np.linalg.norm(dyn_matrix_A, np.inf)
     # two_norm_a = compute_log_2norm(dyn_matrix_A)
-    log_norm_a = compute_log_infnorm(dyn_matrix_A)
-    norm_a = log_norm_a
+    # log_norm_a = compute_log_infnorm(dyn_matrix_A)
+    # norm_a = log_norm_a
     # norm_a = two_norm_a
 
     tt1 = np.exp(tau * norm_a)
@@ -67,10 +67,10 @@ def compute_beta(sys_dynamics, tau, lp):
     dyn_coeff_matrix_U = sys_dynamics.get_dyn_coeff_matrix_U()
     dyn_col_vec_U = sys_dynamics.get_dyn_col_vec_U()
 
-    # norm_a = np.linalg.norm(dyn_matrix_A, np.inf)
+    norm_a = np.linalg.norm(dyn_matrix_A, np.inf)
     # two_norm_a = compute_log_2norm(dyn_matrix_A)
-    log_norm_a = compute_log_infnorm(dyn_matrix_A)
-    norm_a = log_norm_a
+    # log_norm_a = compute_log_infnorm(dyn_matrix_A)
+    # norm_a = log_norm_a
     # norm_a = two_norm_a
 
     # ========
