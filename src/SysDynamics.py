@@ -37,24 +37,33 @@ class AffineDynamics:
 class GeneralDynamics:
     def __init__(self, id_to_vars, *args):
         self.vars_dict = id_to_vars
-        dynamics = [sympy.simplify(arg) for arg in args]
-        num_free_vars = len(reduce((lambda x, y: x.union(y)), [d.free_symbols for d in dynamics]))
+        self.dynamics = [sympy.sympify(arg) for arg in args]
+        num_free_vars = len(reduce((lambda x, y: x.union(y)), [d.free_symbols for d in self.dynamics]))
         assert len(self.vars_dict) >= num_free_vars, \
             "inconsistent number of variables declared ({}) with used in dynamics ({})" \
                 .format(len(self.vars_dict), num_free_vars)
 
         self.state_vars = tuple(sympy.symbols(str(self.vars_dict[key])) for key in self.vars_dict)
-        self.dynamics = sympy.lambdify(self.state_vars, dynamics)
-        self.jacobian_mat = sympy.lambdify(self.state_vars, sympy.Matrix(dynamics).jacobian(self.state_vars))
+        self.lamdafied_dynamics = sympy.lambdify(self.state_vars, self.dynamics)
+        self.jacobian_mat = sympy.lambdify(self.state_vars, sympy.Matrix(self.dynamics).jacobian(self.state_vars))
 
     def eval(self, vals):
         assert len(vals) == len(self.state_vars), \
             "inconsistent number of variables, {} is expected, {} is given".format(len(self.state_vars), len(vals))
 
-        return self.dynamics(*vals)
+        return self.lamdafied_dynamics(*vals)
 
     def eval_jacobian(self, vals):
         return self.jacobian_mat(*vals)
+
+    def __str__(self):
+        return str(self.dynamics)
+
+    # def update_dynamics(self, *args):
+    #     # todo does not work yet
+    #     self.dynamics = [sympy.sympify(arg) for arg in args]
+    #     self.lamdafied_dynamics = sympy.lambdify(self.state_vars, self.dynamics)
+    #     self.jacobian_mat = sympy.lambdify(self.state_vars, sympy.Matrix(self.dynamics).jacobian(self.state_vars))
 
 
 if __name__ == '__main__':
