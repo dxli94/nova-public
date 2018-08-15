@@ -82,3 +82,6 @@ class Linearizer:
         mat_a = np.array(non_linear_dyn.eval_jacobian(abs_center)).astype(np.float64)
         b = [0] * len(abs_center)
         return mat_a, b
+
+    def set_nonlin_dyn(self, dynamics):
+        self.nonlin_dyn = dynamics

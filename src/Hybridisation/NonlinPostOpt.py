@@ -4,7 +4,7 @@ import SuppFuncUtils
 from ConvexSet.HyperBox import HyperBox, hyperbox_contain_by_bounds
 from ConvexSet.Polyhedron import Polyhedron
 from Hybridisation.Linearizer import Linearizer
-from SysDynamics import AffineDynamics
+from SysDynamics import AffineDynamics, GeneralDynamics
 from timerutil import Timers
 from utils.GlpkWrapper import GlpkWrapper
 
@@ -44,7 +44,7 @@ def extract_bounds_from_sf(sf_vec, canno_dir_indices):
 
 class NonlinPostOpt:
     def __init__(self, dim, nonlin_dyn, time_horizon, tau, directions,
-                 init_mat_X0, init_col_X0, is_linear, start_epsilon, pseudo_var):
+                 init_mat_X0, init_col_X0, is_linear, start_epsilon, pseudo_var, id_to_vars):
         self.dim = dim
         self.nonlin_dyn = nonlin_dyn
         self.time_horizon = time_horizon
@@ -56,13 +56,17 @@ class NonlinPostOpt:
         self.init_col_X0 = init_col_X0
         self.template_directions = directions
         self.canno_dir_indices = get_canno_dir_indices(directions)
-        self.pseudo_var = True
+        self.pseudo_var = pseudo_var
+
+        self.id_to_vars = id_to_vars
 
         # the following attributes would be updated along the flowpipe construction
         self.abs_dynamics = None
         self.abs_domain = None
         self.poly_U = None
         self.reach_params = reachParams()
+
+        self.scaled_nonlin_dyn = None
 
         self.lp_solver = GlpkWrapper(dim)
         self.dyn_linearizer = Linearizer(dim, nonlin_dyn, is_linear)
@@ -123,11 +127,19 @@ class NonlinPostOpt:
         phi_list = []
 
         i = 0
-
-        sf_mat = np.zeros((time_frames, self.template_directions.shape[0]))
+        j = -1
 
         flag = True  # whether we have a new abstraction domain
         epsilon = self.start_epsilon
+
+        time_scaling_on = False
+        if time_scaling_on:
+            scaled = False
+            dwell_steps = 5
+        else:
+            dwell_steps = 0
+
+        sf_mat = np.zeros((time_frames + dwell_steps, self.template_directions.shape[0]))
 
         while i < time_frames:
             if flag:
@@ -139,6 +151,17 @@ class NonlinPostOpt:
                                                                      current_input_ub)
                 Timers.toc('alfa 1')
             else:
+                # ======
+                bbox = self.refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_ub)
+                bbox.bloat(epsilon)
+
+                Timers.tic('hybridize')
+                current_input_lb, current_input_ub = self.hybridize(bbox)
+                Timers.toc('hybridize')
+                epsilon *= 2
+                flag = True
+                # ======
+
                 Timers.tic('alfa 2')
                 temp_tube_lb, temp_tube_ub = self.compute_alpha_step(current_init_set_lb,
                                                                      current_init_set_ub,
@@ -170,10 +193,26 @@ class NonlinPostOpt:
                 sf_mat[i] = next_init_sf
 
                 i += 1
-                if i % 100 == 0:
+                if i % 50 == 0:
                     print(i)
 
-                flag = False
+                if time_scaling_on:
+                    if i == 100:
+                        j = dwell_steps  # number of steps dwelling in time scaling mode
+                        self.scale_dynamics()
+                        scaled = True
+
+                    if scaled:
+                        time_frames += 1
+                        j -= 1
+                        print(j)
+                        if j == 0:
+                            self.scaled_nonlin_dyn = self.nonlin_dyn
+                            self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
+                            scaled = False
+
+                # flag = False
+                flag = True
 
                 epsilon = self.start_epsilon
             else:
@@ -505,3 +544,45 @@ class NonlinPostOpt:
             sf_row = np.multiply(sf_row, [-1, -1, 1, 1]).reshape(sf_row.shape[0], 1)
             ret.append(Polyhedron(directions, sf_row))
         return ret
+
+    def scale_dynamics(self):
+        """
+        1. Compute center of the abstraction domain;
+        2. Evaluate the derivative of the center as the normal vector (v) direction;
+        3. Decide on a hyperline, such that
+           1) perpendicular to v;
+           2) some distance ahead; such distance should be far enough (otherwise a part
+              of the image would have already crossed the surface while another part
+              is left behind??)
+        """
+        # 1. find domain center
+        if self.pseudo_var:
+            domain_center = np.sum(self.abs_domain.bounds[:, :-1], axis=0) / 2
+        else:
+            domain_center = np.sum(self.abs_domain.bounds, axis=0) / 2
+
+        # 2. derivative of the center is the eval of dynamics at the center
+        norm_vec = self.nonlin_dyn.eval(domain_center)
+
+        # 3. find a hyperline
+        d = 0.1
+
+        p = domain_center + np.dot(norm_vec, d)
+        bias = np.dot(norm_vec, p)
+
+        dist_str = ''
+        for idx, norm in enumerate(norm_vec):
+            dist_str += '-' + str(norm) + '*x' + str(idx)
+        dist_str += '+' + str(bias)
+
+        scaled_dynamics = []
+        for dyn in self.nonlin_dyn.dynamics:
+            scaled_dynamics.append('({})*({})'.format(dist_str, dyn))
+
+        self.scaled_nonlin_dyn = GeneralDynamics(self.id_to_vars, *scaled_dynamics)
+        self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
+
+        # print(self.scaled_nonlin_dyn.dynamics)
+
+        # scaling_factor = GeneralDynamics(self.id_to_vars, dist_str)
+

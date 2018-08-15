@@ -16,14 +16,17 @@ def main():
     try:
         path = sys.argv[1]
     except IndexError:
-        # path = '../instances/non_linear_instances/vanderpol.json'
+        path = '../instances/non_linear_instances/vanderpol.json'
         # path = '../instances/non_linear_instances/predator_prey.json'
         # path = '../instances/non_linear_instances/2d_water_tank.json'
         # path = '../instances/non_linear_instances/brusselator.json'
         # path = '../instances/non_linear_instances/jet_engine.json'
         # path = '../instances/non_linear_instances/free_ball.json'
         # path = '../instances/non_linear_instances/constant_moving.json'
-        path = '../instances/non_linear_instances/buckling_column.json'
+        # path = '../instances/non_linear_instances/buckling_column.json'
+
+    # buckling_column: d = 0.1, dwell_steps = 200, start_i = 50
+    # vanderpol: d = 0.1, dwell_steps = 5, start_i = 100, time_step = 0.02
 
     data = JsonReader(path).read()
     time_horizon = data['time_horizon']
@@ -50,7 +53,7 @@ def main():
     # ============== start flowpipe construction. ============== #
     np.set_printoptions(precision=100)
     nonlin_post_opt = NonlinPostOpt(dim, non_linear_dynamics, time_horizon, tau, directions,
-                                    init_coeff, init_col, is_linear, start_epsilon, pseudo_var)
+                                    init_coeff, init_col, is_linear, start_epsilon, pseudo_var, id_to_vars)
     sf_mat = nonlin_post_opt.compute_post()
     # images = nonlin_post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=bound_mat)
     # plotter = Plotter(images, opvars)

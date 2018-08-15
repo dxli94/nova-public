@@ -67,7 +67,7 @@ def buckling_column_deriv(x, t):
 
 def constant_moving_deriv(x, t):
     nx0 = 1
-    nx1 = 1
+    nx1 = 0
 
     res = np.array([nx0, nx1])
     return res
