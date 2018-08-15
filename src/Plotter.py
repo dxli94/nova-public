@@ -68,7 +68,7 @@ class Plotter:
 
             i = 0
             for vertices in vertices_sorted:
-                if i % 50 == 0:
+                if i % 1 == 0:
                     x, y = [float(elem.split()[0]) for elem in vertices], [float(elem.split()[1]) for elem in vertices]
                     mat = np.transpose(np.array([x, y]))
                     poly1patch = patches.Polygon(mat, fill=False, edgecolor=color, linewidth=lw, linestyle=ls)

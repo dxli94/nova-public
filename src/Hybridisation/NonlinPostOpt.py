@@ -80,7 +80,7 @@ class NonlinPostOpt:
 
             temp_coeff_neg = np.zeros(self.pseudo_dim)
             temp_coeff_neg[self.pseudo_dim - 1] = -1
-            temp_col_neg = np.ones(1)
+            temp_col_neg = -np.ones(1)
 
             self.init_mat_X0 = np.vstack((self.init_mat_X0, temp_coeff_neg, temp_coeff_pos))
             self.init_col_X0 = np.vstack((self.init_col_X0, temp_col_neg, temp_col_pos))
@@ -220,50 +220,6 @@ class NonlinPostOpt:
 
         return err_lb, err_ub
 
-        # def compute_alpha_step(self, current_init_sf, Vi_lb, Vi_ub):
-        #     # Ω0 = CH(Xi, e^Aτ · Xi ⊕ τV ⊕ α_τ·B)
-        #     Xi_bounds = np.array([Xi_lb, Xi_ub]).T
-        #     Vi_bounds = np.array([Vi_lb, Vi_ub]).T
-        #     ball_bounds = np.array([[-1, 1]] * self.dim)
-
-        # def compute_alpha_step_on_all_directions(self, Xi_lb, Xi_ub, Vi_lb, Vi_ub):
-        #     delta_T = self.reach_params.delta.T
-        #     delta_T_l = delta_T.dot(self.directions.T)
-        #
-        #     signs_delta_T_l = np.where(delta_T_l > 0, 1, 0)  # put 1 for positive elem, 0 for non-positive ones.
-        #     signs_l = np.where(self.directions.T > 0, 1, 0)
-        #
-        #     Xi_bounds = np.array([Xi_lb, Xi_ub]).T
-        #     Vi_bounds = np.array([Vi_lb, Vi_ub]).T
-        #     ball_bounds = np.array([[-1, 1]] * self.dim)
-        #
-        #     # could be optimized?
-        #     for i in range(self.dim):
-        #         optm_Xi_index = signs_delta_T_l[i]
-        #         optm_Vi_index = signs_l[i]
-        #         if i == 0:
-        #             optm_Xi = Xi_bounds[i][optm_Xi_index]
-        #             optm_Vi = Vi_bounds[i][optm_Vi_index]
-        #             optm_ball = ball_bounds[i][optm_Vi_index]
-        #         else:
-        #             optm_Xi = np.vstack((optm_Xi, Xi_bounds[i][optm_Xi_index]))
-        #             optm_Vi = np.vstack((optm_Vi, Vi_bounds[i][optm_Vi_index]))
-        #             optm_ball = np.vstack((optm_ball, ball_bounds[i][optm_Vi_index]))
-
-        # Seems to be even slower (because small dimensionality?)
-        # optm_Xi = Xi_bounds[np.arange(signs_delta_T_l.shape[0])[:, np.newaxis], signs_delta_T_l]
-        # optm_Vi = Vi_bounds[np.arange(signs_l.shape[0])[:, np.newaxis], signs_l]
-        # optm_ball = ball_bounds[np.arange(signs_l.shape[0])[:, np.newaxis], signs_l]
-
-        # e^Aτ · Xi ⊕ τV ⊕ α_τ·B
-        # temp_sf = np.einsum('ij,ij->j', delta_T_l, optm_Xi) \
-        #           + self.tau * np.einsum('ij,ij->j', self.directions.T, optm_Vi) \
-        #           + self.reach_params.alpha * np.einsum('ij,ij->j', self.directions.T, optm_ball)
-        # Xi_sf = np.einsum('ij,ij->j', self.directions.T, optm_Xi)
-        # sf = np.amax([temp_sf, Xi_sf], axis=0)
-        #
-        # return sf
-
     def compute_alpha_step(self, Xi_lb, Xi_ub, Vi_lb, Vi_ub):
         """
         When we have a new abstraction domain, the dynamic changes. To
@@ -399,53 +355,62 @@ class NonlinPostOpt:
 
         input_bounds = np.array([input_lb_seq, input_ub_seq]).T
 
-        # print('phi_list: {}'.format(phi_list))
         for idx, l in enumerate(self.directions):
+            '''
+            Multiply each phi product in phi_list with the direction, then get a list of new directions.
+            Reshape it to a column vector. The number of rows corresponds to length of input sequence.
+
+            E.g. Given
+                     phi_list = [ [1, 2,  [-1, 0,
+                                   3, 4],  0, -1] ]
+                     direction l = [1, 0]
+                     input_lb_seq = [[1, 2], [3, 4]]
+                     input_ub_seq = [[5, 6], [7, 8]]
+
+                 1) phi_list.dot(l) gives:
+                 [ [1,   [-1,
+                    3],   0] ]
+
+                 2) Reshaping it gives:
+                 delta_T_l =
+                 [ 1
+                   3,
+                   -1,
+                   0 ]
+
+                 3) If the element is positive, to maximize x\cdot l, we take the upper bound of input. Otherwise, lower bound.
+                 signs_delta_T_l =
+                 [ 1
+                   1,
+                   0,
+                   0 ]
+
+                 4) input_bounds zips input_lb_seq and input_ub_seq
+                 [  [1, 5],
+                    [2, 6],
+                    [3, 7],
+                    [4, 8] ]
+
+                 5) index input_bounds by signs_delta_T_l, we get
+                 [ 5,      (index 1 from [1, 5])
+                   6,      (index 1 from [2, 6])
+                   3,      (index 0 from [3, 7])
+                   4 ]     (index 0 from [4, 8])
+
+                 6) Now (5, 6, 3, 4) is the vector to maximize x \cdot l
+                 einsum computes the inner product of (5, 6, 3, 4) and delta_T_l.
+                 This is same as first reshape them into row vectors and then take the dot.
+            '''
+
             delta_T_l = phi_list.dot(l).reshape(-1, 1)
             signs_delta_T_l = np.where(delta_T_l > 0, 1, 0)
 
             optm_input = input_bounds[np.arange(signs_delta_T_l.shape[0])[:, np.newaxis], signs_delta_T_l]
+
             sf_val = np.einsum('ij,ij->j', delta_T_l, optm_input)
             sf_vec[idx] = sf_val
 
-        # ================ DEPRECATED ===================== #
-        # res_lb = np.empty(self.pseudo_dim)
-        # res_ub = np.empty(self.pseudo_dim)
-        #
-        # factors = phi_list[:, 0:self.dim].transpose(1, 0, 2).reshape(2, -1)
-        #
-        # for j in range(factors.shape[0]):
-        #     row = factors[j, :]
-        #
-        #     pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
-        #     neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
-        #
-        #     maxval = pos_clip.dot(input_ub_seq) + neg_clip.dot(input_lb_seq)
-        #     minval = neg_clip.dot(input_ub_seq) + pos_clip.dot(input_lb_seq)
-        #
-        #     res_lb[j] = minval
-        #     res_ub[j] = maxval
-
         return sf_vec
-
-    # res_lb = np.empty(self.dim)
-    # res_ub = np.empty(self.dim)
-    #
-    # factors = phi_list.transpose(1, 0, 2).reshape(2, -1)
-    # for j in range(factors.shape[0]):
-    #     row = factors[j, :]
-    #
-    #     pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
-    #     neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
-    #
-    #     maxval = pos_clip.dot(input_ub_seq) + neg_clip.dot(input_lb_seq)
-    #     minval = neg_clip.dot(input_ub_seq) + pos_clip.dot(input_lb_seq)
-    #
-    #     res_lb[j] = minval
-    #     res_ub[j] = maxval
-    #
-    # return res_lb, res_ub
-
 
     def update_phi_list(self, phi_list):
         """
