@@ -7,6 +7,7 @@ from Hybridisation.Linearizer import Linearizer
 from SysDynamics import AffineDynamics
 from timerutil import Timers
 from utils.GlpkWrapper import GlpkWrapper
+import time
 
 
 class reachParams:
@@ -88,7 +89,8 @@ class NonlinPostOpt:
             self.lp_solver_on_pseudo_dim = GlpkWrapper(self.pseudo_dim)
 
             # add a zero column for all directions
-            self.template_directions = np.hstack((self.template_directions, np.zeros((self.template_directions.shape[0], 1))))
+            self.template_directions = np.hstack(
+                (self.template_directions, np.zeros((self.template_directions.shape[0], 1))))
         else:
             self.pseudo_dim = self.dim
             self.lp_solver_on_pseudo_dim = GlpkWrapper(self.dim)
@@ -96,55 +98,54 @@ class NonlinPostOpt:
     def compute_post(self):
         Timers.tic('total')
         time_frames = int(np.ceil(self.time_horizon / self.tau))
-        init_poly = Polyhedron(self.init_mat_X0, self.init_col_X0)
 
+        init_poly = Polyhedron(self.init_mat_X0, self.init_col_X0)
         vertices = init_poly.vertices
-        init_set_ub = np.amax(vertices, axis=0)
+
         init_set_lb = np.amin(vertices, axis=0)
+        init_set_ub = np.amax(vertices, axis=0)
 
         # reachable states in dense time
-        tube_ub = init_set_ub
-        tube_lb = init_set_lb
-
+        tube_lb, tube_ub = init_set_lb, init_set_ub
+        # temporary variables for reachable states in dense time
+        temp_tube_lb, temp_tube_ub = init_set_lb, init_set_ub
         # initial reachable set in discrete time in the current abstract domain
         # changes when the abstract domain is large enough to contain next image in alfa step
-        current_init_set_ub = init_set_ub
-        current_init_set_lb = init_set_lb
+        current_init_set_lb, current_init_set_ub = init_set_lb, init_set_ub
 
-        input_lb_seq = init_set_lb
-        input_ub_seq = init_set_ub
+        input_lb_seq, input_ub_seq = init_set_lb, init_set_ub
+
+        phi_list = []
 
         # B := \bb(X0)
         bbox = HyperBox(init_poly.vertices)
         # (A, V) := L(f, B), such that f(x) = (A, V) over-approx. g(x)
         bbox.bloat(1e-6)
-        current_input_lb, current_input_ub = self.hybridize(bbox)
-
-        phi_list = []
-
-        i = 0
+        epsilon = self.start_epsilon
+        # current_input_lb, current_input_ub = self.hybridize(bbox)
 
         sf_mat = np.zeros((time_frames, self.template_directions.shape[0]))
 
-        flag = True  # whether we have a new abstraction domain
-        epsilon = self.start_epsilon
+        i = 0
 
+        total_time = 0
+        start_time = time.time()
         while i < time_frames:
-            if flag:
-                # P_{i+1} := \alpha(X_{i})
-                Timers.tic('alfa 1')
-                temp_tube_lb, temp_tube_ub = self.compute_alpha_step(current_init_set_lb,
-                                                                     current_init_set_ub,
-                                                                     current_input_lb,
-                                                                     current_input_ub)
-                Timers.toc('alfa 1')
-            else:
-                Timers.tic('alfa 2')
-                temp_tube_lb, temp_tube_ub = self.compute_alpha_step(current_init_set_lb,
-                                                                     current_init_set_ub,
-                                                                     current_input_lb,
-                                                                     current_input_ub)
-                Timers.toc('alfa 2')
+            bbox = self.refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_ub)
+            bbox.bloat(epsilon)
+
+            Timers.tic('hybridize')
+            current_input_lb, current_input_ub = self.hybridize(bbox)
+            Timers.toc('hybridize')
+            epsilon *= 2
+
+            # P_{i+1} := \alpha(X_{i})
+            Timers.tic('alfa 1')
+            temp_tube_lb, temp_tube_ub = self.compute_alpha_step(current_init_set_lb,
+                                                                 current_init_set_ub,
+                                                                 current_input_lb,
+                                                                 current_input_ub)
+            Timers.toc('alfa 1')
 
             # if P_{i+1} \subset B
             if hyperbox_contain_by_bounds(self.abs_domain.bounds, [temp_tube_lb, temp_tube_ub]):
@@ -166,25 +167,19 @@ class NonlinPostOpt:
                 # initial reachable set in discrete time
                 current_init_set_lb, current_init_set_ub = next_init_set_lb, next_init_set_ub
 
-#                 sf_mat[i] = np.append(next_init_set_lb, next_init_set_ub)
+                #                 sf_mat[i] = np.append(next_init_set_lb, next_init_set_ub)
                 sf_mat[i] = next_init_sf
 
                 i += 1
                 if i % 100 == 0:
-                    print(i)
-
-                flag = False
+                    now = time.time()
+                    time_elapsed = now - start_time
+                    total_time += time_elapsed
+                    print('{} / {} steps ({:.2f}%) completed in {:.2f} secs. '
+                          'Total time elapsed: {:.2f}'.format(i, time_frames, 100 * i / time_frames, time_elapsed, total_time))
+                    start_time = now
 
                 epsilon = self.start_epsilon
-            else:
-                bbox = self.refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_ub)
-                bbox.bloat(epsilon)
-
-                Timers.tic('hybridize')
-                current_input_lb, current_input_ub = self.hybridize(bbox)
-                Timers.toc('hybridize')
-                epsilon *= 2
-                flag = True
 
         Timers.toc('total')
         Timers.print_stats()
@@ -448,26 +443,19 @@ class NonlinPostOpt:
             w_mat = np.hstack((pos_iden, neg_iden)).reshape(self.pseudo_dim * 2, -1)
             w_vec = np.vstack((poly_w[1], 0, 0))
             poly_w = (w_mat, w_vec)
-
-            abs_dynamics = AffineDynamics(dim=self.pseudo_dim,
-                                          init_coeff_matrix_X0=self.init_mat_X0,
-                                          init_col_vec_X0=self.init_col_X0,
-                                          dynamics_matrix_A=matrix_A,
-                                          dynamics_matrix_B=coeff_matrix_B,
-                                          dynamics_coeff_matrix_U=poly_w[0],
-                                          dynamics_col_vec_U=poly_w[1])
         else:
             u = poly_w[1]
-            b = np.dstack((c, -c)).reshape((self.dim*2, -1))
-            poly_w = (poly_w[0], u+b)
+            b = np.dstack((c, -c)).reshape((self.dim * 2, -1))
+            poly_w = (poly_w[0], u + b)
+            coeff_matrix_B = self.coeff_matrix_B
 
-            abs_dynamics = AffineDynamics(dim=self.dim,
-                                          init_coeff_matrix_X0=self.init_mat_X0,
-                                          init_col_vec_X0=self.init_col_X0,
-                                          dynamics_matrix_A=matrix_A,
-                                          dynamics_matrix_B=self.coeff_matrix_B,
-                                          dynamics_coeff_matrix_U=poly_w[0],
-                                          dynamics_col_vec_U=poly_w[1])
+        abs_dynamics = AffineDynamics(dim=self.dim,
+                                      init_coeff_matrix_X0=self.init_mat_X0,
+                                      init_col_vec_X0=self.init_col_X0,
+                                      dynamics_matrix_A=matrix_A,
+                                      dynamics_matrix_B=coeff_matrix_B,
+                                      dynamics_coeff_matrix_U=poly_w[0],
+                                      dynamics_col_vec_U=poly_w[1])
         self.abs_dynamics = abs_dynamics
 
     def set_abs_domain(self, abs_domain):
