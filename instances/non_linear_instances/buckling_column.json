@@ -53,5 +53,6 @@
         "x1"
     ],
     "time_horizon": 10,
+    "pseudo_var": true,
     "simu_model": "buckling_col"
 }

@@ -44,7 +44,7 @@ def extract_bounds_from_sf(sf_vec, canno_dir_indices):
 
 class NonlinPostOpt:
     def __init__(self, dim, nonlin_dyn, time_horizon, tau, directions,
-                 init_mat_X0, init_col_X0, is_linear, start_epsilon):
+                 init_mat_X0, init_col_X0, is_linear, start_epsilon, pseudo_var):
         self.dim = dim
         self.nonlin_dyn = nonlin_dyn
         self.time_horizon = time_horizon
@@ -56,6 +56,7 @@ class NonlinPostOpt:
         self.init_col_X0 = init_col_X0
         self.directions = directions
         self.canno_dir_indices = get_canno_dir_indices(directions)
+        self.pseudo_var = True
 
         # the following attributes would be updated along the flowpipe construction
         self.abs_dynamics = None
@@ -63,9 +64,34 @@ class NonlinPostOpt:
         self.poly_U = None
         self.reach_params = reachParams()
 
-        # self.lin_post_opt = PostOperator()
         self.lp_solver = GlpkWrapper(dim)
         self.dyn_linearizer = Linearizer(dim, nonlin_dyn, is_linear)
+        self.pseudo_var = pseudo_var
+
+        # add initialization for psedo-variable
+        if self.pseudo_var:
+            self.pseudo_dim = self.dim + 1
+
+            self.init_mat_X0 = np.hstack((self.init_mat_X0, np.zeros(shape=(self.init_mat_X0.shape[0], 1))))
+
+            temp_coeff_pos = np.zeros(self.pseudo_dim)
+            temp_coeff_pos[self.pseudo_dim - 1] = 1
+            temp_col_pos = np.ones(1)
+
+            temp_coeff_neg = np.zeros(self.pseudo_dim)
+            temp_coeff_neg[self.pseudo_dim - 1] = -1
+            temp_col_neg = np.ones(1)
+
+            self.init_mat_X0 = np.vstack((self.init_mat_X0, temp_coeff_neg, temp_coeff_pos))
+            self.init_col_X0 = np.vstack((self.init_col_X0, temp_col_neg, temp_col_pos))
+
+            self.lp_solver_on_pseudo_dim = GlpkWrapper(self.pseudo_dim)
+
+            # add a zero column for all directions
+            self.directions = np.hstack((self.directions, np.zeros((self.directions.shape[0], 1))))
+        else:
+            self.pseudo_dim = self.dim
+            self.lp_solver_on_pseudo_dim = GlpkWrapper(self.dim)
 
     def compute_post(self):
         time_frames = int(np.ceil(self.time_horizon / self.tau))
@@ -115,9 +141,13 @@ class NonlinPostOpt:
                                                                      current_input_ub)
                 last_alpha_iter = i
             else:
-                temp_tube_lb, temp_tube_ub = self.compute_beta_step(tube_lb, tube_ub,
-                                                                    input_lb_seq, input_ub_seq,
-                                                                    phi_list, i, last_alpha_iter)
+                temp_tube_lb, temp_tube_ub = self.compute_alpha_step(current_init_set_lb,
+                                                                     current_init_set_ub,
+                                                                     current_input_lb,
+                                                                     current_input_ub)
+                # temp_tube_lb, temp_tube_ub = self.compute_beta_step(tube_lb, tube_ub,
+                #                                                     input_lb_seq, input_ub_seq,
+                #                                                     phi_list, i, last_alpha_iter)
                 # temp_tube_lb, temp_tube_ub = extract_bounds_from_sf(temp_tube_sf, self.canno_dir_indices)
 
                 # temp_tube_lb, temp_tube_ub = self.compute_beta_step(tube_lb, tube_ub,
@@ -135,25 +165,21 @@ class NonlinPostOpt:
 
                 next_init_sf = self.compute_gamma_step(input_lb_seq, input_ub_seq, phi_list)
                 next_init_set_lb, next_init_set_ub = extract_bounds_from_sf(next_init_sf, self.canno_dir_indices)
+                if self.pseudo_var:
+                    next_init_set_lb = np.hstack((next_init_set_lb, 1))
+                    next_init_set_ub = np.hstack((next_init_set_ub, 1))
+
                 # initial reachable set in discrete time
                 current_init_set_lb, current_init_set_ub = next_init_set_lb, next_init_set_ub
 
 #                 sf_mat[i] = np.append(next_init_set_lb, next_init_set_ub)
-                bound_mat[i] = np.append(tube_lb, tube_ub)
                 sf_mat[i] = next_init_sf
-
 
                 i += 1
                 if i % 100 == 0:
                     print(i)
 
                 flag = False
-                # if self.start_epsilon > epsilon/2:
-                #     epsilon = self.start_epsilon
-                #     print('start eps')
-                # else:
-                #     epsilon = epsilon / 2
-                #     print('32')
 
                 epsilon = self.start_epsilon
             else:
@@ -169,13 +195,18 @@ class NonlinPostOpt:
         return sf_mat, bound_mat
 
     def hybridize(self, bbox):
-        matrix_A, poly_U = self.dyn_linearizer.gen_abs_dynamics(abs_domain=bbox)
+        if self.pseudo_var:
+            domain_bounds = bbox.bounds[:, :-1]
+        else:
+            domain_bounds = bbox.bounds
 
-        self.set_abs_dynamics(matrix_A, poly_U)
+        matrix_A, poly_w, c = self.dyn_linearizer.gen_abs_dynamics(abs_domain_bounds=domain_bounds)
+
+        self.set_abs_dynamics(matrix_A, poly_w, c)
         # 15.9%
-        self.reach_params.alpha = SuppFuncUtils.compute_alpha(self.abs_dynamics, self.tau, self.lp_solver)
+        self.reach_params.alpha = SuppFuncUtils.compute_alpha(self.abs_dynamics, self.tau, self.lp_solver_on_pseudo_dim)
         # 6.8 %
-        self.reach_params.beta = SuppFuncUtils.compute_beta(self.abs_dynamics, self.tau, self.lp_solver)
+        self.reach_params.beta = SuppFuncUtils.compute_beta(self.abs_dynamics, self.tau, self.lp_solver_on_pseudo_dim)
         # 13.2 %
         self.reach_params.delta = SuppFuncUtils.mat_exp(self.abs_dynamics.matrix_A, self.tau)
 
@@ -251,8 +282,8 @@ class NonlinPostOpt:
         :param Vi_ub: upper bounds of input set in the current (i-th) domain (linearization error)
         :return:
         """
-        reach_tube_lb = np.empty(self.dim)
-        reach_tube_ub = np.empty(self.dim)
+        reach_tube_lb = np.empty(self.pseudo_dim)
+        reach_tube_ub = np.empty(self.pseudo_dim)
 
         # input and bloated term W_α = τV ⊕ α_τ·B,
         # using inf norm, B is a square of width 2 at origin
@@ -277,60 +308,63 @@ class NonlinPostOpt:
         reach_tube_lb = np.amin([Xi_lb, reach_tube_lb], axis=0)
         reach_tube_ub = np.amax([Xi_ub, reach_tube_ub], axis=0)
 
+        reach_tube_lb[self.pseudo_dim - 1] = 1
+        reach_tube_ub[self.pseudo_dim - 1] = 1
+
         return reach_tube_lb, reach_tube_ub
 
-    # tube_lb, tube_ub,
-    # input_lb_seq, input_ub_seq,
-    # phi_list, i
-    def compute_beta_step(self, omega_lb, omega_ub, input_lb_seq, input_ub_seq, phi_list, i, last_alpha_iter):
-        """
-        As long as the continuous post would stay within the current abstraction domain,
-        we could propagate the tube using beta step.
-
-        The reccurrency relation:
-           Ω_{i} = e^Aτ · Ω_{i-1} ⊕ τV_{i-1} ⊕ β_{i-1}·B
-                  is unfolded as
-           Ω_{i} = Φ_{n} ... Φ_{1} Ω0
-                   ⊕ Φ_{n} ... Φ_{2} W_{1}
-                   ⊕ Φ_{n} ... Φ_{3} W_{2}
-                   ⊕ ...
-                   ⊕ Φ_{n} W_{n-1}
-                   ⊕ W_{n},
-        where W_{i} = τV_{i} ⊕ β_{i}·τ·B
-
-        Notice that Ω0 is the initial reach tube in the current domain.
-        Correspondingly, Φ_{1} should be the first mat exp in the current domain.
-
-        :param omega_lb:
-        :param omega_ub:
-        :return:
-        """
-
-        res_lb = np.empty(self.dim)
-        res_ub = np.empty(self.dim)
-
-        # as we care only about the current domain
-        offset = last_alpha_iter - i - 1
-        sub_phi_list = phi_list[offset:]
-        input_lb_seq = np.hstack((omega_lb, input_lb_seq[self.dim * (offset + 1):]))
-        input_ub_seq = np.hstack((omega_ub, input_ub_seq[self.dim * (offset + 1):]))
-
-        # print(len(sub_phi_list), len(input_lb_seq), len(input_ub_seq))
-
-        factors = sub_phi_list.transpose(1, 0, 2).reshape(2, -1)
-        for j in range(factors.shape[0]):
-            row = factors[j, :]
-
-            pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
-            neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
-
-            maxval = pos_clip.dot(input_ub_seq) + neg_clip.dot(input_lb_seq)
-            minval = neg_clip.dot(input_ub_seq) + pos_clip.dot(input_lb_seq)
-
-            res_lb[j] = minval
-            res_ub[j] = maxval
-
-        return res_lb, res_ub
+    # def compute_beta_step(self, omega_lb, omega_ub, input_lb_seq, input_ub_seq, phi_list, i, last_alpha_iter):
+    #     """
+    #     As long as the continuous post would stay within the current abstraction domain,
+    #     we could propagate the tube using beta step.
+    #
+    #     The reccurrency relation:
+    #        Ω_{i} = e^Aτ · Ω_{i-1} ⊕ τV_{i-1} ⊕ β_{i-1}·B
+    #               is unfolded as
+    #        Ω_{i} = Φ_{n} ... Φ_{1} Ω0
+    #                ⊕ Φ_{n} ... Φ_{2} W_{1}
+    #                ⊕ Φ_{n} ... Φ_{3} W_{2}
+    #                ⊕ ...
+    #                ⊕ Φ_{n} W_{n-1}
+    #                ⊕ W_{n},
+    #     where W_{i} = τV_{i} ⊕ β_{i}·τ·B
+    #
+    #     Notice that Ω0 is the initial reach tube in the current domain.
+    #     Correspondingly, Φ_{1} should be the first mat exp in the current domain.
+    #
+    #     :param omega_lb:
+    #     :param omega_ub:
+    #     :return:
+    #     """
+    #
+    #     res_lb = np.empty(self.pseudo_dim)
+    #     res_ub = np.empty(self.pseudo_dim)
+    #
+    #     # as we care only about the current domain
+    #     offset = last_alpha_iter - i - 1
+    #     sub_phi_list = phi_list[offset:]
+    #     input_lb_seq = np.hstack((omega_lb, input_lb_seq[self.dim * (offset + 1):]))
+    #     input_ub_seq = np.hstack((omega_ub, input_ub_seq[self.dim * (offset + 1):]))
+    #
+    #     # print(len(sub_phi_list), len(input_lb_seq), len(input_ub_seq))
+    #
+    #     factors = sub_phi_list.transpose(1, 0, 2).reshape(2, -1)
+    #     for j in range(factors.shape[0]):
+    #         row = factors[j, :]
+    #
+    #         pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
+    #         neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
+    #
+    #         maxval = pos_clip.dot(input_ub_seq) + neg_clip.dot(input_lb_seq)
+    #         minval = neg_clip.dot(input_ub_seq) + pos_clip.dot(input_lb_seq)
+    #
+    #         res_lb[j] = minval
+    #         res_ub[j] = maxval
+    #
+    #     res_lb[self.pseudo_dim - 1] = 1
+    #     res_ub[self.pseudo_dim - 1] = 1
+    #
+    #     return res_lb, res_ub
 
     def compute_gamma_step(self, input_lb_seq, input_ub_seq, phi_list):
         """
@@ -372,31 +406,14 @@ class NonlinPostOpt:
 
             optm_input = input_bounds[np.arange(signs_delta_T_l.shape[0])[:, np.newaxis], signs_delta_T_l]
             sf_val = np.einsum('ij,ij->j', delta_T_l, optm_input)
-
-            # optm_input = np.empty(signs_delta_T_l.shape)
-            # for idx_, elem in enumerate(signs_delta_T_l):
-            #     if elem == 0:
-            #         optm_input[idx_] = input_bounds[idx_][0]
-            #     else:
-            #         optm_input[idx_] = input_bounds[idx_][1]
-
-            # sf_val = np.dot(delta_T_l, optm_input)
-            #
-            # print('direction: {}'.format(l))
-            # print('input bounds: {}'.format(input_bounds))
-            # print('delta_T_l: {}'.format(delta_T_l))
-            # print('optm_input: {}'.format(optm_input))
-            # print('sf_val: {}'.format(sf_val))
-            # print('\n')
             sf_vec[idx] = sf_val
 
         # ================ DEPRECATED ===================== #
-        # res_lb = np.empty(self.dim)
-        # res_ub = np.empty(self.dim)
+        # res_lb = np.empty(self.pseudo_dim)
+        # res_ub = np.empty(self.pseudo_dim)
         #
-        # factors = phi_list.transpose(1, 0, 2).reshape(2, -1)
+        # factors = phi_list[:, 0:self.dim].transpose(1, 0, 2).reshape(2, -1)
         #
-        # print('factors: {}'.format(factors))
         # for j in range(factors.shape[0]):
         #     row = factors[j, :]
         #
@@ -408,9 +425,6 @@ class NonlinPostOpt:
         #
         #     res_lb[j] = minval
         #     res_ub[j] = maxval
-        # print('\n')
-        # print(res_lb, res_ub)
-        # print(sf_vec)
 
         return sf_vec
 
@@ -433,7 +447,6 @@ class NonlinPostOpt:
     # return res_lb, res_ub
 
 
-
     def update_phi_list(self, phi_list):
         """
         phi_list contains the product of delta_transpose.
@@ -448,7 +461,7 @@ class NonlinPostOpt:
             phi_list = np.array([delta_T])
         else:
             phi_list = np.tensordot(phi_list, delta_T, axes=(2, 0))
-        phi_list = np.vstack((phi_list, [np.eye(self.dim)]))
+        phi_list = np.vstack((phi_list, [np.eye(self.pseudo_dim)]))
 
         return phi_list
 
@@ -462,14 +475,38 @@ class NonlinPostOpt:
         return np.append(lb, next_lb), np.append(ub, next_ub)
         # return np.vstack((lb, next_lb)), np.vstack((ub, next_ub))
 
-    def set_abs_dynamics(self, matrix_A, poly_U):
-        abs_dynamics = AffineDynamics(dim=self.dim,
-                                      init_coeff_matrix_X0=self.init_mat_X0,
-                                      init_col_vec_X0=self.init_col_X0,
-                                      dynamics_matrix_A=matrix_A,
-                                      dynamics_matrix_B=self.coeff_matrix_B,
-                                      dynamics_coeff_matrix_U=poly_U[0],
-                                      dynamics_col_vec_U=poly_U[1])
+    def set_abs_dynamics(self, matrix_A, poly_w, c):
+        if self.pseudo_var:
+            matrix_A = np.hstack((matrix_A, c.reshape(len(c), 1)))
+            matrix_A = np.vstack((matrix_A, np.zeros(shape=(1, self.pseudo_dim))))
+
+            coeff_matrix_B = np.identity(n=self.pseudo_dim)
+
+            pos_iden = np.identity(self.pseudo_dim)
+            neg_iden = -np.identity(self.pseudo_dim)
+            w_mat = np.hstack((pos_iden, neg_iden)).reshape(self.pseudo_dim * 2, -1)
+            w_vec = np.vstack((poly_w[1], 0, 0))
+            poly_w = (w_mat, w_vec)
+
+            abs_dynamics = AffineDynamics(dim=self.pseudo_dim,
+                                          init_coeff_matrix_X0=self.init_mat_X0,
+                                          init_col_vec_X0=self.init_col_X0,
+                                          dynamics_matrix_A=matrix_A,
+                                          dynamics_matrix_B=coeff_matrix_B,
+                                          dynamics_coeff_matrix_U=poly_w[0],
+                                          dynamics_col_vec_U=poly_w[1])
+        else:
+            u = poly_w[1]
+            b = np.dstack((c, -c)).reshape((self.dim*2, -1))
+            poly_w = (poly_w[0], u+b)
+
+            abs_dynamics = AffineDynamics(dim=self.dim,
+                                          init_coeff_matrix_X0=self.init_mat_X0,
+                                          init_col_vec_X0=self.init_col_X0,
+                                          dynamics_matrix_A=matrix_A,
+                                          dynamics_matrix_B=self.coeff_matrix_B,
+                                          dynamics_coeff_matrix_U=poly_w[0],
+                                          dynamics_col_vec_U=poly_w[1])
         self.abs_dynamics = abs_dynamics
 
     def set_abs_domain(self, abs_domain):
@@ -486,13 +523,24 @@ class NonlinPostOpt:
         return np.append(lb, next_lb), np.append(ub, next_ub)
 
     def get_projections(self, directions, opdims, sf_mat):
-        " sloppy implementation, change later on"
+        # " sloppy implementation, change later on"
+        #
+        # directions = np.array([[-1, 0], [0, -1], [1, 0], [0, 1]])
+        # ret = []
+        #
+        # for sf_row in sf_mat:
+        #     sf_row = np.multiply(sf_row, [-1, -1, 1, 1]).reshape(sf_row.shape[0], 1)
+        #     ret.append(Polyhedron(directions, sf_row))
+        #     # exit()
+        # return ret
 
+        " sloppy implementation, change later on"
         directions = np.array([[-1, 0], [0, -1], [1, 0], [0, 1]])
         ret = []
 
         for sf_row in sf_mat:
+            sf_row = sf_row.reshape(2, -1)[:, 0:-1]
+            sf_row = sf_row.reshape(1, -1).flatten()
             sf_row = np.multiply(sf_row, [-1, -1, 1, 1]).reshape(sf_row.shape[0], 1)
             ret.append(Polyhedron(directions, sf_row))
-            # exit()
         return ret

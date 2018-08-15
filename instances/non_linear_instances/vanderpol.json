@@ -1,6 +1,6 @@
 {
     "dim": 2,
-    "direction_type": 0,
+    "direction_type": 1,
     "dynamics": [
         "x1",
         "(1-x0^2)*x1-x0"
@@ -46,12 +46,13 @@
         0,
         1
     ],
-    "sampling_time": 0.01,
+    "sampling_time": 0.001,
     "start_epsilon": 1e-09,
     "state_variables": [
         "x0",
         "x1"
     ],
-    "time_horizon": 7,
+    "time_horizon": 1,
+    "pseudo_var": false,
     "simu_model": "vanderpol"
 }
