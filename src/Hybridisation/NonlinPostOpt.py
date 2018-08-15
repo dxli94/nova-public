@@ -127,7 +127,6 @@ class NonlinPostOpt:
         epsilon = self.start_epsilon
         # current_input_lb, current_input_ub = self.hybridize(bbox)
 
-        sf_mat = np.zeros((time_frames, self.template_directions.shape[0]))
         i = 0
         j = -1
 
