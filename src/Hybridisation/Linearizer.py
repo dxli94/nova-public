@@ -54,8 +54,8 @@ class Linearizer:
             bound = [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)]
 
             args = (coeff_vec, bias, i)
-            resmin = minimize(self.err_func, x0, bounds=bound, tol=1e-25, args=args)
-            resmax = minimize(self.minus_err_func, x0, bounds=bound, tol=1e-25, args=args)
+            resmin = minimize(self.err_func, x0, bounds=bound, tol=1e-15, args=args, method='L-BFGS-B')
+            resmax = minimize(self.minus_err_func, x0, bounds=bound, tol=1e-15, args=args, method='L-BFGS-B')
 
             u_min = -resmin.fun
             u_max = -resmax.fun

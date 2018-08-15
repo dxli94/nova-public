@@ -1,6 +1,6 @@
 {
     "dim": 2,
-    "direction_type": 0,
+    "direction_type": 1,
     "dynamics": [
         "1+x0^2*x1-1.5*x0-x0",
         "1.5*x0-x0^2*x1"

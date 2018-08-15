@@ -1,6 +1,6 @@
 {
     "dim": 2,
-    "direction_type": 0,
+    "direction_type": 1,
     "dynamics": [
         "x1",
         "2*x0-x0^3-0.2*x1+0.1"
@@ -46,7 +46,7 @@
         0,
         1
     ],
-    "sampling_time": 0.03,
+    "sampling_time": 0.002,
     "start_epsilon": 1e-09,
     "state_variables": [
         "x0",
@@ -54,5 +54,5 @@
     ],
     "time_horizon": 10,
     "pseudo_var": true,
-    "simu_model": "buckling_col"
+    "simu_model": "buckling_column"
 }
