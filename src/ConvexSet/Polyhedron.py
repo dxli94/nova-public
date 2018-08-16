@@ -1,6 +1,7 @@
 import cdd
 import cvxopt as cvx
 import numpy as np
+import utils.PPLHelper as pplHelper
 from utils.basic_vector_operations import *
 
 
@@ -27,12 +28,17 @@ class Polyhedron:
             self.coeff_matrix = coeff_matrix
             self.col_vec = col_vec
             self.vertices = None
-            # self.cvx_coeff_matrix = cvx.matrix(coeff_matrix, tc='d')
-            # self.cvx_col_vec = cvx.matrix(col_vec, tc='d')
+            self.cvx_coeff_matrix = cvx.matrix(coeff_matrix, tc='d')
+            self.cvx_col_vec = cvx.matrix(col_vec, tc='d')
             # cdd requires b-Ax <= 0 as inputs
 
             # self.mat_poly = cdd.Matrix(np.hstack((self.col_vec, -self.coeff_matrix)))
             # self.mat_poly.rep_type = cdd.RepType.INEQUALITY
+
+    def get_vertices(self):
+        if self.vertices is None:
+            self.vertices = pplHelper.get_vertices(self.coeff_matrix, self.col_vec, self.coeff_matrix.shape[1])
+        return self.vertices
 
     def __str__(self):
         str_repr = 'H-representative\n' + \
@@ -54,66 +60,66 @@ class Polyhedron:
     #         print('\nEntries too large/small, pycddlib cannot handle the precision. Terminating now!\n')
     #         exit(-1)
 
-    def get_2dVertices(self, dim1, dim2):
-        # return self.vertices.extend(gen[1:] for gen in self.poly.get_generators() if gen[0] == 1)
-        # return [gen[1:] for gen in self.poly.get_generators() if gen[0] == 1]
-        set_vertices = self.enumerate_2dVertices(dim1, dim2)
-
-        return set_vertices
-
-    def enumerate_2dVertices(self, i, j):
-        all_vertices = []
-        dim_num = self.coeff_matrix.shape[1]
-
-        u = np.zeros(dim_num)
-        u[i] = 1
-        v = np.zeros(dim_num)
-        v[j] = 1
-
-        self.enum_2dVert_restrict(u, v, i, j, all_vertices)
-
-        u[i] = -1
-        self.enum_2dVert_restrict(u, v, i, j, all_vertices)
-
-        v[j] = -1
-        self.enum_2dVert_restrict(u, v, i, j, all_vertices)
-
-        u[i] = 1
-        self.enum_2dVert_restrict(u, v, i, j, all_vertices)
-
-        return all_vertices
-
-    def enum_2dVert_restrict(self, u, v, i, j, pts):
-        # sv_u = np.zeros(self.coeff_matrix.shape[0])
-        # sv_v = np.zeros(self.coeff_matrix.shape[0])
-
-        lp = GlpkWrapper(sys_dim=self.coeff_matrix.shape[1])
-        sv_u = Polyhedron.compute_support_vectors(self.coeff_matrix, u, self.col_vec, lp)
-        sv_v = Polyhedron.compute_support_vectors(self.coeff_matrix, v, self.col_vec, lp)
-
-        p1 = (sv_u[i], sv_u[j])
-        p2 = (sv_v[i], sv_v[j])
-
-        pts.append(p1)
-        pts.append(p2)
-
-        bisector = (normalize_vector(u) + normalize_vector(v)) / 2
-        sv_bisect = Polyhedron.compute_support_vectors(self.coeff_matrix, bisector, self.col_vec, lp)
-        p3 = (sv_bisect[i], sv_bisect[j])
-
-        if is_collinear(p1, p2, p3):
-            return
-        else:
-            pts.append(p3)
-            self.enum_2dVert_restrict(u, bisector, i, j, pts)
-            self.enum_2dVert_restrict(bisector, v, i, j, pts)
+    # def get_2dVertices(self, dim1, dim2):
+    #     # return self.vertices.extend(gen[1:] for gen in self.poly.get_generators() if gen[0] == 1)
+    #     # return [gen[1:] for gen in self.poly.get_generators() if gen[0] == 1]
+    #     set_vertices = self.enumerate_2dVertices(dim1, dim2)
+    #
+    #     return set_vertices
+    #
+    # def enumerate_2dVertices(self, i, j):
+    #     all_vertices = []
+    #     dim_num = self.coeff_matrix.shape[1]
+    #
+    #     u = np.zeros(dim_num)
+    #     u[i] = 1
+    #     v = np.zeros(dim_num)
+    #     v[j] = 1
+    #
+    #     self.enum_2dVert_restrict(u, v, i, j, all_vertices)
+    #
+    #     u[i] = -1
+    #     self.enum_2dVert_restrict(u, v, i, j, all_vertices)
+    #
+    #     v[j] = -1
+    #     self.enum_2dVert_restrict(u, v, i, j, all_vertices)
+    #
+    #     u[i] = 1
+    #     self.enum_2dVert_restrict(u, v, i, j, all_vertices)
+    #
+    #     return all_vertices
+    #
+    # def enum_2dVert_restrict(self, u, v, i, j, pts):
+    #     # sv_u = np.zeros(self.coeff_matrix.shape[0])
+    #     # sv_v = np.zeros(self.coeff_matrix.shape[0])
+    #
+    #     lp = GlpkWrapper(sys_dim=self.coeff_matrix.shape[1])
+    #     sv_u = Polyhedron.compute_support_vectors(self.coeff_matrix, u, self.col_vec, lp)
+    #     sv_v = Polyhedron.compute_support_vectors(self.coeff_matrix, v, self.col_vec, lp)
+    #
+    #     p1 = (sv_u[i], sv_u[j])
+    #     p2 = (sv_v[i], sv_v[j])
+    #
+    #     pts.append(p1)
+    #     pts.append(p2)
+    #
+    #     bisector = (normalize_vector(u) + normalize_vector(v)) / 2
+    #     sv_bisect = Polyhedron.compute_support_vectors(self.coeff_matrix, bisector, self.col_vec, lp)
+    #     p3 = (sv_bisect[i], sv_bisect[j])
+    #
+    #     if is_collinear(p1, p2, p3):
+    #         return
+    #     else:
+    #         pts.append(p3)
+    #         self.enum_2dVert_restrict(u, bisector, i, j, pts)
+    #         self.enum_2dVert_restrict(bisector, v, i, j, pts)
 
     def get_inequalities(self):
         return np.hstack((self.coeff_matrix, self.col_vec))
 
     def compute_support_function(self, direction, lp):
         c = cvx.matrix(-direction, tc='d')
-        return lp.lp(c, self.coeff_matrix, self.col_vec)
+        return lp.lp(c, self.cvx_coeff_matrix, self.cvx_col_vec)
 
     @staticmethod
     def compute_support_functions(coeff_mat, direction, b, lp):
@@ -171,7 +177,7 @@ class Polyhedron:
             direction[i] = -1
             generator_directions.append(direction.copy())
 
-        return max([self.compute_support_function(d, lp) for d in generator_directions])
+        return max([self.compute_support_function(cvx.matrix(d, tc='d'), lp) for d in generator_directions])
 
 
 if __name__ == '__main__':
@@ -181,11 +187,14 @@ if __name__ == '__main__':
 
     coeff_mat = np.array([[1, 1], [-1, 1], [1, -1], [-1, -1]])
     b = np.array([[1], [1], [1], [1]])
-    from utils.GlpkWrapper import GlpkWrapper
-    lp = GlpkWrapper(sys_dim=2)
-    sf_vals = [Polyhedron.compute_support_functions(coeff_mat, l, b, lp) for l in directions]
-
+    # from utils.GlpkWrapper import GlpkWrapper
+    # lp = GlpkWrapper(sys_dim=2)
+    # sf_vals = [Polyhedron.compute_support_functions(coeff_mat, l, b, lp) for l in directions]
+    #
     poly = Polyhedron(coeff_mat, b)
-    sf_vals = [poly.compute_support_functions(coeff_mat, l, b, lp) for l in directions]
+    print(poly.get_vertices())
+    # sf_vals = [poly.compute_support_functions(coeff_mat, l, b, lp) for l in directions]
+    #
+    # print(set(poly.get_2dVertices(0, 1)))
 
-    print(set(poly.get_2dVertices(0, 1)))
+

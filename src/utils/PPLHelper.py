@@ -2,16 +2,16 @@ from ppl import Variable, Constraint_System, C_Polyhedron
 import numpy as np
 
 # in ppl, most things are integer!
-normalised_factor = 10000
+normalised_factor = 1e10
 
 
 def normalised(n):
     return n * normalised_factor
 
 
-def get_2dVertices(coeff_matrix, col_vec):
+def get_vertices(coeff_matrix, col_vec, dim):
     cs = Constraint_System()
-    variables = np.array([Variable(idx) for idx in range(2)])
+    variables = np.array([Variable(idx) for idx in range(dim)])
 
     for idx, sf_val in zip(range(len(col_vec)), col_vec):
         cs.insert(normalised(np.dot(coeff_matrix[idx], variables)) <= normalised(sf_val))
@@ -20,6 +20,29 @@ def get_2dVertices(coeff_matrix, col_vec):
 
     generators = poly.minimized_generators()
     vertices = []
+    for g in generators:
+        v = np.divide([float(g.coefficient(v)) for v in variables], float(g.divisor()))
+        vertices.append(v.tolist())
+
+    return vertices
+
+
+def create_polytope(coeff_matrix, col_vec, dim):
+    cs = Constraint_System()
+    variables = np.array([Variable(idx) for idx in range(dim)])
+
+    for idx, sf_val in zip(range(len(col_vec)), col_vec):
+        cs.insert(normalised(np.dot(coeff_matrix[idx], variables)) <= normalised(sf_val))
+
+    poly = C_Polyhedron(cs)
+
+    return poly
+
+
+def get_2dVert_from_poly(ppl_poly, dim):
+    generators = ppl_poly.minimized_generators()
+    vertices = []
+    variables = np.array([Variable(idx) for idx in range(dim)])
     for g in generators:
         v = np.divide([float(g.coefficient(v)) for v in variables], float(g.divisor()))
         vertices.append(v.tolist())
@@ -41,4 +64,4 @@ if __name__ == '__main__':
     # p = create_ppl_polyhedra_from_constraints(np.array([[1, 0], [-1, 0], [0, 1], [0, -1]]), [1, 1, 1, 1], 2)
     # genarators = p.generators()
 
-    print(get_2dVertices(coeff_matrix, col_vec))
+    print(get_vertices(coeff_matrix, col_vec))

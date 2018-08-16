@@ -43,12 +43,7 @@ class TransPoly(Polyhedron):
         return str_repr
 
     def compute_support_function(self, direction, lp):
-        if self.is_empty():
-            raise RuntimeError("\n Compute Support Function called for an Empty Set.")
-        elif self.is_universe():
-            raise RuntimeError("\n Cannot Compute Support Function of a Universe Polytope.\n")
-        else:
-            direction = np.dot(self.trans_matrix_B_tp, direction)
-            c = cvx.matrix(-direction, tc='d')
-            return lp.lp(c, self.cvx_coeff_matrix, self.cvx_col_vec)
+        direction = np.dot(self.trans_matrix_B_tp, direction)
+        c = cvx.matrix(-direction, tc='d')
+        return lp.lp(c, self.cvx_coeff_matrix, self.cvx_col_vec)
 

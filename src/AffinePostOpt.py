@@ -3,6 +3,7 @@ import numpy as np
 import SuppFuncUtils
 from ConvexSet.Polyhedron import Polyhedron
 from ConvexSet.TransPoly import TransPoly
+import utils.PPLHelper as PPLHelper
 
 
 class PostOperator:
@@ -92,7 +93,7 @@ class PostOperator:
         for sf_row in sf_mat:
             sf_row_col = np.reshape(sf_row, (len(sf_row), 1))
             sf_row_dir = sf_row_col[d_mat_idx]
-            ret.append(Polyhedron(np.array(d_mat), sf_row_dir))
+            ret.append(PPLHelper.create_polytope(np.array(d_mat), sf_row_dir, len(opdims)))
         return ret
 
     @staticmethod
@@ -124,6 +125,6 @@ class PostOperator:
             sf_vec = [poly_x.compute_support_function(transform_matrix_pi.T.dot(l), lp) for l in directions]
             sf_vec = np.reshape(sf_vec, (len(sf_vec), 1))
 
-            ret.append(Polyhedron(np.array(directions), sf_vec))
+            ret.append(PPLHelper.create_polytope(np.array(directions), sf_vec, len(opdims)))
 
         return ret

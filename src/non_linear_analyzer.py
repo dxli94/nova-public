@@ -15,15 +15,14 @@ import time
 
 def main():
     start_time = time.time()
-    Timers.tic('total')
     # # ============== setting up ============== #
     try:
         path = sys.argv[1]
     except IndexError:
-        path = '../instances/non_linear_instances/vanderpol.json'
+        # path = '../instances/non_linear_instances/vanderpol.json'
         # path = '../instances/non_linear_instances/predator_prey.json'
         # path = '../instances/non_linear_instances/2d_water_tank.json'
-        # path = '../instances/non_linear_instances/brusselator.json'
+        path = '../instances/non_linear_instances/brusselator.json'
         # path = '../instances/non_linear_instances/jet_engine.json'
         # path = '../instances/non_linear_instances/free_ball.json'
         # path = '../instances/non_linear_instances/constant_moving.json'
@@ -31,6 +30,7 @@ def main():
 
     # buckling_column: d = 0.1, dwell_steps = 200, start_i = 50
     # vanderpol: d = 0.1, dwell_steps = 5, start_i = 100, time_step = 0.02
+    # brusselator: d = 0.1, dwell_steps = 400, start_i = 100, time_step = 0.02
 
     data = JsonReader(path).read()
     time_horizon = data['time_horizon']

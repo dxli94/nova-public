@@ -97,7 +97,7 @@ def simulate_one_run(horizon, model, init_point):
 
 def simulate(horizon, model, init_coeff, init_col):
     from ConvexSet.Polyhedron import Polyhedron
-    vertices = Polyhedron(init_coeff, init_col).vertices
+    vertices = Polyhedron(init_coeff, init_col).get_vertices()
     center = np.average(vertices, axis=0)
     print('simulate starting point is: {}'.format(center))
     return simulate_one_run(horizon, model, center)
@@ -106,7 +106,8 @@ def simulate(horizon, model, init_coeff, init_col):
 def main(horizon):
     ts = np.linspace(0, horizon, horizon*100)
 
-    xs = odeint(van_der_pol_oscillator_deriv, [1.25, 2.28], ts)
+    xs = odeint(brusselator_deriv, [2, 0.28], ts)
+    # xs = odeint(van_der_pol_oscillator_deriv, [1.25, 2.28], ts)
     # xs = odeint(two_dim_water_tank_deriv, [0, 8], ts)
     # xs = odeint(predator_prey_deriv, [3.44, 2.3], ts)
     # print('\n'.join(str(x) for x in list(enumerate(xs))))

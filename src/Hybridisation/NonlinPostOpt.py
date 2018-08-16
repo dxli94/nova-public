@@ -100,10 +100,12 @@ class NonlinPostOpt:
             self.lp_solver_on_pseudo_dim = GlpkWrapper(self.dim)
 
     def compute_post(self):
+
+        Timers.tic('total')
         time_frames = int(np.ceil(self.time_horizon / self.tau))
 
         init_poly = Polyhedron(self.init_mat_X0, self.init_col_X0)
-        vertices = init_poly.vertices
+        vertices = init_poly.get_vertices()
 
         init_set_lb = np.amin(vertices, axis=0)
         init_set_ub = np.amax(vertices, axis=0)
@@ -130,10 +132,10 @@ class NonlinPostOpt:
         i = 0
         j = -1
 
-        time_scaling_on = False
+        time_scaling_on = True
         if time_scaling_on:
             scaled = False
-            dwell_steps = 5
+            dwell_steps = 400
         else:
             dwell_steps = 0
 
@@ -146,7 +148,9 @@ class NonlinPostOpt:
             bbox = self.refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_ub)
             bbox.bloat(epsilon)
 
+            Timers.tic('hybridize')
             current_input_lb, current_input_ub = self.hybridize(bbox)
+            Timers.toc('hybridize')
             epsilon *= 2
 
             # P_{i+1} := \alpha(X_{i})
@@ -186,7 +190,7 @@ class NonlinPostOpt:
                     start_walltime = now
 
                 if time_scaling_on:
-                    if i == 100:
+                    if i == 50:
                         j = dwell_steps  # number of steps dwelling in time scaling mode
                         self.scale_dynamics()
                         scaled = True
@@ -200,6 +204,9 @@ class NonlinPostOpt:
                             scaled = False
 
         print('Completed flowpipe computation in {:.2f} secs.\n'.format(total_walltime))
+        Timers.toc('total')
+        Timers.print_stats()
+
         return sf_mat
 
     def hybridize(self, bbox):
@@ -210,6 +217,7 @@ class NonlinPostOpt:
 
         matrix_A, poly_w, c = self.dyn_linearizer.gen_abs_dynamics(abs_domain_bounds=domain_bounds)
 
+        # todo computing bloating factors can avoid calling LP
         self.set_abs_dynamics(matrix_A, poly_w, c)
         # 15.9%
         self.reach_params.alpha = SuppFuncUtils.compute_alpha(self.abs_dynamics, self.tau, self.lp_solver_on_pseudo_dim)
@@ -221,10 +229,19 @@ class NonlinPostOpt:
         self.set_abs_domain(bbox)
         self.poly_U = Polyhedron(self.abs_dynamics.coeff_matrix_U, self.abs_dynamics.col_vec_U)
 
-        vertices = self.poly_U.vertices
+        # todo This can be optimized using a hyperbox rather a polyhedron.
+        Timers.tic('get_vertices')
 
-        err_lb = np.amin(vertices, axis=0)
-        err_ub = np.amax(vertices, axis=0)
+        vertices = self.poly_U.get_vertices()
+        Timers.toc('get_vertices')
+
+        try:
+            err_lb = np.amin(vertices, axis=0)
+            err_ub = np.amax(vertices, axis=0)
+        except ValueError:
+            print(self.abs_dynamics.coeff_matrix_U, self.abs_dynamics.col_vec_U)
+            print(self.poly_U.get_vertices())
+            exit()
 
         return err_lb, err_ub
 

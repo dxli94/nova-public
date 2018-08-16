@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
+import utils.PPLHelper as PPLHelper
 
 class Plotter:
     images = []
@@ -15,7 +16,7 @@ class Plotter:
 
     def sort_vertices(self, im):
         # corners = [(v[self.opvars[0]], v[self.opvars[1]]) for v in im.vertices]
-        corners = im.vertices
+        corners = PPLHelper.get_2dVert_from_poly(im, 2)
 
         # corners = [v[:2] for v in im.vertices]
         n = len(corners)
