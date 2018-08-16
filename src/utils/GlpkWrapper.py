@@ -10,3 +10,7 @@ class GlpkWrapper:
     def lp(self, c, G, h):
         status, x, _, _ = glpk.lp(c, G, h, self.A, self.b)
         return sum(mul(-c, x))
+
+    def find_opt_point(self, c, G, h):
+        status, x, _, _ = glpk.lp(c, G, h, self.A, self.b)
+        return x

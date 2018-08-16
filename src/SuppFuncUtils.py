@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.linalg import expm
+import cvxopt as cvx
 
 from ConvexSet.Polyhedron import Polyhedron
 from ConvexSet.TransPoly import TransPoly
@@ -145,6 +146,20 @@ def generate_directions(direction_type, dim):
 
     return np.array(direction_generator)
 
+
+# def compute_support_functions(coeff_mat, direction, b, lp):
+#     c = cvx.matrix(-direction, tc='d')
+#     coeff_mat = cvx.matrix(coeff_mat, tc='d')
+#     b = cvx.matrix(b, tc='d')
+#     # print(c, coeff_mat, b)
+#     # print('\n')
+#
+#     return lp.lp(c, coeff_mat, b)
+#
+#
+# def compute_support_function(self, direction, lp):
+#     c = cvx.matrix(-direction, tc='d')
+#     return lp.lp(c, self.coeff_matrix, self.col_vec)
 
 if __name__ == '__main__':
     direction_type = 1

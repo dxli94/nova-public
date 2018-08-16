@@ -32,7 +32,6 @@ def main():
     # buckling_column: d = 0.1, dwell_steps = 200, start_i = 50
     # vanderpol: d = 0.1, dwell_steps = 5, start_i = 100, time_step = 0.02
 
-
     data = JsonReader(path).read()
     time_horizon = data['time_horizon']
     tau = data['sampling_time']
