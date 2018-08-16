@@ -1,21 +1,30 @@
 from ppl import Variable, Constraint_System, C_Polyhedron
 import numpy as np
 
-normalised_factor = 1000
+# in ppl, most things are integer!
+normalised_factor = 10000
 
 
 def normalised(n):
     return n * normalised_factor
 
 
-def create_ppl_polyhedra_from_support_functions(sf_vec, directions, dim):
+def get_2dVertices(coeff_matrix, col_vec):
     cs = Constraint_System()
-    variables = np.array([Variable(idx) for idx in range(dim)])
+    variables = np.array([Variable(idx) for idx in range(2)])
 
-    # print(sf_vec)
-    for idx, sf_val in zip(range(len(sf_vec)), sf_vec):
-        cs.insert(normalised(np.dot(directions[idx], variables)) <= normalised(sf_val))
-    return C_Polyhedron(cs)
+    for idx, sf_val in zip(range(len(col_vec)), col_vec):
+        cs.insert(normalised(np.dot(coeff_matrix[idx], variables)) <= normalised(sf_val))
+
+    poly = C_Polyhedron(cs)
+
+    generators = poly.minimized_generators()
+    vertices = []
+    for g in generators:
+        v = np.divide([float(g.coefficient(v)) for v in variables], float(g.divisor()))
+        vertices.append(v.tolist())
+
+    return vertices
 
 
 def contains(poly_1, poly_2):
@@ -26,4 +35,10 @@ def contains(poly_1, poly_2):
     return poly_1.contains(poly_2)
 
 if __name__ == '__main__':
-    create_ppl_polyhedra_from_support_functions([1, 1], np.array([[-1, 0], [1, 0]]), 2)
+    coeff_matrix = np.array([[1, 0], [-1, 0], [0, 1], [0, -1]])
+    col_vec = np.array([1, 1, 1, 1])
+
+    # p = create_ppl_polyhedra_from_constraints(np.array([[1, 0], [-1, 0], [0, 1], [0, -1]]), [1, 1, 1, 1], 2)
+    # genarators = p.generators()
+
+    print(get_2dVertices(coeff_matrix, col_vec))
