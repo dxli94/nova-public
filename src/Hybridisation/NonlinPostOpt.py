@@ -127,17 +127,27 @@ class NonlinPostOpt:
         # (A, V) := L(f, B), such that f(x) = (A, V) over-approx. g(x)
         bbox.bloat(1e-6)
         epsilon = self.start_epsilon
+        i = 0
         # current_input_lb, current_input_ub = self.hybridize(bbox)
 
-        i = 0
         j = -1
 
         time_scaling_on = True
         if time_scaling_on:
             scaled = False
             # vanderpol. time step = 0.01
-            # dwell_steps = [100, 100]
-            # dwell_from = [250, 600]
+            dwell_from = [200, 650]#, 250, 350]#, 600, 900]
+            dwell_steps = [80, 50]#, 50, 50]#, 50, 50]
+            # vanderpol. time step = 0.012
+            # dwell_from = [200, 500]#, 250, 350]#, 600, 900]
+            # dwell_steps = [80, 50]#, 50, 50]#, 50, 50]
+            # vanderpol. time step = 0.015
+            # dwell_from = [100, 150, 430, 500]#, 250, 350]#, 600, 900]
+            # dwell_steps = [150, 50, 50, 10]#, 50, 50]#, 50, 50]
+
+            # vanderpol. time step = 0.01
+            # dwell_steps = [30, 70]#, 50]
+            # dwell_from = [30, 70]#, 300]
 
             # brusselator
             # dwell_from = [50, 400, 1100]
@@ -152,8 +162,8 @@ class NonlinPostOpt:
             # dwell_steps = [100, 100]
 
             # predator-prey
-            dwell_from = [800]
-            dwell_steps = [200]
+            # dwell_from = [800]
+            # dwell_steps = [200]
 
         else:
             dwell_steps = [0]
@@ -568,15 +578,22 @@ class NonlinPostOpt:
         norm_vec = self.nonlin_dyn.eval(domain_center)
 
         # 3. find a hyperline
-        d = 0.1
+        # vanderpol
+        d = 0.5
 
         p = domain_center + np.dot(norm_vec, d)
         bias = np.dot(norm_vec, p)
 
         dist_str = ''
-        for idx, norm in enumerate(norm_vec):
-            dist_str += '-' + str(norm) + '*x' + str(idx)
-        dist_str += '+' + str(bias)
+        for idx, elem in enumerate(p):
+            if norm_vec[idx] > 0:
+                dist_str += '{}-x{}+'.format(elem, idx)
+            else:
+                dist_str += 'x{}-{}+'.format(idx, elem)
+
+        denom = 1
+        dist_str = dist_str[:-1]
+        dist_str = '{}*({})'.format(denom, dist_str)
 
         scaled_dynamics = []
         for dyn in self.nonlin_dyn.dynamics:

@@ -52,8 +52,6 @@ class Linearizer:
         for i in range(self.dim):
             if self.is_linear[i] and not self.is_scaled:
                 u_min = u_max = 0
-            elif self.is_scaled:
-                u_min = u_max = 0
             else:
                 coeff = matrix_A[i]
                 bias = b[i]
