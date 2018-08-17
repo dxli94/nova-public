@@ -47,6 +47,8 @@ class GeneralDynamics:
         self.lamdafied_dynamics = sympy.lambdify(self.state_vars, self.dynamics)
         self.jacobian_mat = sympy.lambdify(self.state_vars, sympy.Matrix(self.dynamics).jacobian(self.state_vars))
 
+        self.str_rep = args
+
     def eval(self, vals):
         assert len(vals) == len(self.state_vars), \
             "inconsistent number of variables, {} is expected, {} is given".format(len(self.state_vars), len(vals))

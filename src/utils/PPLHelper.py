@@ -2,7 +2,7 @@ from ppl import Variable, Constraint_System, C_Polyhedron
 import numpy as np
 
 # in ppl, most things are integer!
-normalised_factor = 1e10
+normalised_factor = 1e4
 
 
 def normalised(n):

@@ -135,14 +135,33 @@ class NonlinPostOpt:
         time_scaling_on = True
         if time_scaling_on:
             scaled = False
-            dwell_steps = 400
+            # vanderpol. time step = 0.01
+            # dwell_steps = [100, 100]
+            # dwell_from = [250, 600]
+
+            # brusselator
+            # dwell_from = [50, 400, 1100]
+            # dwell_steps = [200, 200, 100]
+
+            # buckling_column. time step = 0.01
+            # dwell_from = [50, 200, 700, 1100]
+            # dwell_steps = [100, 100, 100, 100]
+
+            # brusselator (not work)
+            # dwell_from = [100, 1700]
+            # dwell_steps = [100, 100]
+
+            # predator-prey
+            dwell_from = [800]
+            dwell_steps = [200]
+
         else:
-            dwell_steps = 0
+            dwell_steps = [0]
 
         total_walltime = 0
         start_walltime = time.time()
 
-        sf_mat = np.zeros((time_frames + dwell_steps, self.template_directions.shape[0]))
+        sf_mat = np.zeros((time_frames + sum(dwell_steps), self.template_directions.shape[0]))
 
         while i < time_frames:
             bbox = self.refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_ub)
@@ -177,7 +196,8 @@ class NonlinPostOpt:
 
                 #                 sf_mat[i] = np.append(next_init_set_lb, next_init_set_ub)
                 sf_mat[i] = next_init_sf
-                epsilon = self.start_epsilon
+                # epsilon = self.start_epsilon
+                epsilon /= 4
 
                 i += 1
                 if i % 100 == 0:
@@ -190,17 +210,20 @@ class NonlinPostOpt:
                     start_walltime = now
 
                 if time_scaling_on:
-                    if i == 50:
-                        j = dwell_steps  # number of steps dwelling in time scaling mode
-                        self.scale_dynamics()
+                    if i in dwell_from:
+                        idx = dwell_from.index(i)
+                        j = dwell_steps[idx]  # number of steps dwelling in time scaling mode
+                        self.scaled_nonlin_dyn = self.scale_dynamics()
+                        self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
+                        self.dyn_linearizer.is_scaled = True
                         scaled = True
 
                     if scaled:
                         time_frames += 1
                         j -= 1
                         if j == 0:
-                            self.scaled_nonlin_dyn = self.nonlin_dyn
-                            self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
+                            self.dyn_linearizer.set_nonlin_dyn(self.nonlin_dyn)
+                            self.dyn_linearizer.is_scaled = False
                             scaled = False
 
         print('Completed flowpipe computation in {:.2f} secs.\n'.format(total_walltime))
@@ -215,7 +238,9 @@ class NonlinPostOpt:
         else:
             domain_bounds = bbox.bounds
 
+        Timers.tic('gen_abs_dynamics')
         matrix_A, poly_w, c = self.dyn_linearizer.gen_abs_dynamics(abs_domain_bounds=domain_bounds)
+        Timers.toc('gen_abs_dynamics')
 
         # todo computing bloating factors can avoid calling LP
         self.set_abs_dynamics(matrix_A, poly_w, c)
@@ -235,13 +260,8 @@ class NonlinPostOpt:
         vertices = self.poly_U.get_vertices()
         Timers.toc('get_vertices')
 
-        try:
-            err_lb = np.amin(vertices, axis=0)
-            err_ub = np.amax(vertices, axis=0)
-        except ValueError:
-            print(self.abs_dynamics.coeff_matrix_U, self.abs_dynamics.col_vec_U)
-            print(self.poly_U.get_vertices())
-            exit()
+        err_lb = np.amin(vertices, axis=0)
+        err_ub = np.amax(vertices, axis=0)
 
         return err_lb, err_ub
 
@@ -562,8 +582,7 @@ class NonlinPostOpt:
         for dyn in self.nonlin_dyn.dynamics:
             scaled_dynamics.append('({})*({})'.format(dist_str, dyn))
 
-        self.scaled_nonlin_dyn = GeneralDynamics(self.id_to_vars, *scaled_dynamics)
-        self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
+        return GeneralDynamics(self.id_to_vars, *scaled_dynamics)
 
         # print(self.scaled_nonlin_dyn.dynamics)
 
