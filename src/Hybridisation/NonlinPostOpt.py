@@ -617,9 +617,10 @@ class NonlinPostOpt:
         for dyn in self.nonlin_dyn.dynamics:
             scaled_dynamics.append('({})*({})'.format(scaling_func_str, dyn))
 
+        with open('../out/pivots.out', 'a') as opfile:
+            opfile.write(' '.join(str(elem) for elem in p.tolist()) + '\n')
+
+        with open('../out/sca_cent.out', 'a') as opfile:
+            opfile.write(' '.join(str(elem) for elem in domain_center.tolist()) + '\n')
+
         return GeneralDynamics(self.id_to_vars, *scaled_dynamics)
-
-        # print(self.scaled_nonlin_dyn.dynamics)
-
-        # scaling_factor = GeneralDynamics(self.id_to_vars, dist_str)
-

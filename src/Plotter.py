@@ -118,6 +118,32 @@ class Plotter:
         plt.plot(x, y)
         plt.autoscale(enable=True)
 
+    @staticmethod
+    def plot_pivots(ipfile_path, color):
+        print('Start reading pivots file...')
+
+        fig = plt.figure(1, dpi=90)
+        ax = fig.add_subplot(111)
+        ax.set_xlabel('$x_{1}$')
+        ax.set_ylabel('$x_{2}$')
+
+        try:
+            with open(ipfile_path) as ipfile:
+                content = ipfile.read().strip('\n')
+                points = content.split('\n')
+                x = []
+                y = []
+
+                for point in points:
+                    xy = point.split()
+                    x.append(float(xy[0]))
+                    y.append(float(xy[1]))
+        except FileNotFoundError:
+            print('File does not exist %s' % ipfile_path)
+
+        plt.plot(x, y, 'o', color=color, markersize=8, alpha=0.4)
+        plt.autoscale(enable=True)
+
 
 if __name__ == '__main__':
     import argparse
@@ -134,8 +160,15 @@ if __name__ == '__main__':
     elif data_type == 2:
         # Plotter.plot_polygons(filelist)
         Plotter.plot_points(['../out/simu.out'])
+    elif data_type == 3:
+        Plotter.plot_polygons(filelist)
+        Plotter.plot_points(['../out/simu.out'])
+        print('Showing plot now.')
     else:
         Plotter.plot_polygons(filelist)
         Plotter.plot_points(['../out/simu.out'])
+        Plotter.plot_pivots('../out/pivots.out', 'green')
+        Plotter.plot_pivots('../out/sca_cent.out', 'yellow')
+
         print('Showing plot now.')
     plt.show()
