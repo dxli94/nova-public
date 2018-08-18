@@ -59,6 +59,9 @@ class NonlinPostOpt:
         self.canno_dir_indices = get_canno_dir_indices(directions)
         self.pseudo_var = pseudo_var
 
+        # if the bound is larger than this, give up to avoid any further numeric issue in libs.
+        self.max_tolerance = 1e3
+
         self.id_to_vars = id_to_vars
 
         # the following attributes would be updated along the flowpipe construction
@@ -132,12 +135,12 @@ class NonlinPostOpt:
 
         j = -1
 
-        time_scaling_on = True
+        time_scaling_on = False
         if time_scaling_on:
             scaled = False
             # vanderpol. time step = 0.01
-            dwell_from = [200, 650]#, 250, 350]#, 600, 900]
-            dwell_steps = [80, 50]#, 50, 50]#, 50, 50]
+            # dwell_from = [200, 650]#, 250, 350]#, 600, 900]
+            # dwell_steps = [80, 50]#, 50, 50]#, 50, 50]
             # vanderpol. time step = 0.012
             # dwell_from = [200, 500]#, 250, 350]#, 600, 900]
             # dwell_steps = [80, 50]#, 50, 50]#, 50, 50]
@@ -156,6 +159,8 @@ class NonlinPostOpt:
             # buckling_column. time step = 0.01
             # dwell_from = [50, 200, 700, 1100]
             # dwell_steps = [100, 100, 100, 100]
+            # dwell_from = [50, 200, 700]
+            # dwell_steps = [100, 100, 100]
 
             # brusselator (not work)
             # dwell_from = [100, 1700]
@@ -164,6 +169,9 @@ class NonlinPostOpt:
             # predator-prey
             # dwell_from = [800]
             # dwell_steps = [200]
+
+            dwell_from = [900]
+            dwell_steps = [100]# 100]
 
         else:
             dwell_steps = [0]
@@ -187,6 +195,11 @@ class NonlinPostOpt:
                                                                  current_init_set_ub,
                                                                  current_input_lb,
                                                                  current_input_ub)
+
+            if any(np.abs(temp_tube_lb) >= self.max_tolerance) or any(np.abs(temp_tube_ub) >= self.max_tolerance):
+                print('Computation not completed after {} iterations. Abort now.'.format(i))
+                break
+
             # if P_{i+1} \subset B
             if hyperbox_contain_by_bounds(self.abs_domain.bounds, [temp_tube_lb, temp_tube_ub]):
                 tube_lb, tube_ub = temp_tube_lb, temp_tube_ub
@@ -580,6 +593,12 @@ class NonlinPostOpt:
         # 3. find a hyperline
         # vanderpol
         d = 0.5
+
+        # buckling_column
+        d = 0.2
+
+        # pbt
+        d = 0.2
 
         p = domain_center + np.dot(norm_vec, d)
         bias = np.dot(norm_vec, p)

@@ -65,6 +65,16 @@ def buckling_column_deriv(x, t):
     return res
 
 
+def pbt_deriv(x, t):
+    # "x1",
+    # "2*x0-x0^3-0.2*x1+0.1"
+    nx0 = x[1]
+    nx1 = x[0] ** 2
+
+    res = np.array([nx0, nx1])
+    return res
+
+
 def constant_moving_deriv(x, t):
     nx0 = 1
     nx1 = 0
@@ -90,6 +100,8 @@ def simulate_one_run(horizon, model, init_point):
         xs = odeint(jet_engine_deriv, init_point, ts)
     elif model == 'buckling_column':
         xs = odeint(buckling_column_deriv, init_point, ts)
+    elif model == 'pbt':
+        xs = odeint(pbt_deriv, init_point, ts)
     else:
         raise ValueError('Simulate eigen: invalid model name!')
     return xs[:, 0], xs[:, 1]
