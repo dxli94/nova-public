@@ -138,15 +138,17 @@ class NonlinPostOpt:
         time_scaling_on = True
         if time_scaling_on:
             scaled = False
-            # vanderpol. time step = 0.01
+            # vanderpol. time step = 0.01, d=0.2
             dwell_from = [200, 650]#, 250, 350]#, 600, 900]
-            dwell_steps = [80, 50]#, 50, 50]#, 50, 50]
+            dwell_steps = [80, 100]#, 50, 50]#, 50, 50]
             # vanderpol. time step = 0.012
             # dwell_from = [200, 500]#, 250, 350]#, 600, 900]
             # dwell_steps = [80, 50]#, 50, 50]#, 50, 50]
             # vanderpol. time step = 0.015
-            # dwell_from = [100, 150, 430, 500]#, 250, 350]#, 600, 900]
-            # dwell_steps = [150, 50, 50, 10]#, 50, 50]#, 50, 50]
+            # dwell_from = [100, 150, 430]#, 500]#, 250, 350]#, 600, 900]
+            # dwell_steps = [150, 50, 50]#, 10]#, 50, 50]#, 50, 50]
+            # dwell_from = [100, 430]#, 500]#, 250, 350]#, 600, 900]
+            # dwell_steps = [150, 50]#, 10]#, 50, 50]#, 50, 50]
 
             # vanderpol. time step = 0.01
             # dwell_steps = [30, 70]#, 50]
@@ -595,7 +597,7 @@ class NonlinPostOpt:
         d = 0.2
 
         # buckling_column
-        # d = 0.2
+        # d = 0.1
 
         # pbt
         # d = 0.2
@@ -605,13 +607,24 @@ class NonlinPostOpt:
         b = np.dot(norm_vec, p)
 
         norm = np.dot(norm_vec, norm_vec)**0.5
-        a = norm_vec / norm
-        a_prime = -a
+        # a = norm_vec / norm
+        a_prime = [-elem for elem in norm_vec]
 
         scaling_func_str = ''
         for idx, elem in enumerate(a_prime):
             scaling_func_str += '{}*x{}+'.format(elem, idx)
-        scaling_func_str += '{}+{}'.format(scaling_func_str, b)
+        scaling_func_str = '{}+{}'.format(scaling_func_str, b)
+
+        print('domain center: {}'.format(domain_center))
+        print('distance: {}'.format(d))
+        print('p: {}'.format(p))
+        print('norm vec: {}'.format(norm_vec))
+        print('norm: {}'.format(norm))
+        print('bias: {}'.format(b))
+        print('minus normalized normal: {}'.format(a_prime))
+        print('scaling func: {}'.format(scaling_func_str))
+        print('\n')
+        # exit()
 
         scaled_dynamics = []
         for dyn in self.nonlin_dyn.dynamics:
