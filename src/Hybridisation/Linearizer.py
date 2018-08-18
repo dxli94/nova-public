@@ -228,16 +228,6 @@ def coeff2ibex(coeff_vec, bias):
 #     bias = 0.1
     # print(coeff2ibex(a, bias))
 
-def square(q, numbers, res):
-    for x in numbers:
-        # print('%s squared  is  %s' % (x, x ** 2))
-        res.append(x)
-        print(res)
-
-
-def job(num):
-    return num * 2
-
 if __name__ == '__main__':
     def err_func(x, *args):
         coeff_vec = args[0]

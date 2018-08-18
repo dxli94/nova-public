@@ -135,12 +135,12 @@ class NonlinPostOpt:
 
         j = -1
 
-        time_scaling_on = False
+        time_scaling_on = True
         if time_scaling_on:
             scaled = False
             # vanderpol. time step = 0.01
-            # dwell_from = [200, 650]#, 250, 350]#, 600, 900]
-            # dwell_steps = [80, 50]#, 50, 50]#, 50, 50]
+            dwell_from = [200, 650]#, 250, 350]#, 600, 900]
+            dwell_steps = [80, 50]#, 50, 50]#, 50, 50]
             # vanderpol. time step = 0.012
             # dwell_from = [200, 500]#, 250, 350]#, 600, 900]
             # dwell_steps = [80, 50]#, 50, 50]#, 50, 50]
@@ -170,8 +170,8 @@ class NonlinPostOpt:
             # dwell_from = [800]
             # dwell_steps = [200]
 
-            dwell_from = [900]
-            dwell_steps = [100]# 100]
+            # dwell_from = [900]
+            # dwell_steps = [100]# 100]
 
         else:
             dwell_steps = [0]
@@ -592,31 +592,30 @@ class NonlinPostOpt:
 
         # 3. find a hyperline
         # vanderpol
-        d = 0.5
+        d = 0.2
 
         # buckling_column
-        d = 0.2
+        # d = 0.2
 
         # pbt
-        d = 0.2
+        # d = 0.2
 
+        # scaling function -(a/||a||) \cdot x + b
         p = domain_center + np.dot(norm_vec, d)
-        bias = np.dot(norm_vec, p)
+        b = np.dot(norm_vec, p)
 
-        dist_str = ''
-        for idx, elem in enumerate(p):
-            if norm_vec[idx] > 0:
-                dist_str += '{}-x{}+'.format(elem, idx)
-            else:
-                dist_str += 'x{}-{}+'.format(idx, elem)
+        norm = np.dot(norm_vec, norm_vec)**0.5
+        a = norm_vec / norm
+        a_prime = -a
 
-        denom = 1
-        dist_str = dist_str[:-1]
-        dist_str = '{}*({})'.format(denom, dist_str)
+        scaling_func_str = ''
+        for idx, elem in enumerate(a_prime):
+            scaling_func_str += '{}*x{}+'.format(elem, idx)
+        scaling_func_str += '{}+{}'.format(scaling_func_str, b)
 
         scaled_dynamics = []
         for dyn in self.nonlin_dyn.dynamics:
-            scaled_dynamics.append('({})*({})'.format(dist_str, dyn))
+            scaled_dynamics.append('({})*({})'.format(scaling_func_str, dyn))
 
         return GeneralDynamics(self.id_to_vars, *scaled_dynamics)
 
