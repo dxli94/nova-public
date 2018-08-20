@@ -16,7 +16,7 @@ class Linearizer:
         self.is_linear = is_linear
         self.is_scaled = False
 
-    # maximize (ax+b-g(x)) is equiv. to -minimize(g(x)-(ax+b)) todo double-check, seems to always return x0
+    # maximize (ax+b-g(x)) is equiv. to -minimize(g(x)-(ax+b))
     def err_func(self, x, *args):
         coeff_vec = args[0]
         bias = args[1]
@@ -28,7 +28,7 @@ class Linearizer:
         # return 1
         return err
 
-    # maxmize (g(x)-(ax+b)) is equiv. to -minimize(ax+b-g(x)) todo double-check, seems to always return x0
+    # maxmize (g(x)-(ax+b)) is equiv. to -minimize(ax+b-g(x))
     def minus_err_func(self, x, *args):
         coeff_vec = args[0]
         bias = args[1]
@@ -55,6 +55,8 @@ class Linearizer:
         for i in range(self.dim):
             if self.is_linear[i] and not self.is_scaled:
                 u_min = u_max = 0
+            # elif self.is_scaled:
+            #     u_min = u_max = 0
             else:
                 coeff = matrix_A[i]
                 bias = b[i]
@@ -70,25 +72,9 @@ class Linearizer:
                 x0 = abs_domain_centre
 
                 minimizer_kwargs = dict(method='L-BFGS-B', bounds=bounds, args=args)
-                u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=3).fun
-                u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=3).fun
-
-                # u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs, niter=20).fun
-                # u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs, niter=20).fun
-                # u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs, niter=200).fun
-                # print(u_min)
-                # u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs, niter=5).fun
-                # u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs, niter=5).fun
-                # from pathos.multiprocessing import Pool
-                # pool = Pool(processes=2)
-                # # data = p.map(job, [i for i in range(20000000)])
-                # p.close()
-                # arg1 = (err_func, x0, minimizer_kwargs, 3)
-                # arg2 = (minus_err_func, x0, minimizer_kwargs, 3)
-                # arg1 = (err_func, x0, minimizer_kwargs)
-                # arg2 = (minus_err_func, x0, minimizer_kwargs)
-                # u_min, u_max = pool.map(Linearizer.maximize_diff, [arg1, arg2])
-
+                u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=2).fun
+                u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=6).fun
+                
             u_bounds.extend([u_max, u_min])
 
             # if self.is_scaled:

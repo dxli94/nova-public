@@ -139,41 +139,33 @@ class NonlinPostOpt:
         if time_scaling_on:
             scaled = False
             # vanderpol. time step = 0.01, d=0.2
-            dwell_from = [200, 650]#, 250, 350]#, 600, 900]
-            dwell_steps = [80, 100]#, 50, 50]#, 50, 50]
-            # vanderpol. time step = 0.012
-            # dwell_from = [200, 500]#, 250, 350]#, 600, 900]
-            # dwell_steps = [80, 50]#, 50, 50]#, 50, 50]
-            # vanderpol. time step = 0.015
-            # dwell_from = [100, 150, 430]#, 500]#, 250, 350]#, 600, 900]
-            # dwell_steps = [150, 50, 50]#, 10]#, 50, 50]#, 50, 50]
-            # dwell_from = [100, 430]#, 500]#, 250, 350]#, 600, 900]
-            # dwell_steps = [150, 50]#, 10]#, 50, 50]#, 50, 50]
+            dwell_from = [200, 650]
+            dwell_steps = [80, 100]
+            d = [0.1, 0.1]
 
-            # vanderpol. time step = 0.01
-            # dwell_steps = [30, 70]#, 50]
-            # dwell_from = [30, 70]#, 300]
-
-            # brusselator
-            # dwell_from = [50, 400, 1100]
-            # dwell_steps = [200, 200, 100]
+            # brusselator, time step = 0.01 (scale times 20)
+            # dwell_from = [200]
+            # dwell_steps = [50]
+            # d = [0.3]
 
             # buckling_column. time step = 0.01
             # dwell_from = [50, 200, 700, 1100]
             # dwell_steps = [100, 100, 100, 100]
+            # d = [0.2, 0.2, 0.2, 0.2]
+
             # dwell_from = [50, 200, 700]
             # dwell_steps = [100, 100, 100]
 
-            # brusselator (not work)
-            # dwell_from = [100, 1700]
-            # dwell_steps = [100, 100]
+            # predator-prey (not working)
+            # dwell_from = [550]
+            # dwell_steps = [50]
+            # d = [0.5]
 
-            # predator-prey
-            # dwell_from = [800]
-            # dwell_steps = [200]
+            # lac operon
+            # dwell_from = [50]
+            # dwell_steps = [50]
+            # d = [5]
 
-            # dwell_from = [900]
-            # dwell_steps = [100]# 100]
 
         else:
             dwell_steps = [0]
@@ -238,7 +230,7 @@ class NonlinPostOpt:
                     if i in dwell_from:
                         idx = dwell_from.index(i)
                         j = dwell_steps[idx]  # number of steps dwelling in time scaling mode
-                        self.scaled_nonlin_dyn = self.scale_dynamics()
+                        self.scaled_nonlin_dyn = self.scale_dynamics(d[idx])
                         self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
                         self.dyn_linearizer.is_scaled = True
                         scaled = True
@@ -573,7 +565,7 @@ class NonlinPostOpt:
             ret.append(Polyhedron(directions, sf_row))
         return ret
 
-    def scale_dynamics(self):
+    def scale_dynamics(self, d):
         """
         1. Compute center of the abstraction domain;
         2. Evaluate the derivative of the center as the normal vector (v) direction;
@@ -594,7 +586,7 @@ class NonlinPostOpt:
 
         # 3. find a hyperline
         # vanderpol
-        d = 0.2
+        # d = 0.1
 
         # buckling_column
         # d = 0.1
@@ -615,15 +607,15 @@ class NonlinPostOpt:
             scaling_func_str += '{}*x{}+'.format(elem, idx)
         scaling_func_str = '{}+{}'.format(scaling_func_str, b)
 
-        print('domain center: {}'.format(domain_center))
-        print('distance: {}'.format(d))
-        print('p: {}'.format(p))
-        print('norm vec: {}'.format(norm_vec))
-        print('norm: {}'.format(norm))
-        print('bias: {}'.format(b))
-        print('minus normalized normal: {}'.format(a_prime))
-        print('scaling func: {}'.format(scaling_func_str))
-        print('\n')
+        # print('domain center: {}'.format(domain_center))
+        # print('distance: {}'.format(d))
+        # print('p: {}'.format(p))
+        # print('norm vec: {}'.format(norm_vec))
+        # print('norm: {}'.format(norm))
+        # print('bias: {}'.format(b))
+        # print('minus normalized normal: {}'.format(a_prime))
+        # print('scaling func: {}'.format(scaling_func_str))
+        # print('\n')
         # exit()
 
         scaled_dynamics = []

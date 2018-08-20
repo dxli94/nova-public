@@ -75,6 +75,14 @@ def pbt_deriv(x, t):
     return res
 
 
+def lacoperon_deriv(x, t):
+    nx0 = -0.4*x[0]**2 *((0.0003*x[1]**2 + 0.008) / (0.2*x[0]**2 + 2.00001) ) + 0.012 + (0.0000003 * (54660 - 5000.006*x[0]) * (0.2*x[0]**2 + 2.00001)) / (0.00036*x[1]**2 + 0.00960018 + 0.000000018*x[0]**2)
+    nx1 = -0.0006*x[1]**2 + (0.000000006*x[1]**2 + 0.00000016) / (0.2*x[0]**2 + 2.00001) + (0.0015015*x[0]*(0.2*x[0]**2 + 2.00001)) / (0.00036*x[1]**2 + 0.00960018 + 0.000000018*x[0]**2)
+
+    res = np.array([nx0, nx1])
+    return res
+
+
 def constant_moving_deriv(x, t):
     nx0 = 1
     nx1 = 0
@@ -102,6 +110,8 @@ def simulate_one_run(horizon, model, init_point):
         xs = odeint(buckling_column_deriv, init_point, ts)
     elif model == 'pbt':
         xs = odeint(pbt_deriv, init_point, ts)
+    elif model == 'lacoperon':
+        xs = odeint(lacoperon_deriv, init_point, ts)
     else:
         raise ValueError('Simulate eigen: invalid model name!')
     return xs[:, 0], xs[:, 1]

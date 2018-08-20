@@ -28,6 +28,7 @@ def main():
         # path = '../instances/non_linear_instances/constant_moving.json'
         # path = '../instances/non_linear_instances/buckling_column.json'
         # path = '../instances/non_linear_instances/pbt.json'
+        # path = '../instances/non_linear_instances/lacoperon.json'
 
     # buckling_column: d = 0.1, dwell_steps = 200, start_i = 50
     # vanderpol: d = 0.1, dwell_steps = 5, start_i = 100, time_step = 0.02
