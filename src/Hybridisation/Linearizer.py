@@ -73,8 +73,8 @@ class Linearizer:
 
                 minimizer_kwargs = dict(method='L-BFGS-B', bounds=bounds, args=args)
                 u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=2).fun
-                u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=6).fun
-                
+                u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=2).fun
+
             u_bounds.extend([u_max, u_min])
 
             # if self.is_scaled:
