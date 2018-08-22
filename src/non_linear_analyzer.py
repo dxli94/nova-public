@@ -19,7 +19,7 @@ def main():
     try:
         path = sys.argv[1]
     except IndexError:
-        path = '../instances/non_linear_instances/vanderpol.json'
+        # path = '../instances/non_linear_instances/vanderpol.json'
         # path = '../instances/non_linear_instances/predator_prey.json'
         # path = '../instances/non_linear_instances/2d_water_tank.json'
         # path = '../instances/non_linear_instances/brusselator.json'
@@ -30,6 +30,7 @@ def main():
         # path = '../instances/non_linear_instances/pbt.json'
         # path = '../instances/non_linear_instances/pbt_y.json'
         # path = '../instances/non_linear_instances/lacoperon.json'
+        path = '../instances/non_linear_instances/coupled_vanderpol.json'
 
     # buckling_column: d = 0.1, dwell_steps = 200, start_i = 50
     # vanderpol: d = 0.1, dwell_steps = 5, start_i = 100, time_step = 0.02
@@ -71,7 +72,7 @@ def main():
     # Timers.toc('flowpipe computation')
 
     # Timers.tic('get projection')
-    images = AffinePostOperator.get_projections(directions=directions, opdims=opvars, sf_mat=sf_mat)
+    images = AffinePostOperator.get_projections_new(directions=directions, opdims=opvars, sf_mat=sf_mat)
     # Timers.toc('get projection')
 
     # Timers.tic('Initialise Plotter')
@@ -83,7 +84,7 @@ def main():
     # Timers.toc('Save Polygons to file')
 
     # Timers.tic('Run simulation')
-    run_simulate(time_horizon, simu_model, init_coeff, init_col)
+    run_simulate(time_horizon, simu_model, init_coeff, init_col, opvars)
     # Timers.toc('Run simulation')
     #
     # Timers.toc('total')
@@ -95,8 +96,8 @@ def main():
     print('Total running time: {:.2f}'.format(time.time() - start_time))
 
 
-def run_simulate(time_horizon, model, init_coeff, init_col):
-    x, y = simu.simulate(time_horizon, model, init_coeff, init_col)
+def run_simulate(time_horizon, model, init_coeff, init_col, opdims):
+    x, y = simu.simulate(time_horizon, model, init_coeff, init_col, opdims)
     with open('../out/simu.out', 'w') as simu_op:
         for elem in zip(x, y):
             simu_op.write(str(elem[0]) + ' ' + str(elem[1]) + '\n')

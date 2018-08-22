@@ -6,7 +6,14 @@ from pyibex import Function, IntervalVector
 
 from multiprocessing import Process
 
-generator_2d_matrix = np.array([[1, 0], [-1, 0], [0, 1], [0, -1]])
+
+def get_generator_matrix(dim):
+    rv = np.zeros(shape=(2*dim, dim))
+
+    for i, row in enumerate(rv):
+        row[i // 2] = (-1)**i
+
+    return rv
 
 
 class Linearizer:
@@ -15,6 +22,8 @@ class Linearizer:
         self.nonlin_dyn = nonlin_dyn
         self.is_linear = is_linear
         self.is_scaled = False
+
+        self.generator_matrix = get_generator_matrix(dim)
 
     # maximize (ax+b-g(x)) is equiv. to -minimize(g(x)-(ax+b))
     def err_func(self, x, *args):
@@ -82,7 +91,8 @@ class Linearizer:
 
         col_vec = np.array(u_bounds)
 
-        poly_U = (generator_2d_matrix, col_vec.reshape(len(col_vec), 1))
+        # generator_2d_matrix = np.array([[1, 0], [-1, 0], [0, 1], [0, -1]])
+        poly_U = (self.generator_matrix, col_vec.reshape(len(col_vec), 1))
 
         return matrix_A, poly_U, b
 

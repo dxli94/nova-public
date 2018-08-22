@@ -144,9 +144,14 @@ class NonlinPostOpt:
             # d = [0.05, 0.05]
 
             # vanderpol. time step = 0.01, d=0.2
-            dwell_from = [200, 650]
-            dwell_steps = [100, 100]
-            d = [0.1, 0.1]
+            # dwell_from = [200, 650]
+            # dwell_steps = [100, 100]
+            # d = [0.1, 0.1]
+
+            # coupled vanderpol, time step = 0.05
+            dwell_from = [400, 1150]
+            dwell_steps = [150, 150]
+            d = [0.05, 0.1]
 
             # brusselator, time step = 0.01 (scale times 20)
             # dwell_from = [200]
@@ -237,6 +242,7 @@ class NonlinPostOpt:
 
                 if time_scaling_on:
                     if i in dwell_from:
+                        print('start time scaling at step {}'.format(i))
                         idx = dwell_from.index(i)
                         j = dwell_steps[idx]  # number of steps dwelling in time scaling mode
                         self.scaled_nonlin_dyn = self.scale_dynamics(d[idx])
@@ -335,8 +341,9 @@ class NonlinPostOpt:
         reach_tube_lb = np.amin([Xi_lb, reach_tube_lb], axis=0)
         reach_tube_ub = np.amax([Xi_ub, reach_tube_ub], axis=0)
 
-        reach_tube_lb[self.pseudo_dim - 1] = 1
-        reach_tube_ub[self.pseudo_dim - 1] = 1
+        if self.pseudo_var:
+            reach_tube_lb[self.pseudo_dim - 1] = 1
+            reach_tube_ub[self.pseudo_dim - 1] = 1
 
         return reach_tube_lb, reach_tube_ub
 
@@ -468,7 +475,7 @@ class NonlinPostOpt:
                    3,      (index 0 from [3, 7])
                    4 ]     (index 0 from [4, 8])
 
-                 6) Now (5, 6, 3, 4) is the vector to maximize x \cdot l
+                 6) Now (5, 6, 3, 4) is the vector maximizing x \cdot l
                  einsum computes the inner product of (5, 6, 3, 4) and delta_T_l.
                  This is same as first reshape them into row vectors and then take the dot.
             '''
@@ -487,11 +494,14 @@ class NonlinPostOpt:
         """
         phi_list contains the product of delta_transpose.
         After n-times update, phi_list looks like this:
-        [ Φ_{1}^T … Φ_{n-1}^T Φ_{n}^T, Φ_{2}^T … Φ_{n}^T, ..., Φ_{n-1}^T Φ_{n}^T, Φ_{n}^T]
+        [ Φ_{n}^T Φ_{n-1}^T … Φ_{1}^T, Φ_{n-1}^T … Φ_{1}^T, ..., Φ_{1}^T]
         """
         dyn_coeff_mat = self.abs_dynamics.get_dyn_coeff_matrix_A()
         delta = SuppFuncUtils.mat_exp(dyn_coeff_mat, self.tau)
         delta_T = delta.T
+
+        # print('delta_T: {}'.format(delta_T))
+        # print('original phi_list: {}'.format(phi_list))
 
         if len(phi_list) == 0:
             phi_list = np.array([delta_T])
@@ -499,6 +509,8 @@ class NonlinPostOpt:
             phi_list = np.tensordot(phi_list, delta_T, axes=(2, 0))
         phi_list = np.vstack((phi_list, [np.eye(self.pseudo_dim)]))
 
+        # print('after tensordot phi_list: {}'.format(phi_list))
+        # print('\n')
         return phi_list
 
     def update_wb_seq(self, lb, ub, next_lb, next_ub):

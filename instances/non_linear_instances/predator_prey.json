@@ -1,6 +1,6 @@
 {
     "dim": 2,
-    "direction_type": 0,
+    "direction_type": 1,
     "dynamics": [
         "x0-x0*x1",
         "-x1+x0*x1"
@@ -24,16 +24,16 @@
     ],
     "init_col": [
         [
-            5.1
+            5.2
         ],
         [
-            -4.9
+            -4.8
         ],
         [
-            2.1
+            2.2
         ],
         [
-            -1.9
+            -1.8
         ]
     ],
     "opvars": [
@@ -44,13 +44,13 @@
         false,
         false
     ],
-    "sampling_time": 0.002,
-    "start_epsilon": 1e-04,
+    "sampling_time": 0.005,
+    "start_epsilon": 1e-05,
     "state_variables": [
         "x0",
         "x1"
     ],
-    "time_horizon": 10,
+    "time_horizon": 8,
     "pseudo_var": true,
     "simu_model": "predator_prev"
 }

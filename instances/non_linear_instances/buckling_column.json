@@ -46,7 +46,7 @@
         0,
         1
     ],
-    "sampling_time": 0.002,
+    "sampling_time": 0.01,
     "start_epsilon": 1e-09,
     "state_variables": [
         "x0",

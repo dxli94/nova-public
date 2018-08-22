@@ -75,6 +75,7 @@ class PostOperator:
 
     @staticmethod
     def get_projections(directions, opdims, sf_mat):
+        # todo might be buggy, try get_projections_new() instead
         ret = []
 
         d_mat = []
@@ -94,6 +95,40 @@ class PostOperator:
             sf_row_col = np.reshape(sf_row, (len(sf_row), 1))
             sf_row_dir = sf_row_col[d_mat_idx]
             ret.append(PPLHelper.create_polytope(np.array(d_mat), sf_row_dir, len(opdims)))
+
+        return ret
+
+
+    @staticmethod
+    def get_projections_new(directions, opdims, sf_mat):
+        assert len(opdims) == 2, 'Support projection on 2d space only.'
+
+        donot_opdims = []
+        for i in range(directions.shape[1]):
+            if i not in opdims:
+                donot_opdims.append(i)
+        donot_opdims = tuple(donot_opdims)
+
+        ret = []
+
+        d_mat = []
+        d_mat_idx = []
+        close_list = {}
+        for i, d in enumerate(directions):
+            if any(d[list(opdims)]) and not any(d[list(donot_opdims)]):
+                projection_dir = d[list(opdims)]
+                projection_dir_tuple = tuple(projection_dir.tolist())
+
+                if projection_dir_tuple not in close_list:
+                    d_mat.append(projection_dir)
+                    d_mat_idx.append(i)
+                    close_list[projection_dir_tuple] = True
+
+        for sf_row in sf_mat:
+            sf_row_col = np.reshape(sf_row, (len(sf_row), 1))
+            sf_row_dir = sf_row_col[d_mat_idx]
+            ret.append(PPLHelper.create_polytope(np.array(d_mat), sf_row_dir, len(opdims)))
+
         return ret
 
     @staticmethod

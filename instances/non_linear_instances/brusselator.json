@@ -52,7 +52,7 @@
         "x0",
         "x1"
     ],
-    "time_horizon": 15,
+    "time_horizon": 12,
     "pseudo_var": true,
     "simu_model": "brusselator"
 }

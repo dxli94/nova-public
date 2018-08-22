@@ -90,8 +90,17 @@ def constant_moving_deriv(x, t):
     res = np.array([nx0, nx1])
     return res
 
+def coupled_vanderpol(x, t):
+    nx0 = x[1]
+    nx1 = -(x[0] ** 2.0 - 1.0) * x[1] - x[0] - (x[2] - x[0])
+    nx2 = x[3]
+    nx3 = -(x[2] ** 2.0 - 1.0) * x[3] - x[2] - (x[0] - x[2])
+    # nx1 = -x[0] - x[1]
+    res = np.array([nx0, nx1, nx2, nx3])
+    return res
 
-def simulate_one_run(horizon, model, init_point):
+
+def simulate_one_run(horizon, model, init_point, opdims):
     ts = np.linspace(0, horizon, horizon*200)
 
     if model == 'vanderpol':
@@ -112,28 +121,37 @@ def simulate_one_run(horizon, model, init_point):
         xs = odeint(pbt_deriv, init_point, ts)
     elif model == 'lacoperon':
         xs = odeint(lacoperon_deriv, init_point, ts)
+    elif model == 'coupled_vanderpol':
+        xs = odeint(coupled_vanderpol, init_point, ts)
     else:
         raise ValueError('Simulate eigen: invalid model name!')
-    return xs[:, 0], xs[:, 1]
+    return xs[:, opdims[0]], xs[:, opdims[1]]
 
 
-def simulate(horizon, model, init_coeff, init_col):
+def simulate(horizon, model, init_coeff, init_col, opdims):
     from ConvexSet.Polyhedron import Polyhedron
     vertices = Polyhedron(init_coeff, init_col).get_vertices()
     center = np.average(vertices, axis=0)
     print('simulate starting point is: {}'.format(center))
-    return simulate_one_run(horizon, model, center)
+    return simulate_one_run(horizon, model, center, opdims)
 
 
 def main(horizon):
-    ts = np.linspace(0, horizon, horizon*100)
+    ts = np.linspace(0, 7, 500)
 
-    xs = odeint(brusselator_deriv, [2, 0.28], ts)
+    import time
+    # start_time = time.time()
+    # for i in range(1000000):
+    #     xs = odeint(brusselator_deriv, [2, 0.28], ts)
+    # print(time.time() - start_time)
+    # exit()
+    xs = odeint(coupled_vanderpol, [2, 0.28, 2, 0.28], ts)
     # xs = odeint(van_der_pol_oscillator_deriv, [1.25, 2.28], ts)
     # xs = odeint(two_dim_water_tank_deriv, [0, 8], ts)
     # xs = odeint(predator_prey_deriv, [3.44, 2.3], ts)
     # print('\n'.join(str(x) for x in list(enumerate(xs))))
-    plt.plot(xs[:, 0], xs[:, 1])
+
+    plt.plot(xs[:, 2], xs[:, 3])
     plt.gca().set_aspect('equal')
     # plt.savefig('vanderpol_oscillator.png')
     plt.autoscale()

@@ -2,7 +2,7 @@
     "dim": 2,
     "direction_type": 0,
     "dynamics": [
-        "2-x0",
+        "1",
         "1"
     ],
     "init_coeff": [
@@ -45,7 +45,7 @@
         0,
         1
     ],
-    "sampling_time": 0.1,
+    "sampling_time": 0.01,
     "start_epsilon": 1e-09,
     "state_variables": [
         "x0",

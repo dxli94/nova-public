@@ -51,7 +51,7 @@
         "x0",
         "x1"
     ],
-    "time_horizon": 5,
+    "time_horizon": 1,
     "pseudo_var": true,
     "simu_model": "free_ball"
 }
