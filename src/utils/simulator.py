@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
+import math
 
 mu = 1
 
@@ -90,7 +91,8 @@ def constant_moving_deriv(x, t):
     res = np.array([nx0, nx1])
     return res
 
-def coupled_vanderpol(x, t):
+
+def coupled_vanderpol_deriv(x, t):
     nx0 = x[1]
     nx1 = -(x[0] ** 2.0 - 1.0) * x[1] - x[0] - (x[2] - x[0])
     nx2 = x[3]
@@ -100,8 +102,71 @@ def coupled_vanderpol(x, t):
     return res
 
 
+def spring_pendulum_deriv(x, t):
+    # "x2",
+    # "x3",
+    # "x0*x3^2+9.8*cos(x1)-2*(x0-1)",
+    # "-(1/x0)*(2*x2*x3+9.8*sin(x1))"
+    nx0 = x[2]
+    nx1 = x[3]
+    nx2 = x[0]*x[3]**2+9.8*math.cos(x[1])-2*(x[0]-1)
+    nx3 = -(1/x[0])*(2*x[2]*x[3]+9.8*math.sin(x[1]))
+
+    res = np.array([nx0, nx1, nx2, nx3])
+    return res
+
+
+def lorentz_system_deriv(x, t):
+    # "10*(x1-x0)",
+    # "x0*(8/3-x2)-x1",
+    # "x0*x1-28*x2"
+    nx0 = 10*(x[1]-x[0])
+    nx1 = x[0]*(28-x[2])-x[1]
+    nx2 = x[0]*x[1]-2.6667*x[2]
+
+    res = np.array([nx0, nx1, nx2])
+    return res
+
+
+def biology_1(x, t):
+    nx0 = -0.4*x[0] + 5*x[2]*x[3]
+    nx1 = 0.4*x[0] - x[1]
+    nx2 = x[1] - 5*x[2]*x[3]
+    nx3 = 5*x[4]*x[5] - 5*x[2]*x[3]
+    nx4 = -5*x[4]*x[5] + 5*x[2]*x[3]
+    nx5 = 0.5*x[6] - 5*x[4]*x[5]
+    nx6 = -0.5*x[6] + 5*x[4]*x[5]
+
+    res = np.array([nx0, nx1, nx2, nx3, nx4, nx5, nx6])
+    return res
+
+
+def biology_2(x, t):
+    # "3*x2 - x0*x5",
+    # "x3 - x1*x5",
+    # "x0*x5 - 3*x2",
+    # "x1*x5 - x3",
+    # "3*x2 + 5*x0 - x4",
+    # "5*x4 + 3*x2 + x3 - x5*(x0 + x1 + 2*x7 + 1)",
+    # "5*x3 + x1 - 0.5*x6",
+    # "5*x6 - 2*x5*x7 + x8 - 0.2*x7",
+    # "2*x5*x7 - x8"
+    nx0 = 3*x[2] - x[0]*x[5]
+    nx1 = x[3] - x[1]*x[5]
+    nx2 = x[0]*x[5] - 3*x[2]
+    nx3 = x[1]*x[5] - x[3]
+    nx4 = 3*x[2] + 5*x[0] - x[4]
+    nx5 = 5*x[4] + 3*x[2] + x[3] - x[5]*(x[0] + x[1] + 2*x[7] + 1)
+    nx6 = 5*x[3] + x[1] - 0.5*x[6]
+    nx7 = 5*x[6] - 2*x[5]*x[7] + x[8] - 0.2*x[7]
+    nx8 = 2*x[5]*x[7] - x[8]
+
+    res = np.array([nx0, nx1, nx2, nx3, nx4, nx5, nx6, nx7, nx8])
+    return res
+
+
 def simulate_one_run(horizon, model, init_point, opdims):
-    ts = np.linspace(0, horizon, horizon*200)
+    ts = np.linspace(0, horizon, horizon*1500)
 
     if model == 'vanderpol':
         xs = odeint(van_der_pol_oscillator_deriv, init_point, ts)
@@ -122,7 +187,15 @@ def simulate_one_run(horizon, model, init_point, opdims):
     elif model == 'lacoperon':
         xs = odeint(lacoperon_deriv, init_point, ts)
     elif model == 'coupled_vanderpol':
-        xs = odeint(coupled_vanderpol, init_point, ts)
+        xs = odeint(coupled_vanderpol_deriv, init_point, ts)
+    elif model == 'spring_pendulum':
+        xs = odeint(spring_pendulum_deriv, init_point, ts)
+    elif model == 'lorentz_system':
+        xs = odeint(lorentz_system_deriv, init_point, ts)
+    elif model == 'biology_1':
+        xs = odeint(biology_1, init_point, ts)
+    elif model == 'biology_2':
+        xs = odeint(biology_2, init_point, ts)
     else:
         raise ValueError('Simulate eigen: invalid model name!')
     return xs[:, opdims[0]], xs[:, opdims[1]]
@@ -137,7 +210,7 @@ def simulate(horizon, model, init_coeff, init_col, opdims):
 
 
 def main(horizon):
-    ts = np.linspace(0, 7, 500)
+    ts = np.linspace(0, 2, 1500)
 
     import time
     # start_time = time.time()
@@ -145,13 +218,13 @@ def main(horizon):
     #     xs = odeint(brusselator_deriv, [2, 0.28], ts)
     # print(time.time() - start_time)
     # exit()
-    xs = odeint(coupled_vanderpol, [2, 0.28, 2, 0.28], ts)
+    xs = odeint(biology_2, [1, 1, 1, 1, 1, 1, 1, 1, 1], ts)
     # xs = odeint(van_der_pol_oscillator_deriv, [1.25, 2.28], ts)
     # xs = odeint(two_dim_water_tank_deriv, [0, 8], ts)
     # xs = odeint(predator_prey_deriv, [3.44, 2.3], ts)
     # print('\n'.join(str(x) for x in list(enumerate(xs))))
 
-    plt.plot(xs[:, 2], xs[:, 3])
+    plt.plot(xs[:, 0], xs[:, 1])
     plt.gca().set_aspect('equal')
     # plt.savefig('vanderpol_oscillator.png')
     plt.autoscale()

@@ -30,12 +30,17 @@ def main():
         # path = '../instances/non_linear_instances/pbt.json'
         # path = '../instances/non_linear_instances/pbt_y.json'
         # path = '../instances/non_linear_instances/lacoperon.json'
-        path = '../instances/non_linear_instances/coupled_vanderpol.json'
+        # path = '../instances/non_linear_instances/coupled_vanderpol.json'
+        # path = '../instances/non_linear_instances/spring_pendulum.json'
+        # path = '../instances/non_linear_instances/lorentz_system.json'
+        # path = '../instances/non_linear_instances/biology_1.json'
+        path = '../instances/non_linear_instances/biology_2.json'
 
     # buckling_column: d = 0.1, dwell_steps = 200, start_i = 50
     # vanderpol: d = 0.1, dwell_steps = 5, start_i = 100, time_step = 0.02
     # brusselator: d = 0.1, dwell_steps = 400, start_i = 100, time_step = 0.02
 
+    print('reading model file: {}'.format(path.split('/')[-1]))
     data = JsonReader(path).read()
     time_horizon = data['time_horizon']
     tau = data['sampling_time']
