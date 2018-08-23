@@ -165,7 +165,7 @@ def biology_2(x, t):
     return res
 
 
-def simulate_one_run(horizon, model, init_point, opdims):
+def simulate_one_run(horizon, model, init_point):
     ts = np.linspace(0, horizon, horizon*1500)
 
     if model == 'vanderpol':
@@ -198,16 +198,25 @@ def simulate_one_run(horizon, model, init_point, opdims):
         xs = odeint(biology_2, init_point, ts)
     else:
         raise ValueError('Simulate eigen: invalid model name!')
-    return xs[:, opdims[0]], xs[:, opdims[1]]
+    return xs
+    # return xs[:, opdims[0]], xs[:, opdims[1]]
 
 
-def simulate(horizon, model, init_coeff, init_col, opdims):
+def simulate(horizon, model, init_coeff, init_col):
     from ConvexSet.Polyhedron import Polyhedron
     vertices = Polyhedron(init_coeff, init_col).get_vertices()
     center = np.average(vertices, axis=0)
     print('simulate starting point is: {}'.format(center))
-    return simulate_one_run(horizon, model, center, opdims)
+    return simulate_one_run(horizon, model, center)
 
+
+def save_simu_traj(xs, filename):
+    with open(filename, 'w') as simu_op:
+        for row in xs:
+        # with open('../out/simu.out', 'w') as simu_op:
+            for elem in row:
+                simu_op.write(str(elem) + ' ')
+            simu_op.write('\n')
 
 def main(horizon):
     ts = np.linspace(0, 2, 1500)

@@ -1,6 +1,9 @@
 import sys
+import os
+import pickle
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from AffinePostOpt import PostOperator as AffinePostOperator
 import SuppFuncUtils
@@ -35,13 +38,10 @@ def main():
         # path = '../instances/non_linear_instances/lorentz_system.json'
         # path = '../instances/non_linear_instances/biology_1.json'
         path = '../instances/non_linear_instances/biology_2.json'
-
-    # buckling_column: d = 0.1, dwell_steps = 200, start_i = 50
-    # vanderpol: d = 0.1, dwell_steps = 5, start_i = 100, time_step = 0.02
-    # brusselator: d = 0.1, dwell_steps = 400, start_i = 100, time_step = 0.02
-
-    print('reading model file: {}'.format(path.split('/')[-1]))
+    model_name = path.split('/')[-1].split('.')[0]
+    print('reading model file: {}'.format(model_name))
     data = JsonReader(path).read()
+    print('Finished.')
     time_horizon = data['time_horizon']
     tau = data['sampling_time']
     direction_type = data['direction_type']
@@ -52,62 +52,93 @@ def main():
     is_linear = data['is_linear']
     init_coeff = np.array(data['init_coeff'])
     init_col = np.array(data['init_col'])
-    opvars = data['opvars']
+    opdims = data['opvars']
     simu_model = data['simu_model']
     pseudo_var = data['pseudo_var']
 
-    # Timers.tic('Generate directions')
     directions = SuppFuncUtils.generate_directions(direction_type, dim)
-    # Timers.toc('Generate directions')
 
-    # Timers.tic('Generate General Dynamics')
+    pickle_path = os.path.join('../out/pickles', model_name +
+                               '_T={}_t={}_dt={}_pv={}.pickle'.format(time_horizon, tau,
+                                                                     direction_type, pseudo_var))
+    simu_path = os.path.join('../out/simu_traj', model_name + '.simu')
+    poly_path = '../out/outfile.out'
+
     id_to_vars = {}
     for i, var in enumerate(state_vars):
         id_to_vars[i] = var
     non_linear_dynamics = GeneralDynamics(id_to_vars, *non_linear_dynamics)
-    # Timers.toc('Generate General Dynamics')
     # ============== setting up done ============== #
 
     # ============== start flowpipe construction. ============== #
-    # Timers.tic('flowpipe computation')
     np.set_printoptions(precision=100)
     nonlin_post_opt = NonlinPostOpt(dim, non_linear_dynamics, time_horizon, tau, directions,
                                     init_coeff, init_col, is_linear, start_epsilon, pseudo_var, id_to_vars)
     sf_mat = nonlin_post_opt.compute_post()
-    # Timers.toc('flowpipe computation')
+    # ============== Flowpipe construction done. ============== #
 
-    # Timers.tic('get projection')
-    images = AffinePostOperator.get_projections_new(directions=directions, opdims=opvars, sf_mat=sf_mat)
-    # Timers.toc('get projection')
+    pickle_start_time = time.time()
+    print('\nStoring support function values on disk...')
+    create_pickle(pickle_path, sf_mat)
+    print('Finished in {} secs.'.format(time.time()-pickle_start_time))
 
-    # Timers.tic('Initialise Plotter')
-    plotter = Plotter(images, opvars)
-    # Timers.toc('Initialise Plotter')
+    xs = run_simulate(time_horizon, simu_model, init_coeff, init_col)
+    simu.save_simu_traj(xs, simu_path)
 
-    # Timers.tic('Save Polygons to file')
-    plotter.save_polygons_to_file()
-    # Timers.toc('Save Polygons to file')
-
-    # Timers.tic('Run simulation')
-    run_simulate(time_horizon, simu_model, init_coeff, init_col, opvars)
-    # Timers.toc('Run simulation')
-    #
-    # Timers.toc('total')
-    # Timers.print_stats()
-    #
-    # images = nonlin_post_opt.lin_post_opt.get_projections(directions=directions, opdims=opvars, sf_mat=x_mat)
-    # plotter = Plotter(images, opvars)
-    # plotter.save_polygons_to_file(filename='x.out')
+    print('Saving images...')
+    img_start_time = time.time()
+    make_plot(dim, directions, sf_mat, model_name, xs, poly_path)
+    print('Finished in {} secs.'.format(time.time()-img_start_time))
     print('Total running time: {:.2f}'.format(time.time() - start_time))
 
 
-def run_simulate(time_horizon, model, init_coeff, init_col, opdims):
-    x, y = simu.simulate(time_horizon, model, init_coeff, init_col, opdims)
-    with open('../out/simu.out', 'w') as simu_op:
-        for elem in zip(x, y):
-            simu_op.write(str(elem[0]) + ' ' + str(elem[1]) + '\n')
-    return x, y
+def run_simulate(time_horizon, model, init_coeff, init_col):
+    xs = simu.simulate(time_horizon, model, init_coeff, init_col)
+    # with open('../out/simu.out', 'w') as simu_op:
+    #     for elem in zip(x, y):
+    #         simu_op.write(str(elem[0]) + ' ' + str(elem[1]) + '\n')
+    return xs
 
+
+def create_pickle(filename, data):
+    with open(filename, 'wb') as opfile:
+        pickle.dump(data, opfile)
+
+
+def make_plot(dim, directions, sf_mat, model_name, xs, poly_path):
+    for i in range(dim):
+        for j in range(i, dim):
+            if i == j:
+                continue
+            opdims = (i, j)
+            config_plt(opdims)
+            ppl_polys = AffinePostOperator.get_projections_new(directions=directions, opdims=opdims, sf_mat=sf_mat)
+
+            dir_path = os.path.join('../out/imgs', model_name)
+            if not os.path.exists(dir_path):
+                os.mkdir(dir_path)
+            img_path = os.path.join(dir_path, '{}-{}'.format(*opdims))
+            plotter = Plotter(ppl_polys, opdims)
+
+            x, y = xs[:, opdims[0]], xs[:, opdims[1]]
+            plotter.plot_points(x, y, xlabel=str(i), ylabel=str(j))
+
+            plotter.save_polygons_to_file(filename=poly_path)
+            plotter.plot_polygons(poly_path, opfile=img_path, xlabel=str(i), ylabel=str(j))
+
+            if os.path.exists('../out/pivots.out'):
+                plotter.plot_pivots('../out/pivots.out', 'green')
+            if os.path.exists('../out/sca_cent.out'):
+                plotter.plot_pivots('../out/sca_cent.out', 'yellow')
+
+
+def config_plt(opdims):
+    plt.clf()
+
+    fig = plt.figure(1, dpi=90)
+    ax = fig.add_subplot(111)
+    ax.set_xlabel('$x_{}$'.format(opdims[0]))
+    ax.set_ylabel('$x_{}$'.format(opdims[1]))
 
 if __name__ == '__main__':
     main()

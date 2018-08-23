@@ -30,11 +30,8 @@ class Plotter:
 
         return list(map(lambda ca: (ca[0], ca[1]), cornersWithAngles))
 
-    def save_polygons_to_file(self, dirpath='../out/', filename='outfile.out'):
-        if not os.path.exists(dirpath):
-            os.makedirs(dirpath)
-
-        with open(os.path.join(dirpath, filename), 'w') as opfile:
+    def save_polygons_to_file(self, filename='../out/outfile.out'):
+        with open(filename, 'w') as opfile:
             for vertices in self.vertices_sorted:
                 x, y = [elem[0] for elem in vertices], [elem[1] for elem in vertices]
                 x.append(x[0])
@@ -45,19 +42,22 @@ class Plotter:
                 opfile.write('\n')
 
     @staticmethod
-    def plot_polygons(filelist):
-        print('Start reading file...')
+    def plot_polygons(filelist, xlabel, ylabel, opfile=None):
+        # print('Start reading file...')
+        if not isinstance(filelist, list):
+            filelist = [filelist]
+
         colors = ['red', 'blue']
         linewidths = [0.5, 0.5]
         linestyles = ['solid', 'dashed']
 
         fig = plt.figure(1, dpi=90)
         ax = fig.add_subplot(111)
-        ax.set_xlabel('$x_{1}$')
-        ax.set_ylabel('$x_{2}$')
+        ax.set_xlabel('$x_{}$'.format(xlabel))
+        ax.set_ylabel('$x_{}$'.format(ylabel))
 
         for ipfile_path, color, lw, ls in zip(filelist, colors[:len(filelist)], linewidths[:len(filelist)], linestyles[:len(filelist)]):
-            print(ipfile_path)
+            # print(ipfile_path)
             try:
                 with open(ipfile_path) as ipfile:
                     content = ipfile.read().strip('\n')
@@ -65,11 +65,11 @@ class Plotter:
                     vertices_sorted = list(map(lambda poly: poly.split('\n'), polygons))
             except FileExistsError:
                 print('File does not exist %s' % ipfile_path)
-            print('Finished. \nStart plotting...')
+            # print('Finished. \nStart plotting...')
 
             i = 0
             for vertices in vertices_sorted:
-                if i % 5 == 0:
+                if i % 1 == 0:
                     x, y = [float(elem.split()[0]) for elem in vertices], [float(elem.split()[1]) for elem in vertices]
                     mat = np.transpose(np.array([x, y]))
                     poly1patch = patches.Polygon(mat, fill=False, edgecolor=color, linewidth=lw, linestyle=ls)
@@ -77,22 +77,27 @@ class Plotter:
                 i+=1
 
         plt.autoscale(enable=True)
+
+        if opfile:
+            plt.savefig(opfile, format='eps')
         return plt
 
     @staticmethod
-    def plot_points(filelist):
-        print('Start reading file...')
+    def plot_points_from_file(filelist, xlabel, ylabel):
+        if not isinstance(filelist, list):
+            filelist = [filelist]
+        # print('Start reading file...')
         colors = ['red', 'blue']
         linewidths = [1, 1]
         linestyles = ['solid', 'dashed']
 
         fig = plt.figure(1, dpi=90)
         ax = fig.add_subplot(111)
-        ax.set_xlabel('$x_{1}$')
-        ax.set_ylabel('$x_{2}$')
+        ax.set_xlabel('$x_{}$'.format(xlabel))
+        ax.set_ylabel('$x_{}$'.format(ylabel))
 
         for ipfile_path, color, lw, ls in zip(filelist, colors[:len(filelist)], linewidths[:len(filelist)], linestyles[:len(filelist)]):
-            print(ipfile_path)
+            # print(ipfile_path)
             try:
                 with open(ipfile_path) as ipfile:
                     content = ipfile.read().strip('\n')
@@ -107,15 +112,23 @@ class Plotter:
                         y.append(float(xy[1]))
             except FileExistsError:
                 print('File does not exist %s' % ipfile_path)
-            print('Finished. \nStart plotting...')
 
-        # print([x, y])
-            # for vertices in vertices_sorted:
-            #     x, y = [float(elem.split()[0]) for elem in vertices], [float(elem.split()[1]) for elem in vertices]
-            #     mat = np.transpose(np.array([x, y]))
-            #     poly1patch = patches.Polygon(mat, fill=False, edgecolor=color, linewidth=lw, linestyle=ls)
-            #     ax.add_patch(poly1patch)
         plt.plot(x, y)
+        plt.autoscale(enable=True)
+
+    @staticmethod
+    def plot_points(x, y, xlabel, ylabel):
+        # print('Start reading file...')
+        color = 'darkblue'
+        linewidths = 0.5
+        linestyles = 'solid'
+
+        fig = plt.figure(1, dpi=90)
+        ax = fig.add_subplot(111)
+        ax.set_xlabel('$x_{}$'.format(xlabel))
+        ax.set_ylabel('$x_{}$'.format(ylabel))
+
+        plt.plot(x, y, color=color, ls=linestyles, lw=linewidths)
         plt.autoscale(enable=True)
 
     @staticmethod
@@ -159,14 +172,14 @@ if __name__ == '__main__':
         Plotter.plot_polygons(filelist)
     elif data_type == 2:
         # Plotter.plot_polygons(filelist)
-        Plotter.plot_points(['../out/simu.out'])
+        Plotter.plot_points_from_file(['../out/simu.out'])
     elif data_type == 3:
         Plotter.plot_polygons(filelist)
-        Plotter.plot_points(['../out/simu.out'])
+        Plotter.plot_points_from_file(['../out/simu.out'])
         print('Showing plot now.')
     else:
         Plotter.plot_polygons(filelist)
-        Plotter.plot_points(['../out/simu.out'])
+        Plotter.plot_points_from_file(['../out/simu.out'])
         Plotter.plot_pivots('../out/pivots.out', 'green')
         Plotter.plot_pivots('../out/sca_cent.out', 'yellow')
 
