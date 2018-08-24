@@ -187,9 +187,9 @@ class NonlinPostOpt:
             # d = [0.3, 0.3, 0.3]
 
             # lorentz
-            # dwell_from = [100]
-            # dwell_steps = [100]
-            # d = [0.002]
+            dwell_from = [100]
+            dwell_steps = [100]
+            d = [0.002]
 
         else:
             dwell_steps = [0]

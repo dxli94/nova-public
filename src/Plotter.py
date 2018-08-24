@@ -69,6 +69,7 @@ class Plotter:
 
             i = 0
             stepsize = max(len(vertices_sorted) // 50, 1)
+            stepsize = min(len(vertices_sorted) // 50, 1)
 
             for vertices in vertices_sorted:
                 if i % stepsize == 0:
