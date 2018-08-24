@@ -42,7 +42,7 @@ class Plotter:
                 opfile.write('\n')
 
     @staticmethod
-    def plot_polygons(filelist, xlabel, ylabel, opfile=None):
+    def plot_polygons(filelist, xlabel, ylabel):
         # print('Start reading file...')
         if not isinstance(filelist, list):
             filelist = [filelist]
@@ -68,8 +68,10 @@ class Plotter:
             # print('Finished. \nStart plotting...')
 
             i = 0
+            stepsize = max(len(vertices_sorted) // 500, 1)
+
             for vertices in vertices_sorted:
-                if i % 1 == 0:
+                if i % stepsize == 0:
                     x, y = [float(elem.split()[0]) for elem in vertices], [float(elem.split()[1]) for elem in vertices]
                     mat = np.transpose(np.array([x, y]))
                     poly1patch = patches.Polygon(mat, fill=False, edgecolor=color, linewidth=lw, linestyle=ls)
@@ -78,17 +80,15 @@ class Plotter:
 
         plt.autoscale(enable=True)
 
-        if opfile:
-            plt.savefig(opfile, format='eps')
         return plt
 
     @staticmethod
-    def plot_points_from_file(filelist, xlabel, ylabel):
+    def plot_points_from_file(filelist, opdims, xlabel, ylabel):
         if not isinstance(filelist, list):
             filelist = [filelist]
         # print('Start reading file...')
         colors = ['red', 'blue']
-        linewidths = [1, 1]
+        linewidths = [0.5, 0.5]
         linestyles = ['solid', 'dashed']
 
         fig = plt.figure(1, dpi=90)
@@ -108,8 +108,8 @@ class Plotter:
 
                     for p in points:
                         xy = p.split()
-                        x.append(float(xy[0]))
-                        y.append(float(xy[1]))
+                        x.append(float(xy[opdims[0]]))
+                        y.append(float(xy[opdims[1]]))
             except FileExistsError:
                 print('File does not exist %s' % ipfile_path)
 
@@ -132,13 +132,11 @@ class Plotter:
         plt.autoscale(enable=True)
 
     @staticmethod
-    def plot_pivots(ipfile_path, color):
-        print('Start reading pivots file...')
-
-        fig = plt.figure(1, dpi=90)
-        ax = fig.add_subplot(111)
-        ax.set_xlabel('$x_{1}$')
-        ax.set_ylabel('$x_{2}$')
+    def plot_pivots(ipfile_path, opdims, color):
+        # fig = plt.figure(1, dpi=90)
+        # ax = fig.add_subplot(111)
+        # ax.set_xlabel('$x_{1}$')
+        # ax.set_ylabel('$x_{2}$')
 
         try:
             with open(ipfile_path) as ipfile:
@@ -149,8 +147,8 @@ class Plotter:
 
                 for point in points:
                     xy = point.split()
-                    x.append(float(xy[0]))
-                    y.append(float(xy[1]))
+                    x.append(float(xy[opdims[0]]))
+                    y.append(float(xy[opdims[1]]))
         except FileNotFoundError:
             print('File does not exist %s' % ipfile_path)
 
@@ -158,30 +156,52 @@ class Plotter:
         plt.autoscale(enable=True)
 
 
+    @staticmethod
+    def save_plt(opfile):
+        plt.savefig(opfile, format='eps')
+
 if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path', type=str, nargs='*', help='path to the input file storing vertex.')
+    parser.add_argument('--path', type=str, help='path to the input file storing vertex.')
+    parser.add_argument('--opdims', type=int, nargs=2, help='2 dimensions to output.')
     parser.add_argument('--type', type=int, help='0 for points, 1 for polygons. If 2, polygon from first; points from '
                                                  'second.')
+    # parser.
+    # directions = SuppFuncUtils.generate_directions(direction_type, 2)
     args = parser.parse_args()
-    filelist = args.path if args.path else ['../out/outfile.out']
+
+    ipfile = args.path
+    opdims = args.opdims
+
+    assert ipfile, 'No input file specified!'
+    assert opdims, 'No output dimension specified!'
+
     data_type = args.type
+    model_name = ipfile.split('/')[-1].split('.')[0]
+
     if data_type == 1:
-        Plotter.plot_polygons(filelist)
+        Plotter.plot_polygons(ipfile, xlabel=str(opdims[0]), ylabel=str(opdims[1]))
     elif data_type == 2:
         # Plotter.plot_polygons(filelist)
-        Plotter.plot_points_from_file(['../out/simu.out'])
+        Plotter.plot_points_from_file(['../out/simu.out'], opdims, xlabel=str(opdims[0]), ylabel=str(opdims[1]))
     elif data_type == 3:
-        Plotter.plot_polygons(filelist)
-        Plotter.plot_points_from_file(['../out/simu.out'])
+        Plotter.plot_polygons(ipfile, xlabel=str(opdims[0]), ylabel=str(opdims[1]))
+        Plotter.plot_points_from_file(['../out/simu.out'], opdims, xlabel=str(opdims[0]), ylabel=str(opdims[1]))
         print('Showing plot now.')
     else:
-        Plotter.plot_polygons(filelist)
-        Plotter.plot_points_from_file(['../out/simu.out'])
-        Plotter.plot_pivots('../out/pivots.out', 'green')
-        Plotter.plot_pivots('../out/sca_cent.out', 'yellow')
+        # plot poly
+        poly_path = os.path.join('../out/sfvals', model_name, '{}-{}'.format(*opdims))
+        Plotter.plot_polygons(poly_path, xlabel=str(opdims[0]), ylabel=str(opdims[1]))
+
+        # plot simulation
+        simu_path = os.path.join('../out/simu_traj', '{}.simu'.format(model_name))
+        Plotter.plot_points_from_file(simu_path, opdims, xlabel=str(opdims[0]), ylabel=str(opdims[1]))
+
+        # plot scaling points
+        Plotter.plot_pivots('../out/pivots.out', opdims, 'green')
+        Plotter.plot_pivots('../out/sca_cent.out', opdims, 'yellow')
 
         print('Showing plot now.')
     plt.show()

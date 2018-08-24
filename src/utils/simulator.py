@@ -128,6 +128,18 @@ def lorentz_system_deriv(x, t):
     return res
 
 
+def roessler_attractor_deriv(x, t):
+    # "-x1-x2",
+    # "x0+0.2*x1",
+    # "0.2+x2*(x0-5.7)"
+    nx0 = -x[1]-x[2]
+    nx1 = x[0]+0.2*x[1]
+    nx2 = 0.2+x[2]*(x[0]-5.7)
+
+    res = np.array([nx0, nx1, nx2])
+    return res
+
+
 def biology_1(x, t):
     nx0 = -0.4*x[0] + 5*x[2]*x[3]
     nx1 = 0.4*x[0] - x[1]
@@ -192,6 +204,8 @@ def simulate_one_run(horizon, model, init_point):
         xs = odeint(spring_pendulum_deriv, init_point, ts)
     elif model == 'lorentz_system':
         xs = odeint(lorentz_system_deriv, init_point, ts)
+    elif model == 'roessler_attractor':
+        xs = odeint(roessler_attractor_deriv, init_point, ts)
     elif model == 'biology_1':
         xs = odeint(biology_1, init_point, ts)
     elif model == 'biology_2':

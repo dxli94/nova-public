@@ -135,7 +135,7 @@ class NonlinPostOpt:
 
         j = -1
 
-        time_scaling_on = False
+        time_scaling_on = True
         if time_scaling_on:
             scaled = False
             # # vanderpol. time step = 0.01, d=0.2
@@ -187,9 +187,9 @@ class NonlinPostOpt:
             # d = [0.3, 0.3, 0.3]
 
             # lorentz
-            dwell_from = [500]
-            dwell_steps = [200]
-            d = [0.02]
+            dwell_from = [100]
+            dwell_steps = [100]
+            d = [0.002]
 
         else:
             dwell_steps = [0]

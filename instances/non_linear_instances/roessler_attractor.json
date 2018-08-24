@@ -2,9 +2,9 @@
     "dim": 3,
     "direction_type": 1,
     "dynamics": [
-        "10*(x1-x0)",
-        "x0*(28-x2)-x1",
-        "x0*x1-2.6667*x2"
+        "-x1-x2",
+        "x0+0.2*x1",
+        "0.2+x2*(x0-5.7)"
     ],
     "init_coeff": [
         [ 1,  0,  0],
@@ -15,30 +15,30 @@
         [ 0,  0, -1]
     ],
     "init_col": [
-        [15.001],
-        [-14.999],
-        [15.001],
-        [-14.999],
-        [36.001],
-        [-35.999]
+        [0.2],
+        [0.2],
+        [-8.2],
+        [8.6],
+        [0.2],
+        [0.2]
     ],
     "is_linear": [
         true,
-        false,
+        true,
         false
     ],
     "opvars": [
         0,
         1
     ],
-    "sampling_time": 0.0005,
+    "sampling_time": 0.002,
     "start_epsilon": 1e-05,
     "state_variables": [
         "x0",
         "x1",
         "x2"
     ],
-    "time_horizon": 0.1,
+    "time_horizon": 6,
     "pseudo_var": true,
-    "simu_model": "lorentz_system"
+    "simu_model": "roessler_attractor"
 }
