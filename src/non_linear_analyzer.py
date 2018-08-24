@@ -1,19 +1,20 @@
-import sys
 import os
 import pickle
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-from AffinePostOpt import PostOperator as AffinePostOperator
-import SuppFuncUtils
-from Hybridisation.NonlinPostOpt import NonlinPostOpt
-from SysDynamics import GeneralDynamics
-from Plotter import Plotter
-from utils.DataReader import JsonReader
-import utils.simulator as simu
-from timerutil import Timers
+import sys
 import time
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+import SuppFuncUtils
+import utils.simulator as simu
+from AffinePostOpt import PostOperator as AffinePostOperator
+from Hybridisation.NonlinPostOpt import NonlinPostOpt
+from Plotter import Plotter
+from SysDynamics import GeneralDynamics
+from utils.DataReader import JsonReader
+
+from timerutil import Timers
 
 
 def main():
@@ -34,11 +35,12 @@ def main():
         # path = '../instances/non_linear_instances/pbt_y.json'
         # path = '../instances/non_linear_instances/lacoperon.json'
         # path = '../instances/non_linear_instances/roessler_attractor.json'
-        # path = '../instances/non_linear_instances/coupled_vanderpol.json'
+        path = '../instances/non_linear_instances/coupled_vanderpol.json'
         # path = '../instances/non_linear_instances/spring_pendulum.json'
-        path = '../instances/non_linear_instances/lorentz_system.json'
+        # path = '../instances/non_linear_instances/lorentz_system.json'
         # path = '../instances/non_linear_instances/biology_1.json'
         # path = '../instances/non_linear_instances/biology_2.json'
+
     model_name = path.split('/')[-1].split('.')[0]
     print('reading model file: {}'.format(model_name))
     data = JsonReader(path).read()
@@ -95,9 +97,6 @@ def main():
 
 def run_simulate(time_horizon, model, init_coeff, init_col):
     xs = simu.simulate(time_horizon, model, init_coeff, init_col)
-    # with open('../out/simu.out', 'w') as simu_op:
-    #     for elem in zip(x, y):
-    #         simu_op.write(str(elem[0]) + ' ' + str(elem[1]) + '\n')
     return xs
 
 
@@ -134,10 +133,11 @@ def make_plot(dim, directions, sf_mat, model_name, xs, poly_dir):
             plotter.plot_polygons(poly_file_path, xlabel=str(i), ylabel=str(j))
 
             # plot scaling points
-            if os.path.exists('../out/pivots.out'):
-                plotter.plot_pivots('../out/pivots.out', opdims, 'green')
-            if os.path.exists('../out/sca_cent.out'):
-                plotter.plot_pivots('../out/sca_cent.out', opdims, 'yellow')
+            if None:  # has issue with transparency,
+                if os.path.exists('../out/pivots.out'):
+                    plotter.plot_pivots('../out/pivots.out', opdims, 'green')
+                if os.path.exists('../out/sca_cent.out'):
+                    plotter.plot_pivots('../out/sca_cent.out', opdims, 'yellow')
 
             plotter.save_plt(opfile=img_path)
 

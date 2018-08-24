@@ -141,7 +141,7 @@ class NonlinPostOpt:
             # # vanderpol. time step = 0.01, d=0.2
             # dwell_from = [200, 650]
             # dwell_steps = [100, 100]
-            # d = [0.05, 0.05]
+            # d = [0.2, 0.2]
 
             # vanderpol. time step = 0.01, d=0.2
             # dwell_from = [200, 650]
@@ -150,8 +150,8 @@ class NonlinPostOpt:
 
             # coupled vanderpol, time step = 0.05
             # dwell_from = [400, 1150]
-            # dwell_steps = [150, 150]
-            # d = [0.05, 0.1]
+            # dwell_steps = [200, 200]
+            # d = [0.2, 0.2]
 
             # coupled vanderpol, time step = 0.01
             # dwell_from = [220, 650]
@@ -187,9 +187,9 @@ class NonlinPostOpt:
             # d = [0.3, 0.3, 0.3]
 
             # lorentz
-            dwell_from = [100]
-            dwell_steps = [100]
-            d = [0.002]
+            # dwell_from = [100]
+            # dwell_steps = [100]
+            # d = [0.002]
 
         else:
             dwell_steps = [0]
@@ -624,12 +624,13 @@ class NonlinPostOpt:
 
         # pbt
         # d = 0.2
+        norm = np.dot(norm_vec, norm_vec) ** 0.5
+        norm_vec = norm_vec / norm
 
         # scaling function -(a/||a||) \cdot x + b
         p = domain_center + np.dot(norm_vec, d)
         b = np.dot(norm_vec, p)
 
-        norm = np.dot(norm_vec, norm_vec)**0.5
         # a = norm_vec / norm
         a_prime = [-elem for elem in norm_vec]
 
@@ -638,20 +639,11 @@ class NonlinPostOpt:
             scaling_func_str += '{}*x{}+'.format(elem, idx)
         scaling_func_str = '{}+{}'.format(scaling_func_str, b)
 
-        # print('domain center: {}'.format(domain_center))
-        # print('distance: {}'.format(d))
-        # print('p: {}'.format(p))
-        # print('norm vec: {}'.format(norm_vec))
-        # print('norm: {}'.format(norm))
-        # print('bias: {}'.format(b))
-        # print('minus normalized normal: {}'.format(a_prime))
-        # print('scaling func: {}'.format(scaling_func_str))
-        # print('\n')
-        # exit()
-
         scaled_dynamics = []
         for dyn in self.nonlin_dyn.dynamics:
             scaled_dynamics.append('({})*({})'.format(scaling_func_str, dyn))
+
+        print(scaled_dynamics)
 
         with open('../out/pivots.out', 'a') as opfile:
             opfile.write(' '.join(str(elem) for elem in p.tolist()) + '\n')
