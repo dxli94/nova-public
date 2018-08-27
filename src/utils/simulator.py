@@ -178,7 +178,7 @@ def biology_2(x, t):
 
 
 def simulate_one_run(horizon, model, init_point):
-    ts = np.linspace(0, horizon, horizon*1500)
+    ts = np.linspace(0, horizon, horizon*5000)
 
     if model == 'vanderpol':
         xs = odeint(van_der_pol_oscillator_deriv, init_point, ts)

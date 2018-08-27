@@ -4,6 +4,7 @@ import cvxopt as cvx
 
 from ConvexSet.Polyhedron import Polyhedron
 from ConvexSet.TransPoly import TransPoly
+from SysDynamics import AffineDynamics
 
 
 def mat_exp(A, tau):
@@ -86,6 +87,43 @@ def compute_beta(sys_dynamics, tau, lp):
     return (tt1 - 1 - tau * norm_a) * (v_max_norm / norm_a)
 
 
+def compute_beta_no_offset(sys_dynamics, tau):
+    dyn_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
+
+    # if dyn_matrix_A is a zero-matrix, no need to perform bloating
+    if not np.any(dyn_matrix_A):
+        return 0
+
+    norm_a = np.linalg.norm(dyn_matrix_A, np.inf)
+
+    dyn_coeff_matrix_U = sys_dynamics.get_dyn_coeff_matrix_U()
+    dyn_col_vec_U = sys_dynamics.get_dyn_col_vec_U()
+
+    tt1 = np.exp(tau * norm_a)
+
+    lb, ub = [], []
+
+    for i in range(dyn_coeff_matrix_U.shape[0]):
+        coeff_row = dyn_coeff_matrix_U[i]
+        col_row = dyn_col_vec_U[i][0]
+
+        if sum(coeff_row) == 1:
+            ub.append(col_row)
+        else:
+            lb.append(-col_row)
+
+    diff_lb, diff_ub = [], []
+
+    for l, u in zip(lb, ub):
+        diff_lb.append(l - u)
+        diff_ub.append(u - l)
+
+    D_v = max(np.amax(np.abs(diff_lb), axis=0), np.amax(np.abs(diff_ub), axis=0))
+    R_w = D_v / 2
+
+    return (tt1 - 1 - tau * norm_a) * (R_w / norm_a)
+
+
 def generate_directions(direction_type, dim):
     direction_generator = []
 
@@ -147,22 +185,49 @@ def generate_directions(direction_type, dim):
     return np.array(direction_generator)
 
 
-# def compute_support_functions(coeff_mat, direction, b, lp):
-#     c = cvx.matrix(-direction, tc='d')
-#     coeff_mat = cvx.matrix(coeff_mat, tc='d')
-#     b = cvx.matrix(b, tc='d')
-#     # print(c, coeff_mat, b)
-#     # print('\n')
-#
-#     return lp.lp(c, coeff_mat, b)
-#
-#
-# def compute_support_function(self, direction, lp):
-#     c = cvx.matrix(-direction, tc='d')
-#     return lp.lp(c, self.coeff_matrix, self.col_vec)
+def compute_support_function_singular(c, l):
+    return np.dot(l, c)
+
+
+def mat_exp_int(A, t_min, t_max, nbins=5):
+    iden = np.identity(A.shape[0])
+    f = lambda x: expm(A*x)-iden
+    xv = np.linspace(t_min, t_max, nbins)
+    result = np.apply_along_axis(f, 0, xv.reshape(1, -1))
+    return np.trapz(result, xv)
+
 
 if __name__ == '__main__':
-    direction_type = 1
-    dim = 3
+    # direction_type = 1
+    # dim = 3
+    #
+    # print(len(generate_directions(direction_type, dim)))
+    A = np.array([[1, 0], [0, 1]])
+    T = 0.01
+    rv = mat_exp_int(A, T)
+    print(rv)
 
-    print(len(generate_directions(direction_type, dim)))
+    inv_A = np.linalg.inv(A)
+
+    print(np.dot((mat_exp(A, T) - mat_exp(A, 0)), inv_A))
+
+    # init_mat_X0 = np.array([[1, 0], [-1, 0], [0, 1], [0, -1]])
+    # init_col_X0 = np.array([[1], [1], [1], [1]])
+    #
+    # coeff_matrix_B = np.array([[1, 0], [0, 1]])
+    #
+    # matrix_A = np.array([[1, 0], [0, 1]])
+    # coeff_col = np.array([[1], [-1]])
+    #
+    # poly_w_0 = np.array([[1, 0], [-1, 0], [0, 1], [0, -1]])
+    # poly_w_1 = np.array([[1], [1], [1], [1]])
+    #
+    # abs_dynamics = AffineDynamics(dim=2,
+    #                               init_coeff_matrix_X0=init_mat_X0,
+    #                               init_col_vec_X0=init_col_X0,
+    #                               dynamics_matrix_A=matrix_A,
+    #                               dynamics_matrix_B=coeff_matrix_B,
+    #                               dynamics_coeff_matrix_U=poly_w_0,
+    #                               dynamics_col_vec_U=poly_w_1)
+    #
+    # print(compute_beta_no_offset(abs_dynamics, 0.1))

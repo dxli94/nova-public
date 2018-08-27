@@ -139,16 +139,16 @@ class NonlinPostOpt:
         if time_scaling_on:
             scaled = False
             # # vanderpol. time step = 0.01, d=0.2
-            # dwell_from = [200, 650]
-            # dwell_steps = [100, 100]
-            # d = [0.2, 0.2]
+            dwell_from = [200, 650]
+            dwell_steps = [100, 100]
+            d = [0.2, 0.2]
 
             # vanderpol. time step = 0.01, d=0.2
             # dwell_from = [200, 650]
             # dwell_steps = [100, 100]
             # d = [0.1, 0.1]
 
-            # coupled vanderpol, time step = 0.05
+            # coupled vanderpol, time step = 0.005
             # dwell_from = [400, 1150]
             # dwell_steps = [200, 200]
             # d = [0.2, 0.2]
@@ -187,9 +187,9 @@ class NonlinPostOpt:
             # d = [0.3, 0.3, 0.3]
 
             # lorentz
-            dwell_from = [100]
-            dwell_steps = [100]
-            d = [0.002]
+            # dwell_from = [100]
+            # dwell_steps = [100]
+            # d = [0.002]
 
         else:
             dwell_steps = [0]
@@ -289,7 +289,8 @@ class NonlinPostOpt:
         # 15.9%
         self.reach_params.alpha = SuppFuncUtils.compute_alpha(self.abs_dynamics, self.tau, self.lp_solver_on_pseudo_dim)
         # 6.8 %
-        self.reach_params.beta = SuppFuncUtils.compute_beta(self.abs_dynamics, self.tau, self.lp_solver_on_pseudo_dim)
+        # self.reach_params.beta = SuppFuncUtils.compute_beta(self.abs_dynamics, self.tau, self.lp_solver_on_pseudo_dim)
+        self.reach_params.beta = SuppFuncUtils.compute_beta_no_offset(self.abs_dynamics, self.tau)
         # 13.2 %
         self.reach_params.delta = SuppFuncUtils.mat_exp(self.abs_dynamics.matrix_A, self.tau)
 
@@ -523,15 +524,30 @@ class NonlinPostOpt:
         # print('\n')
         return phi_list
 
-    def update_wb_seq(self, lb, ub, next_lb, next_ub):
-        """
-         W_{i} = τV_{i} ⊕ β_{i}·B
-        """
-        next_lb = next_lb * self.tau - self.reach_params.beta
-        next_ub = next_ub * self.tau + self.reach_params.beta
-
-        return np.append(lb, next_lb), np.append(ub, next_ub)
+    # def update_wb_seq(self, lb, ub, next_lb, next_ub):
+    #     """
+    #      W_{i} = τV_{i} ⊕ β_{i}·B
+    #     """
+    #     next_lb = next_lb * self.tau - self.reach_params.beta
+    #     next_ub = next_ub * self.tau + self.reach_params.beta
+    #
+    #     return np.append(lb, next_lb), np.append(ub, next_ub)
         # return np.vstack((lb, next_lb)), np.vstack((ub, next_ub))
+
+    def update_wb_seq(self, lb_seq, ub_seq, next_lb, next_ub):
+        """
+         W_{i} = τV_{i} ⊕ τd ⊕ β_{i}·B, where d = (1/τ) * \int_{0}^{τ}[(e^(τ-s)A-I)c]ds.
+         c is the center of the boxed uncertainty region.
+        """
+        c = (next_lb + next_ub) / 2
+        A = self.abs_dynamics.get_dyn_coeff_matrix_A()
+        M = SuppFuncUtils.mat_exp_int(A, t_min=0, t_max=self.tau)
+        tau_d = np.dot(M, c)
+
+        next_lb = next_lb * self.tau - self.reach_params.beta + tau_d
+        next_ub = next_ub * self.tau + self.reach_params.beta + tau_d
+
+        return np.append(lb_seq, next_lb), np.append(ub_seq, next_ub)
 
     def set_abs_dynamics(self, matrix_A, poly_w, c):
         if self.pseudo_var:

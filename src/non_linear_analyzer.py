@@ -35,9 +35,9 @@ def main():
         # path = '../instances/non_linear_instances/pbt_y.json'
         # path = '../instances/non_linear_instances/lacoperon.json'
         # path = '../instances/non_linear_instances/roessler_attractor.json'
-        # path = '../instances/non_linear_instances/coupled_vanderpol.json'
+        path = '../instances/non_linear_instances/coupled_vanderpol.json'
         # path = '../instances/non_linear_instances/spring_pendulum.json'
-        path = '../instances/non_linear_instances/lorentz_system.json'
+        # path = '../instances/non_linear_instances/lorentz_system.json'
         # path = '../instances/non_linear_instances/biology_1.json'
         # path = '../instances/non_linear_instances/biology_2.json'
 
