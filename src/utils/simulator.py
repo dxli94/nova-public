@@ -140,7 +140,7 @@ def roessler_attractor_deriv(x, t):
     return res
 
 
-def biology_1(x, t):
+def biology_1_deriv(x, t):
     nx0 = -0.4*x[0] + 5*x[2]*x[3]
     nx1 = 0.4*x[0] - x[1]
     nx2 = x[1] - 5*x[2]*x[3]
@@ -153,7 +153,7 @@ def biology_1(x, t):
     return res
 
 
-def biology_2(x, t):
+def biology_2_deriv(x, t):
     # "3*x2 - x0*x5",
     # "x3 - x1*x5",
     # "x0*x5 - 3*x2",
@@ -174,6 +174,19 @@ def biology_2(x, t):
     nx8 = 2*x[5]*x[7] - x[8]
 
     res = np.array([nx0, nx1, nx2, nx3, nx4, nx5, nx6, nx7, nx8])
+    return res
+
+
+def laub_loomis_deriv(x, t):
+    nx0 = 1.4 * x[2] - 0.9 * x[0]
+    nx1 = 2.5 * x[4] - 1.5 * x[1]
+    nx2 = 0.6 * x[7] - 0.8 * x[2] * x[1]
+    nx3 = 2 - 1.3 * x[3] * x[2]
+    nx4 = 0.7 * x[0] - x[3] * x[4]
+    nx5 = 0.3 * x[0] - 3.1 * x[5]
+    nx6 = 1.8 * x[5] - 1.5 * x[7] * x[1]
+
+    res = np.array([nx0, nx1, nx2, nx3, nx4, nx5, nx6])
     return res
 
 
@@ -207,9 +220,11 @@ def simulate_one_run(horizon, model, init_point):
     elif model == 'roessler_attractor':
         xs = odeint(roessler_attractor_deriv, init_point, ts)
     elif model == 'biology_1':
-        xs = odeint(biology_1, init_point, ts)
+        xs = odeint(biology_1_deriv, init_point, ts)
     elif model == 'biology_2':
-        xs = odeint(biology_2, init_point, ts)
+        xs = odeint(biology_2_deriv, init_point, ts)
+    elif model == 'laub_loomis':
+        xs = odeint(laub_loomis_deriv, init_point, ts)
     else:
         raise ValueError('Simulate eigen: invalid model name!')
     return xs
@@ -241,7 +256,7 @@ def main(horizon):
     #     xs = odeint(brusselator_deriv, [2, 0.28], ts)
     # print(time.time() - start_time)
     # exit()
-    xs = odeint(biology_2, [1, 1, 1, 1, 1, 1, 1, 1, 1], ts)
+    xs = odeint(biology_2_deriv, [1, 1, 1, 1, 1, 1, 1, 1, 1], ts)
     # xs = odeint(van_der_pol_oscillator_deriv, [1.25, 2.28], ts)
     # xs = odeint(two_dim_water_tank_deriv, [0, 8], ts)
     # xs = odeint(predator_prey_deriv, [3.44, 2.3], ts)

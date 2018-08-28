@@ -37,9 +37,10 @@ def main():
         # path = '../instances/non_linear_instances/roessler_attractor.json'
         # path = '../instances/non_linear_instances/coupled_vanderpol.json'
         # path = '../instances/non_linear_instances/spring_pendulum.json'
-        path = '../instances/non_linear_instances/lorentz_system.json'
+        # path = '../instances/non_linear_instances/lorentz_system.json'
         # path = '../instances/non_linear_instances/biology_1.json'
         # path = '../instances/non_linear_instances/biology_2.json'
+        path = '../instances/non_linear_instances/laub_loomis.json'
 
     model_name = path.split('/')[-1].split('.')[0]
     print('reading model file: {}'.format(model_name))
