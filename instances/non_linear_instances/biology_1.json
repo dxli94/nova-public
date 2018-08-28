@@ -67,6 +67,6 @@
         "x6"
     ],
     "time_horizon": 2,
-    "pseudo_var": true,
+    "pseudo_var": false,
     "simu_model": "biology_1"
 }

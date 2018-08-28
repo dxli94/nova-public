@@ -38,7 +38,7 @@
         "x1",
         "x2"
     ],
-    "time_horizon": 6,
-    "pseudo_var": true,
+    "time_horizon": 3,
+    "pseudo_var": false,
     "simu_model": "roessler_attractor"
 }

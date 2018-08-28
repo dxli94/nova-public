@@ -31,14 +31,14 @@
         0,
         1
     ],
-    "sampling_time": 0.0005,
+    "sampling_time": 0.002,
     "start_epsilon": 1e-05,
     "state_variables": [
         "x0",
         "x1",
         "x2"
     ],
-    "time_horizon": 0.1,
-    "pseudo_var": true,
+    "time_horizon": 2.5,
+    "pseudo_var": false,
     "simu_model": "lorentz_system"
 }

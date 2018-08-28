@@ -35,9 +35,9 @@ def main():
         # path = '../instances/non_linear_instances/pbt_y.json'
         # path = '../instances/non_linear_instances/lacoperon.json'
         # path = '../instances/non_linear_instances/roessler_attractor.json'
-        path = '../instances/non_linear_instances/coupled_vanderpol.json'
+        # path = '../instances/non_linear_instances/coupled_vanderpol.json'
         # path = '../instances/non_linear_instances/spring_pendulum.json'
-        # path = '../instances/non_linear_instances/lorentz_system.json'
+        path = '../instances/non_linear_instances/lorentz_system.json'
         # path = '../instances/non_linear_instances/biology_1.json'
         # path = '../instances/non_linear_instances/biology_2.json'
 
@@ -117,7 +117,7 @@ def make_plot(dim, directions, sf_mat, model_name, xs, poly_dir):
             img_dir_path = os.path.join('../out/imgs', model_name)
             if not os.path.exists(img_dir_path):
                 os.mkdir(img_dir_path)
-            img_path = os.path.join(img_dir_path, '{}-{}'.format(*opdims))
+            img_path = os.path.join(img_dir_path, '{}-{}.png'.format(*opdims))
             plotter = Plotter(ppl_polys, opdims)
 
             # plot simulation
