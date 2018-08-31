@@ -44,8 +44,8 @@ def extract_bounds_from_sf(sf_vec, canno_dir_indices):
 
 
 class NonlinPostOpt:
-    def __init__(self, dim, nonlin_dyn, time_horizon, tau, directions,
-                 init_mat_X0, init_col_X0, is_linear, start_epsilon, pseudo_var, id_to_vars):
+    def __init__(self, dim, nonlin_dyn, time_horizon, tau, init_coeff, init_col, is_linear, directions, start_epsilon,
+                 pseudo_var, id_to_vars):
         self.dim = dim
         self.nonlin_dyn = nonlin_dyn
         self.time_horizon = time_horizon
@@ -53,8 +53,8 @@ class NonlinPostOpt:
         self.coeff_matrix_B = np.identity(dim)
         self.is_linear = is_linear
         self.start_epsilon = start_epsilon
-        self.init_mat_X0 = init_mat_X0
-        self.init_col_X0 = init_col_X0
+        self.init_coeff = init_coeff
+        self.init_col = init_col
         self.template_directions = directions
         self.canno_dir_indices = get_canno_dir_indices(directions)
         self.pseudo_var = pseudo_var
@@ -80,7 +80,7 @@ class NonlinPostOpt:
         if self.pseudo_var:
             self.pseudo_dim = self.dim + 1
 
-            self.init_mat_X0 = np.hstack((self.init_mat_X0, np.zeros(shape=(self.init_mat_X0.shape[0], 1))))
+            self.init_coeff = np.hstack((self.init_coeff, np.zeros(shape=(self.init_coeff.shape[0], 1))))
 
             temp_coeff_pos = np.zeros(self.pseudo_dim)
             temp_coeff_pos[self.pseudo_dim - 1] = 1
@@ -90,8 +90,8 @@ class NonlinPostOpt:
             temp_coeff_neg[self.pseudo_dim - 1] = -1
             temp_col_neg = -np.ones(1)
 
-            self.init_mat_X0 = np.vstack((self.init_mat_X0, temp_coeff_neg, temp_coeff_pos))
-            self.init_col_X0 = np.vstack((self.init_col_X0, temp_col_neg, temp_col_pos))
+            self.init_coeff = np.vstack((self.init_coeff, temp_coeff_neg, temp_coeff_pos))
+            self.init_col = np.vstack((self.init_col, temp_col_neg, temp_col_pos))
 
             self.lp_solver_on_pseudo_dim = GlpkWrapper(self.pseudo_dim)
 
@@ -107,7 +107,7 @@ class NonlinPostOpt:
         Timers.tic('total')
         time_frames = int(np.ceil(self.time_horizon / self.tau))
 
-        init_poly = Polyhedron(self.init_mat_X0, self.init_col_X0)
+        init_poly = Polyhedron(self.init_coeff, self.init_col)
         vertices = init_poly.get_vertices()
 
         init_set_lb = np.amin(vertices, axis=0)
@@ -139,9 +139,8 @@ class NonlinPostOpt:
         if time_scaling_on:
             scaled = False
             # # vanderpol. time step = 0.01, d=0.2
-            dwell_from = [200, 650]
-            dwell_steps = [100, 100]
-            d = [0.2, 0.2]
+            # dwell_from = [200, 650]
+            # dwell_steps = [100, 100]
 
             # vanderpol, time step = 0.03, small init [1.25, 1.55], [2.28, 2.32]
             # dwell_from = [65, 210]
@@ -159,8 +158,8 @@ class NonlinPostOpt:
             # d = [0.1, 0.1]
 
             # coupled vanderpol, time step = 0.005
-            # dwell_from = [400, 1150]
-            # dwell_steps = [200, 200]
+            dwell_from = [400, 1150]
+            dwell_steps = [200, 200]
             # d = [0.2, 0.2]
 
             # coupled vanderpol, time step = 0.01
@@ -265,7 +264,8 @@ class NonlinPostOpt:
                         print('start time scaling at step {}'.format(i))
                         idx = dwell_from.index(i)
                         j = dwell_steps[idx]  # number of steps dwelling in time scaling mode
-                        self.scaled_nonlin_dyn = self.scale_dynamics(d[idx])
+                        scaling_config = self.get_scaling_configs(tube_lb, tube_ub)
+                        self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
                         self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
                         self.dyn_linearizer.is_scaled = True
                         scaled = True
@@ -578,8 +578,8 @@ class NonlinPostOpt:
             coeff_matrix_B = self.coeff_matrix_B
 
         abs_dynamics = AffineDynamics(dim=self.dim,
-                                      init_coeff_matrix_X0=self.init_mat_X0,
-                                      init_col_vec_X0=self.init_col_X0,
+                                      init_coeff_matrix_X0=self.init_coeff,
+                                      init_col_vec_X0=self.init_col,
                                       dynamics_matrix_A=matrix_A,
                                       dynamics_matrix_B=coeff_matrix_B,
                                       dynamics_coeff_matrix_U=poly_w[0],
@@ -622,7 +622,38 @@ class NonlinPostOpt:
             ret.append(Polyhedron(directions, sf_row))
         return ret
 
-    def scale_dynamics(self, d):
+    def get_scaling_configs(self, tube_lb, tube_ub):
+        # domain center
+        c = np.sum(self.abs_domain.bounds, axis=0) / 2
+
+        # compute derivative
+        deriv = self.nonlin_dyn.eval(c)
+
+        # get norm vector
+        norm = np.dot(deriv, deriv) ** 0.5
+        norm_vec = deriv / norm
+
+        # get the minimal distance between the domain center and the reachable set boundary
+        # along the normal vector direction.
+        p = self.get_pedal_point(norm_vec, tube_lb, tube_ub)
+
+        with open('../out/sca_cent.out', 'a') as opfile:
+            opfile.write(' '.join(str(elem) for elem in c.tolist()) + '\n')
+
+        with open('../out/pivots.out', 'a') as opfile:
+            opfile.write(' '.join(str(elem) for elem in p.tolist()) + '\n')
+
+        return norm_vec, p
+
+    @staticmethod
+    def get_pedal_point(l, tube_lb, tube_ub):
+        pos_clip = np.where(l >= 0, 1, 0)
+        neg_clip = np.where(l < 0, 1, 0)
+
+        pp = pos_clip * tube_ub + neg_clip * tube_lb
+        return pp
+
+    def scale_dynamics(self, norm_vec, p):
         """
         1. Compute center of the abstraction domain;
         2. Evaluate the derivative of the center as the normal vector (v) direction;
@@ -632,29 +663,8 @@ class NonlinPostOpt:
               of the image would have already crossed the surface while another part
               is left behind??)
         """
-        # 1. find domain center
-        if self.pseudo_var:
-            domain_center = np.sum(self.abs_domain.bounds[:, :-1], axis=0) / 2
-        else:
-            domain_center = np.sum(self.abs_domain.bounds, axis=0) / 2
-
-        # 2. derivative of the center is the eval of dynamics at the center
-        norm_vec = self.nonlin_dyn.eval(domain_center)
-
-        # 3. find a hyperline
-        # vanderpol
-        # d = 0.1
-
-        # buckling_column
-        # d = 0.1
-
-        # pbt
-        # d = 0.2
-        norm = np.dot(norm_vec, norm_vec) ** 0.5
-        norm_vec = norm_vec / norm
-
-        # scaling function -(a/||a||) \cdot x + b
-        p = domain_center + np.dot(norm_vec, d)
+        # # scaling function -(a/||a||) \cdot x + b
+        # p = domain_center + np.dot(norm_vec, d)
         b = np.dot(norm_vec, p)
 
         # a = norm_vec / norm
@@ -669,12 +679,24 @@ class NonlinPostOpt:
         for dyn in self.nonlin_dyn.dynamics:
             scaled_dynamics.append('({})*({})'.format(scaling_func_str, dyn))
 
-        print(scaled_dynamics)
-
-        with open('../out/pivots.out', 'a') as opfile:
-            opfile.write(' '.join(str(elem) for elem in p.tolist()) + '\n')
-
-        with open('../out/sca_cent.out', 'a') as opfile:
-            opfile.write(' '.join(str(elem) for elem in domain_center.tolist()) + '\n')
-
         return GeneralDynamics(self.id_to_vars, *scaled_dynamics)
+
+
+if __name__ == '__main__':
+    nlpost = NonlinPostOpt
+
+    # test get_pedal_point()
+    tube_lb = np.array([0, 0])
+    tube_ub = np.array([1, 1])
+    l = np.array([1, 0])
+    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 1])
+    l = np.array([1, 1])
+    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 1])
+    l = np.array([0.5, 1])
+    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 1])
+    l = np.array([-0.5, 1])
+    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [0, 1])
+    l = np.array([-0.5, -0.5])
+    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [0, 0])
+    l = np.array([0.5, -0.5])
+    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 0])

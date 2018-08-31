@@ -23,7 +23,7 @@ def main():
     try:
         path = sys.argv[1]
     except IndexError:
-        # path = '../instances/non_linear_instances/vanderpol.json'
+        path = '../instances/non_linear_instances/vanderpol.json'
         # path = '../instances/non_linear_instances/predator_prey.json'
         # path = '../instances/non_linear_instances/2d_water_tank.json'
         # path = '../instances/non_linear_instances/brusselator.json'
@@ -40,7 +40,7 @@ def main():
         # path = '../instances/non_linear_instances/lorentz_system.json'
         # path = '../instances/non_linear_instances/biology_1.json'
         # path = '../instances/non_linear_instances/biology_2.json'
-        path = '../instances/non_linear_instances/laub_loomis.json'
+        # path = '../instances/non_linear_instances/laub_loomis.json'
 
     model_name = path.split('/')[-1].split('.')[0]
     print('reading model file: {}'.format(model_name))
@@ -70,8 +70,19 @@ def main():
 
     # ============== start flowpipe construction. ============== #
     np.set_printoptions(precision=100)
-    nonlin_post_opt = NonlinPostOpt(dim, non_linear_dynamics, time_horizon, tau, directions,
-                                    init_coeff, init_col, is_linear, start_epsilon, pseudo_var, id_to_vars)
+    # def __init__(self, dim, nonlin_dyn, time_horizon, tau, directions,
+    #              init_mat_X0, init_col_X0, is_linear, start_epsilon, pseudo_var, id_to_vars):
+    nonlin_post_opt = NonlinPostOpt(dim=dim,
+                                    nonlin_dyn=non_linear_dynamics,
+                                    time_horizon=time_horizon,
+                                    tau=tau,
+                                    init_coeff=init_coeff,
+                                    init_col=init_col,
+                                    is_linear=is_linear,
+                                    directions=directions,
+                                    start_epsilon=start_epsilon,
+                                    pseudo_var=pseudo_var,
+                                    id_to_vars=id_to_vars)
     sf_mat = nonlin_post_opt.compute_post()
     # ============== Flowpipe construction done. ============== #
 

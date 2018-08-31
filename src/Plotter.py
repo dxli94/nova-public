@@ -68,8 +68,8 @@ class Plotter:
             # print('Finished. \nStart plotting...')
 
             i = 0
-            stepsize = max(len(vertices_sorted) // 50, 1)
-            # stepsize = min(len(vertices_sorted) // 50, 1)
+            # stepsize = max(len(vertices_sorted) // 50, 1)
+            stepsize = 1
 
             for vertices in vertices_sorted:
                 if i % stepsize == 0:
@@ -129,7 +129,7 @@ class Plotter:
         ax.set_xlabel('$x_{}$'.format(xlabel))
         ax.set_ylabel('$x_{}$'.format(ylabel))
 
-        plt.plot(x, y, color=color, ls=linestyles, lw=linewidths)
+        plt.plot(x, y, color=color, ls=linestyles, lw=linewidths, alpha=0.5)
         plt.autoscale(enable=True)
 
     @staticmethod
@@ -153,7 +153,7 @@ class Plotter:
         except FileNotFoundError:
             print('File does not exist %s' % ipfile_path)
 
-        plt.plot(x, y, 'o', color=color, markersize=8)
+        plt.plot(x, y, 'o', color=color, markersize=8, alpha=0.5)
         plt.autoscale(enable=True)
 
 
