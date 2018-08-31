@@ -180,11 +180,11 @@ def biology_2_deriv(x, t):
 def laub_loomis_deriv(x, t):
     nx0 = 1.4 * x[2] - 0.9 * x[0]
     nx1 = 2.5 * x[4] - 1.5 * x[1]
-    nx2 = 0.6 * x[7] - 0.8 * x[2] * x[1]
+    nx2 = 0.6 * x[6] - 0.8 * x[2] * x[1]
     nx3 = 2 - 1.3 * x[3] * x[2]
     nx4 = 0.7 * x[0] - x[3] * x[4]
     nx5 = 0.3 * x[0] - 3.1 * x[5]
-    nx6 = 1.8 * x[5] - 1.5 * x[7] * x[1]
+    nx6 = 1.8 * x[5] - 1.5 * x[6] * x[1]
 
     res = np.array([nx0, nx1, nx2, nx3, nx4, nx5, nx6])
     return res
@@ -234,7 +234,8 @@ def simulate_one_run(horizon, model, init_point):
 def simulate(horizon, model, init_coeff, init_col):
     from ConvexSet.Polyhedron import Polyhedron
     vertices = Polyhedron(init_coeff, init_col).get_vertices()
-    center = np.average(vertices, axis=0)
+    # center = np.average(vertices, axis=0)
+    center = vertices[-1]
     print('simulate starting point is: {}'.format(center))
     return simulate_one_run(horizon, model, center)
 
