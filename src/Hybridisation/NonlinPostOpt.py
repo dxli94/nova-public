@@ -17,6 +17,8 @@ class reachParams:
         self.delta = delta
         self.tau = tau
 
+# class stateHolder:
+
 
 def get_canno_dir_indices(directions):
     ub_indices = []
@@ -132,14 +134,14 @@ class NonlinPostOpt:
         epsilon = self.start_epsilon
         i = 0
         # current_input_lb, current_input_ub = self.hybridize(bbox)
+        ct = 0
+        current_vol = 1e10
 
-        j = -1
-
-        time_scaling_on = True
-        if time_scaling_on:
+        use_time_scaling = False
+        if use_time_scaling:
             scaled = False
             # # vanderpol. time step = 0.01, d=0.2
-            # dwell_from = [200, 650]
+            dwell_from = [200, 650]
             # dwell_steps = [100, 100]
 
             # vanderpol, time step = 0.03, small init [1.25, 1.55], [2.28, 2.32]
@@ -158,8 +160,8 @@ class NonlinPostOpt:
             # d = [0.1, 0.1]
 
             # coupled vanderpol, time step = 0.005
-            dwell_from = [400, 1150]
-            dwell_steps = [200, 200]
+            # dwell_from = [400, 1150]
+            # dwell_steps = [200, 200]
             # d = [0.2, 0.2]
 
             # coupled vanderpol, time step = 0.01
@@ -190,8 +192,8 @@ class NonlinPostOpt:
             # dwell_steps = [50]
             # d = [5]
 
-            # pbt
-            # dwell_from = [700, 1400, 1700]
+            # pbt (wrong)
+            # dwell_from = [300, 1400, 1700]
             # dwell_steps = [400, 200, 1000]
             # d = [0.3, 0.3, 0.3]
 
@@ -201,12 +203,14 @@ class NonlinPostOpt:
             # d = [0.3]
 
         else:
+            dwell_from = []
             dwell_steps = [0]
 
         total_walltime = 0
         start_walltime = time.time()
 
-        sf_mat = np.zeros((time_frames + sum(dwell_steps), self.template_directions.shape[0]))
+        # sf_mat = np.zeros((time_frames + sum(dwell_steps), self.template_directions.shape[0]))
+        sf_mat = []
 
         while i < time_frames:
             bbox = self.refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_ub)
@@ -231,6 +235,9 @@ class NonlinPostOpt:
             if hyperbox_contain_by_bounds(self.abs_domain.bounds, [temp_tube_lb, temp_tube_ub]):
                 tube_lb, tube_ub = temp_tube_lb, temp_tube_ub
 
+                prev_vol = current_vol
+                current_vol = self.compute_vol(current_init_set_lb, current_input_ub)
+
                 phi_list = self.update_phi_list(phi_list)
                 input_lb_seq, input_ub_seq = self.update_wb_seq(input_lb_seq, input_ub_seq,
                                                                 current_input_lb, current_input_ub)
@@ -245,7 +252,8 @@ class NonlinPostOpt:
                 current_init_set_lb, current_init_set_ub = next_init_set_lb, next_init_set_ub
 
                 #                 sf_mat[i] = np.append(next_init_set_lb, next_init_set_ub)
-                sf_mat[i] = next_init_sf
+                # sf_mat[i] = next_init_sf
+                sf_mat.append(next_init_sf)
                 # epsilon = self.start_epsilon
                 epsilon /= 4
 
@@ -259,11 +267,12 @@ class NonlinPostOpt:
                                                                    total_walltime))
                     start_walltime = now
 
-                if time_scaling_on:
-                    if i in dwell_from:
+                if use_time_scaling:
+                    flag_scaling = i in dwell_from
+                    if flag_scaling:
                         print('start time scaling at step {}'.format(i))
-                        idx = dwell_from.index(i)
-                        j = dwell_steps[idx]  # number of steps dwelling in time scaling mode
+                        # idx = dwell_from.index(i)
+                        # j = dwell_steps[idx]  # number of steps dwelling in time scaling mode
                         scaling_config = self.get_scaling_configs(tube_lb, tube_ub)
                         self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
                         self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
@@ -272,17 +281,23 @@ class NonlinPostOpt:
 
                     if scaled:
                         time_frames += 1
-                        j -= 1
-                        if j == 0:
+                        stop_scaling = current_vol > prev_vol and not flag_scaling
+                        if stop_scaling:
                             self.dyn_linearizer.set_nonlin_dyn(self.nonlin_dyn)
                             self.dyn_linearizer.is_scaled = False
                             scaled = False
+
+                            print('stopped at {} scaling steps'.format(ct))
+                            ct = 0
+                        else:
+                            ct += 1
+                            # print(ct)
 
         print('Completed flowpipe computation in {:.2f} secs.\n'.format(total_walltime))
         Timers.toc('total')
         Timers.print_stats()
 
-        return sf_mat
+        return np.array(sf_mat)
 
     def hybridize(self, bbox):
         if self.pseudo_var:
@@ -627,6 +642,7 @@ class NonlinPostOpt:
         c = np.sum(self.abs_domain.bounds, axis=0) / 2
 
         # compute derivative
+        print(self.nonlin_dyn.str_rep)
         deriv = self.nonlin_dyn.eval(c)
 
         # get norm vector
@@ -652,6 +668,11 @@ class NonlinPostOpt:
 
         pp = pos_clip * tube_ub + neg_clip * tube_lb
         return pp
+
+    @staticmethod
+    def compute_vol(tube_lb, tube_ub):
+        widths = tube_ub - tube_lb
+        return np.prod(widths)
 
     def scale_dynamics(self, norm_vec, p):
         """
@@ -680,7 +701,6 @@ class NonlinPostOpt:
             scaled_dynamics.append('({})*({})'.format(scaling_func_str, dyn))
 
         return GeneralDynamics(self.id_to_vars, *scaled_dynamics)
-
 
 if __name__ == '__main__':
     nlpost = NonlinPostOpt
