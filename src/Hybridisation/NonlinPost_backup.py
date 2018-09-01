@@ -17,7 +17,7 @@ class reachParams:
         self.delta = delta
         self.tau = tau
 
-# class stateHolder:
+
 
 
 def get_canno_dir_indices(directions):
@@ -72,6 +72,9 @@ class NonlinPostOpt:
         self.poly_U = None
         self.reach_params = reachParams()
 
+        self.prev_state = None
+        self.current_state = None
+
         self.scaled_nonlin_dyn = None
 
         self.lp_solver = GlpkWrapper(dim)
@@ -79,30 +82,32 @@ class NonlinPostOpt:
         self.pseudo_var = pseudo_var
 
         # add initialization for psedo-variable
-        if self.pseudo_var:
-            self.pseudo_dim = self.dim + 1
-
-            self.init_coeff = np.hstack((self.init_coeff, np.zeros(shape=(self.init_coeff.shape[0], 1))))
-
-            temp_coeff_pos = np.zeros(self.pseudo_dim)
-            temp_coeff_pos[self.pseudo_dim - 1] = 1
-            temp_col_pos = np.ones(1)
-
-            temp_coeff_neg = np.zeros(self.pseudo_dim)
-            temp_coeff_neg[self.pseudo_dim - 1] = -1
-            temp_col_neg = -np.ones(1)
-
-            self.init_coeff = np.vstack((self.init_coeff, temp_coeff_neg, temp_coeff_pos))
-            self.init_col = np.vstack((self.init_col, temp_col_neg, temp_col_pos))
-
-            self.lp_solver_on_pseudo_dim = GlpkWrapper(self.pseudo_dim)
-
-            # add a zero column for all directions
-            self.template_directions = np.hstack(
-                (self.template_directions, np.zeros((self.template_directions.shape[0], 1))))
-        else:
-            self.pseudo_dim = self.dim
-            self.lp_solver_on_pseudo_dim = GlpkWrapper(self.dim)
+        # if self.pseudo_var:
+        #     self.pseudo_dim = self.dim + 1
+        #
+        #     self.init_coeff = np.hstack((self.init_coeff, np.zeros(shape=(self.init_coeff.shape[0], 1))))
+        #
+        #     temp_coeff_pos = np.zeros(self.pseudo_dim)
+        #     temp_coeff_pos[self.pseudo_dim - 1] = 1
+        #     temp_col_pos = np.ones(1)
+        #
+        #     temp_coeff_neg = np.zeros(self.pseudo_dim)
+        #     temp_coeff_neg[self.pseudo_dim - 1] = -1
+        #     temp_col_neg = -np.ones(1)
+        #
+        #     self.init_coeff = np.vstack((self.init_coeff, temp_coeff_neg, temp_coeff_pos))
+        #     self.init_col = np.vstack((self.init_col, temp_col_neg, temp_col_pos))
+        #
+        #     self.lp_solver_on_pseudo_dim = GlpkWrapper(self.pseudo_dim)
+        #
+        #     # add a zero column for all directions
+        #     self.template_directions = np.hstack(
+        #         (self.template_directions, np.zeros((self.template_directions.shape[0], 1))))
+        # else:
+        #     self.pseudo_dim = self.dim
+        #     self.lp_solver_on_pseudo_dim = GlpkWrapper(self.dim)
+        self.pseudo_dim = self.dim
+        self.lp_solver_on_pseudo_dim = GlpkWrapper(self.dim)
 
     def compute_post(self):
 
@@ -116,16 +121,18 @@ class NonlinPostOpt:
         init_set_ub = np.amax(vertices, axis=0)
 
         # reachable states in dense time
-        tube_lb, tube_ub = init_set_lb, init_set_ub
-        # temporary variables for reachable states in dense time
-        temp_tube_lb, temp_tube_ub = init_set_lb, init_set_ub
-        # initial reachable set in discrete time in the current abstract domain
-        # changes when the abstract domain is large enough to contain next image in alfa step
-        current_init_set_lb, current_init_set_ub = init_set_lb, init_set_ub
+        # tube_lb, tube_ub = init_set_lb, init_set_ub
+        # # temporary variables for reachable states in dense time
+        # temp_tube_lb, temp_tube_ub = init_set_lb, init_set_ub
+        # # initial reachable set in discrete time in the current abstract domain
+        # # changes when the abstract domain is large enough to contain next image in alfa step
+        # current_init_set_lb, current_init_set_ub = init_set_lb, init_set_ub
+        #
+        # input_lb_seq, input_ub_seq = init_set_lb, init_set_ub
+        #
+        # phi_list = []
 
-        input_lb_seq, input_ub_seq = init_set_lb, init_set_ub
-
-        phi_list = []
+        self.current_state = stateHolder(init_set_lb, init_set_ub)
 
         # B := \bb(X0)
         bbox = HyperBox(init_poly.vertices)
@@ -141,7 +148,7 @@ class NonlinPostOpt:
         if use_time_scaling:
             scaled = False
             # # vanderpol. time step = 0.01, d=0.2
-            dwell_from = [200]#, 650]
+            dwell_from = [200, 650]
             # dwell_steps = [100, 100]
 
             # vanderpol, time step = 0.03, small init [1.25, 1.55], [2.28, 2.32]
@@ -175,7 +182,7 @@ class NonlinPostOpt:
             # d = [0.3]
 
             # buckling_column. time step = 0.01
-            # dwell_from = [50, 200, 700, 1100]
+            # dwell_from = [50, 340, 1000]  # , 700, 1100]
             # dwell_steps = [100, 100, 100, 100]
             # d = [0.2, 0.2, 0.2, 0.2]
 
@@ -204,7 +211,6 @@ class NonlinPostOpt:
 
         else:
             dwell_from = []
-            dwell_steps = [0]
 
         total_walltime = 0
         start_walltime = time.time()
@@ -213,43 +219,42 @@ class NonlinPostOpt:
         sf_mat = []
 
         while i < time_frames:
-            bbox = self.refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_ub)
+            bbox = self.refine_domain()
             bbox.bloat(epsilon)
 
             Timers.tic('hybridize')
-            current_input_lb, current_input_ub = self.hybridize(bbox)
+            self.hybridize(bbox)
             Timers.toc('hybridize')
             epsilon *= 2
 
             # P_{i+1} := \alpha(X_{i})
-            temp_tube_lb, temp_tube_ub = self.compute_alpha_step(current_init_set_lb,
-                                                                 current_init_set_ub,
-                                                                 current_input_lb,
-                                                                 current_input_ub)
+            self.compute_alpha_step()
 
-            if any(np.abs(temp_tube_lb) >= self.max_tolerance) or any(np.abs(temp_tube_ub) >= self.max_tolerance):
+            if any(np.abs(self.current_state.temp_tube_lb) >= self.max_tolerance) or any(np.abs(self.current_state.temp_tube_ub) >= self.max_tolerance):
                 print('Computation not completed after {} iterations. Abort now.'.format(i))
                 break
 
             # if P_{i+1} \subset B
-            if hyperbox_contain_by_bounds(self.abs_domain.bounds, [temp_tube_lb, temp_tube_ub]):
-                tube_lb, tube_ub = temp_tube_lb, temp_tube_ub
+            if hyperbox_contain_by_bounds(self.abs_domain.bounds, [self.current_state.temp_tube_lb, self.current_state.temp_tube_ub]):
+                # tube_lb, tube_ub = temp_tube_lb, temp_tube_ub
+                self.current_state.set_tube_bounds()
 
                 prev_vol = current_vol
-                current_vol = self.compute_vol(current_init_set_lb, current_input_ub)
+                current_vol = self.current_state.compute_vol()
 
-                phi_list = self.update_phi_list(phi_list)
-                input_lb_seq, input_ub_seq = self.update_wb_seq(input_lb_seq, input_ub_seq,
-                                                                current_input_lb, current_input_ub)
+                self.current_state.update_phi_list(self.abs_dynamics, self.tau)
+                self.current_state.update_input_seq(self.abs_dynamics, self.tau, self.reach_params.beta)
 
-                next_init_sf = self.compute_gamma_step(input_lb_seq, input_ub_seq, phi_list)
-                next_init_set_lb, next_init_set_ub = extract_bounds_from_sf(next_init_sf, self.canno_dir_indices)
-                if self.pseudo_var:
-                    next_init_set_lb = np.hstack((next_init_set_lb, 1))
-                    next_init_set_ub = np.hstack((next_init_set_ub, 1))
+                next_init_sf = self.compute_gamma_step()
+                init_bounds = extract_bounds_from_sf(next_init_sf, self.canno_dir_indices)
+                self.current_state.set_current_init_bounds(*init_bounds)
+
+                # if self.pseudo_var:
+                #     next_init_set_lb = np.hstack((next_init_set_lb, 1))
+                #     next_init_set_ub = np.hstack((next_init_set_ub, 1))
 
                 # initial reachable set in discrete time
-                current_init_set_lb, current_init_set_ub = next_init_set_lb, next_init_set_ub
+                # current_init_set_lb, current_init_set_ub = next_init_set_lb, next_init_set_ub
 
                 #                 sf_mat[i] = np.append(next_init_set_lb, next_init_set_ub)
                 # sf_mat[i] = next_init_sf
@@ -263,7 +268,8 @@ class NonlinPostOpt:
                     walltime_elapsed = now - start_walltime
                     total_walltime += walltime_elapsed
                     print('{} / {} steps ({:.2f}%) completed in {:.2f} secs. '
-                          'Total time elapsed: {:.2f} secs'.format(i, time_frames, 100 * i / time_frames, walltime_elapsed,
+                          'Total time elapsed: {:.2f} secs'.format(i, time_frames, 100 * i / time_frames,
+                                                                   walltime_elapsed,
                                                                    total_walltime))
                     start_walltime = now
 
@@ -271,9 +277,8 @@ class NonlinPostOpt:
                     flag_scaling = i in dwell_from
                     if flag_scaling:
                         print('start time scaling at step {}'.format(i))
-                        # idx = dwell_from.index(i)
                         # j = dwell_steps[idx]  # number of steps dwelling in time scaling mode
-                        scaling_config = self.get_scaling_configs(tube_lb, tube_ub)
+                        scaling_config = self.get_scaling_configs(self.current_state.tube_lb, self.current_state.tube_ub)
                         self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
                         self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
                         self.dyn_linearizer.is_scaled = True
@@ -331,9 +336,9 @@ class NonlinPostOpt:
         err_lb = np.amin(vertices, axis=0)
         err_ub = np.amax(vertices, axis=0)
 
-        return err_lb, err_ub
+        self.current_state.set_input_bounds(err_lb, err_ub)
 
-    def compute_alpha_step(self, Xi_lb, Xi_ub, Vi_lb, Vi_ub):
+    def compute_alpha_step(self):
         """
         When we have a new abstraction domain, the dynamic changes. To
         preserve the conservativeness, we cannot simply repeat beta step
@@ -345,12 +350,18 @@ class NonlinPostOpt:
 
         Ω0 = CH(Xi, e^Aτ · Xi ⊕ τV ⊕ α_τ·B)
 
-        :param Xi_lb: lower bounds of discrete reachable set at t_new in the current (i-th) domain
-        :param Xi_ub: upper bounds of discrete reachable set at t_new in the current (i-th) domain
-        :param Vi_lb: lower bounds of input set in the current (i-th) domain (linearization error)
-        :param Vi_ub: upper bounds of input set in the current (i-th) domain (linearization error)
         :return:
         """
+        # Xi_lb: lower bounds of discrete reachable set at t_new in the current (i-th) domain
+        # Xi_ub: upper bounds of discrete reachable set at t_new in the current (i-th) domain
+        # Vi_lb: lower bounds of input set in the current (i-th) domain (linearization error)
+        # Vi_ub: upper bounds of input set in the current (i-th) domain (linearization error)
+
+        Xi_lb, Xi_ub, Vi_lb, Vi_ub = self.current_state.current_init_set_lb, \
+                                     self.current_state.current_init_set_ub, \
+                                     self.current_state.current_input_lb, \
+                                     self.current_state.current_input_ub
+
         reach_tube_lb = np.empty(self.pseudo_dim)
         reach_tube_ub = np.empty(self.pseudo_dim)
 
@@ -377,11 +388,12 @@ class NonlinPostOpt:
         reach_tube_lb = np.amin([Xi_lb, reach_tube_lb], axis=0)
         reach_tube_ub = np.amax([Xi_ub, reach_tube_ub], axis=0)
 
-        if self.pseudo_var:
-            reach_tube_lb[self.pseudo_dim - 1] = 1
-            reach_tube_ub[self.pseudo_dim - 1] = 1
+        self.current_state.set_temp_tube_bounds(reach_tube_lb, reach_tube_ub)
+        # if self.pseudo_var:
+        #     reach_tube_lb[self.pseudo_dim - 1] = 1
+        #     reach_tube_ub[self.pseudo_dim - 1] = 1
 
-        return reach_tube_lb, reach_tube_ub
+        # return reach_tube_lb, reach_tube_ub
 
     # def compute_beta_step(self, omega_lb, omega_ub, input_lb_seq, input_ub_seq, phi_list, i, last_alpha_iter):
     #     """
@@ -436,7 +448,7 @@ class NonlinPostOpt:
     #
     #     return res_lb, res_ub
 
-    def compute_gamma_step(self, input_lb_seq, input_ub_seq, phi_list):
+    def compute_gamma_step(self):
         """
         Compute X_i from X0. The sequence of X is the discrete time
         reachable set at particular time points. Namely, X_i is the
@@ -465,10 +477,12 @@ class NonlinPostOpt:
                  res_ub: upper bounds of X_i
         """
 
-        sf_vec = np.empty(self.template_directions.shape[0])
+        input_lb_seq, input_ub_seq, phi_list = self.current_state.input_lb_seq, self.current_state.input_ub_seq, self.current_state.phi_list
 
+        sf_vec = np.empty(self.template_directions.shape[0])
         input_bounds = np.array([input_lb_seq, input_ub_seq]).T
 
+        # todo could be parallized
         for idx, l in enumerate(self.template_directions):
             '''
             Multiply each phi product in phi_list with the direction, then get a list of new directions.
@@ -526,53 +540,38 @@ class NonlinPostOpt:
 
         return sf_vec
 
-    def update_phi_list(self, phi_list):
-        """
-        phi_list contains the product of delta_transpose.
-        After n-times update, phi_list looks like this:
-        [ Φ_{n}^T Φ_{n-1}^T … Φ_{1}^T, Φ_{n-1}^T … Φ_{1}^T, ..., Φ_{1}^T]
-        """
-        dyn_coeff_mat = self.abs_dynamics.get_dyn_coeff_matrix_A()
-        delta = SuppFuncUtils.mat_exp(dyn_coeff_mat, self.tau)
-        delta_T = delta.T
+        # def update_phi_list(self, phi_list):
+        #     """
+        #     phi_list contains the product of delta_transpose.
+        #     After n-times update, phi_list looks like this:
+        #     [ Φ_{n}^T Φ_{n-1}^T … Φ_{1}^T, Φ_{n-1}^T … Φ_{1}^T, ..., Φ_{1}^T]
+        #     """
+        #     dyn_coeff_mat = self.abs_dynamics.get_dyn_coeff_matrix_A()
+        #     delta = SuppFuncUtils.mat_exp(dyn_coeff_mat, self.tau)
+        #     delta_T = delta.T
+        #
+        #     # print('delta_T: {}'.format(delta_T))
+        #     # print('original phi_list: {}'.format(phi_list))
+        #
+        #     if len(phi_list) == 0:
+        #         phi_list = np.array([delta_T])
+        #     else:
+        #         phi_list = np.tensordot(phi_list, delta_T, axes=(2, 0))
+        #     phi_list = np.vstack((phi_list, [np.eye(self.pseudo_dim)]))
+        #
+        #     # print('after tensordot phi_list: {}'.format(phi_list))
+        #     # print('\n')
+        #     return phi_list
 
-        # print('delta_T: {}'.format(delta_T))
-        # print('original phi_list: {}'.format(phi_list))
-
-        if len(phi_list) == 0:
-            phi_list = np.array([delta_T])
-        else:
-            phi_list = np.tensordot(phi_list, delta_T, axes=(2, 0))
-        phi_list = np.vstack((phi_list, [np.eye(self.pseudo_dim)]))
-
-        # print('after tensordot phi_list: {}'.format(phi_list))
-        # print('\n')
-        return phi_list
-
-    # def update_wb_seq(self, lb, ub, next_lb, next_ub):
-    #     """
-    #      W_{i} = τV_{i} ⊕ β_{i}·B
-    #     """
-    #     next_lb = next_lb * self.tau - self.reach_params.beta
-    #     next_ub = next_ub * self.tau + self.reach_params.beta
-    #
-    #     return np.append(lb, next_lb), np.append(ub, next_ub)
+        # def update_wb_seq(self, lb, ub, next_lb, next_ub):
+        #     """
+        #      W_{i} = τV_{i} ⊕ β_{i}·B
+        #     """
+        #     next_lb = next_lb * self.tau - self.reach_params.beta
+        #     next_ub = next_ub * self.tau + self.reach_params.beta
+        #
+        #     return np.append(lb, next_lb), np.append(ub, next_ub)
         # return np.vstack((lb, next_lb)), np.vstack((ub, next_ub))
-
-    def update_wb_seq(self, lb_seq, ub_seq, next_lb, next_ub):
-        """
-         W_{i} = τV_{i} ⊕ τd ⊕ β_{i}·B, where d = (1/τ) * \int_{0}^{τ}[(e^(τ-s)A-I)c]ds.
-         c is the center of the boxed uncertainty region.
-        """
-        c = (next_lb + next_ub) / 2
-        A = self.abs_dynamics.get_dyn_coeff_matrix_A()
-        M = SuppFuncUtils.mat_exp_int(A, t_min=0, t_max=self.tau)
-        tau_d = np.dot(M, c)
-
-        next_lb = next_lb * self.tau - self.reach_params.beta + tau_d
-        next_ub = next_ub * self.tau + self.reach_params.beta + tau_d
-
-        return np.append(lb_seq, next_lb), np.append(ub_seq, next_ub)
 
     def set_abs_dynamics(self, matrix_A, poly_w, c):
         if self.pseudo_var:
@@ -604,9 +603,9 @@ class NonlinPostOpt:
     def set_abs_domain(self, abs_domain):
         self.abs_domain = abs_domain
 
-    def refine_domain(self, tube_lb, tube_ub, temp_tube_lb, temp_tube_ub):
-        bbox_lb = np.amin([tube_lb, temp_tube_lb], axis=0)
-        bbox_ub = np.amax([tube_ub, temp_tube_ub], axis=0)
+    def refine_domain(self):
+        bbox_lb = np.amin([self.current_state.tube_lb, self.current_state.temp_tube_lb], axis=0)
+        bbox_ub = np.amax([self.current_state.tube_ub, self.current_state.temp_tube_ub], axis=0)
         bbox = HyperBox([bbox_lb, bbox_ub])
 
         return bbox
@@ -614,43 +613,18 @@ class NonlinPostOpt:
     def update_input_bounds_seq(self, ub, lb, next_ub, next_lb):
         return np.append(lb, next_lb), np.append(ub, next_ub)
 
-    def get_projections(self, directions, opdims, sf_mat):
-        # " sloppy implementation, change later on"
-        #
-        # directions = np.array([[-1, 0], [0, -1], [1, 0], [0, 1]])
-        # ret = []
-        #
-        # for sf_row in sf_mat:
-        #     sf_row = np.multiply(sf_row, [-1, -1, 1, 1]).reshape(sf_row.shape[0], 1)
-        #     ret.append(Polyhedron(directions, sf_row))
-        #     # exit()
-        # return ret
-
-        " sloppy implementation, change later on"
-        directions = np.array([[-1, 0], [0, -1], [1, 0], [0, 1]])
-        ret = []
-
-        for sf_row in sf_mat:
-            sf_row = sf_row.reshape(2, -1)[:, 0:-1]
-            sf_row = sf_row.reshape(1, -1).flatten()
-            sf_row = np.multiply(sf_row, [-1, -1, 1, 1]).reshape(sf_row.shape[0], 1)
-            ret.append(Polyhedron(directions, sf_row))
-        return ret
-
     def get_scaling_configs(self, tube_lb, tube_ub):
-        # domain center
+        # compute domain center
         c = np.sum(self.abs_domain.bounds, axis=0) / 2
 
         # compute derivative
-        print(self.nonlin_dyn.str_rep)
         deriv = self.nonlin_dyn.eval(c)
 
         # get norm vector
         norm = np.dot(deriv, deriv) ** 0.5
         norm_vec = deriv / norm
 
-        # get the minimal distance between the domain center and the reachable set boundary
-        # along the normal vector direction.
+        # get pedal point of the normal vec and reachable set
         p = self.get_pedal_point(norm_vec, tube_lb, tube_ub)
 
         with open('../out/sca_cent.out', 'a') as opfile:
@@ -669,27 +643,19 @@ class NonlinPostOpt:
         pp = pos_clip * tube_ub + neg_clip * tube_lb
         return pp
 
-    @staticmethod
-    def compute_vol(tube_lb, tube_ub):
-        widths = tube_ub - tube_lb
-        return np.prod(widths)
-
     def scale_dynamics(self, norm_vec, p):
         """
-        1. Compute center of the abstraction domain;
-        2. Evaluate the derivative of the center as the normal vector (v) direction;
-        3. Decide on a hyperline, such that
-           1) perpendicular to v;
-           2) some distance ahead; such distance should be far enough (otherwise a part
-              of the image would have already crossed the surface while another part
-              is left behind??)
+            Scale the dynamics by a mutiplier of distance to a hyperplane defined by norm_vec and p.
+
+            :param norm_vec: the normalised normal vector of the hyperplane.
+            :param p: a point on the hyperplane.
         """
-        # # scaling function -(a/||a||) \cdot x + b
-        # p = domain_center + np.dot(norm_vec, d)
+        # # scaling function (-a \cdot x + b) / ||a||
         b = np.dot(norm_vec, p)
 
-        # a = norm_vec / norm
-        a_prime = [-elem for elem in norm_vec]
+        # a' = -a / ||a||
+        # a_prime = [-elem for elem in norm_vec]
+        a_prime = -norm_vec
 
         scaling_func_str = ''
         for idx, elem in enumerate(a_prime):
@@ -700,23 +666,26 @@ class NonlinPostOpt:
         for dyn in self.nonlin_dyn.dynamics:
             scaled_dynamics.append('({})*({})'.format(scaling_func_str, dyn))
 
+        # todo instead of creating a new dyanmics, maybe just to update the dynamics string to avoid instantiating
         return GeneralDynamics(self.id_to_vars, *scaled_dynamics)
 
-if __name__ == '__main__':
-    nlpost = NonlinPostOpt
 
-    # test get_pedal_point()
-    tube_lb = np.array([0, 0])
-    tube_ub = np.array([1, 1])
-    l = np.array([1, 0])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 1])
-    l = np.array([1, 1])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 1])
-    l = np.array([0.5, 1])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 1])
-    l = np.array([-0.5, 1])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [0, 1])
-    l = np.array([-0.5, -0.5])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [0, 0])
-    l = np.array([0.5, -0.5])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 0])
+if __name__ == '__main__':
+    pass
+    # nlpost = NonlinPostOpt
+    #
+    # # test get_pedal_point()
+    # tube_lb = np.array([0, 0])
+    # tube_ub = np.array([1, 1])
+    # l = np.array([1, 0])
+    # np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 1])
+    # l = np.array([1, 1])
+    # np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 1])
+    # l = np.array([0.5, 1])
+    # np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 1])
+    # l = np.array([-0.5, 1])
+    # np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [0, 1])
+    # l = np.array([-0.5, -0.5])
+    # np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [0, 0])
+    # l = np.array([0.5, -0.5])
+    # np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 0])

@@ -23,7 +23,7 @@ def main():
     try:
         path = sys.argv[1]
     except IndexError:
-        # path = '../instances/non_linear_instances/vanderpol.json'
+        path = '../instances/non_linear_instances/vanderpol.json'
         # path = '../instances/non_linear_instances/predator_prey.json'
         # path = '../instances/non_linear_instances/2d_water_tank.json'
         # path = '../instances/non_linear_instances/brusselator.json'
@@ -35,7 +35,7 @@ def main():
         # path = '../instances/non_linear_instances/pbt_y.json'
         # path = '../instances/non_linear_instances/lacoperon.json'
         # path = '../instances/non_linear_instances/roessler_attractor.json'
-        path = '../instances/non_linear_instances/coupled_vanderpol.json'
+        # path = '../instances/non_linear_instances/coupled_vanderpol.json'
         # path = '../instances/non_linear_instances/spring_pendulum.json'
         # path = '../instances/non_linear_instances/lorentz_system.json'
         # path = '../instances/non_linear_instances/biology_1.json'
