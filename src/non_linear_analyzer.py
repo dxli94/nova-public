@@ -23,7 +23,7 @@ def main():
     try:
         path = sys.argv[1]
     except IndexError:
-        # path = '../instances/non_linear_instances/vanderpol.json'
+        path = '../instances/non_linear_instances/vanderpol.json'
         # path = '../instances/non_linear_instances/predator_prey.json'
         # path = '../instances/non_linear_instances/2d_water_tank.json'
         # path = '../instances/non_linear_instances/brusselator.json'
@@ -40,7 +40,7 @@ def main():
         # path = '../instances/non_linear_instances/lorentz_system.json'
         # path = '../instances/non_linear_instances/biology_1.json'
         # path = '../instances/non_linear_instances/biology_2.json'
-        path = '../instances/non_linear_instances/laub_loomis.json'
+        # path = '../instances/non_linear_instances/laub_loomis.json'
 
     model_name = path.split('/')[-1].split('.')[0]
     print('reading model file: {}'.format(model_name))
