@@ -23,7 +23,7 @@ def main():
     try:
         path = sys.argv[1]
     except IndexError:
-        path = '../instances/non_linear_instances/vanderpol.json'
+        # path = '../instances/non_linear_instances/vanderpol.json'
         # path = '../instances/non_linear_instances/predator_prey.json'
         # path = '../instances/non_linear_instances/2d_water_tank.json'
         # path = '../instances/non_linear_instances/brusselator.json'
@@ -36,7 +36,7 @@ def main():
         # path = '../instances/non_linear_instances/lacoperon.json'
         # path = '../instances/non_linear_instances/roessler_attractor.json'
         # path = '../instances/non_linear_instances/coupled_vanderpol.json'
-        # path = '../instances/non_linear_instances/spring_pendulum.json'
+        path = '../instances/non_linear_instances/spring_pendulum.json'
         # path = '../instances/non_linear_instances/lorentz_system.json'
         # path = '../instances/non_linear_instances/biology_1.json'
         # path = '../instances/non_linear_instances/biology_2.json'
@@ -58,7 +58,10 @@ def main():
     init_col = np.array(data['init_col'])
     opdims = data['opvars']
     simu_model = data['simu_model']
-    pseudo_var = data['pseudo_var']
+    # pseudo_var = data['pseudo_var']
+    pseudo_var = False
+    scaling_per = data['scaling_per']
+    scaling_cutoff = data['scaling_cutoff']
 
     directions = SuppFuncUtils.generate_directions(direction_type, dim)
 
@@ -82,6 +85,8 @@ def main():
                                     directions=directions,
                                     start_epsilon=start_epsilon,
                                     pseudo_var=pseudo_var,
+                                    scaling_per=scaling_per,
+                                    scaling_cutoff=scaling_cutoff,
                                     id_to_vars=id_to_vars)
     sf_mat = nonlin_post_opt.compute_post()
     # ============== Flowpipe construction done. ============== #

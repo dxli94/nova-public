@@ -46,6 +46,8 @@
         "x3"
     ],
     "time_horizon": 7,
+    "scaling_per": 0.1,
+    "scaling_cutoff": 1e-2,
     "pseudo_var": false,
     "simu_model": "coupled_vanderpol"
 }

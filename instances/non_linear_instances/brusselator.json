@@ -53,6 +53,8 @@
         "x1"
     ],
     "time_horizon": 12,
-    "pseudo_var": true,
+    "pseudo_var": false,
+    "scaling_per": 0.1,
+    "scaling_cutoff": 1e-3,
     "simu_model": "brusselator"
 }

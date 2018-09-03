@@ -18,8 +18,6 @@ class reachParams:
         self.delta = delta
         self.tau = tau
 
-# class stateHolder:
-
 
 def get_canno_dir_indices(directions):
     ub_indices = []
@@ -48,7 +46,7 @@ def extract_bounds_from_sf(sf_vec, canno_dir_indices):
 
 class NonlinPostOpt:
     def __init__(self, dim, nonlin_dyn, time_horizon, tau, init_coeff, init_col, is_linear, directions, start_epsilon,
-                 pseudo_var, id_to_vars):
+                 pseudo_var, scaling_per, scaling_cutoff, id_to_vars):
         self.dim = dim
         self.nonlin_dyn = nonlin_dyn
         self.time_horizon = time_horizon
@@ -61,6 +59,8 @@ class NonlinPostOpt:
         self.template_directions = directions
         self.canno_dir_indices = get_canno_dir_indices(directions)
         self.pseudo_var = pseudo_var
+        self.scaling_per = scaling_per
+        self.scaling_cutoff = scaling_cutoff
 
         # if the bound is larger than this, give up to avoid any further numeric issue in libs.
         self.max_tolerance = 1e3
@@ -109,50 +109,48 @@ class NonlinPostOpt:
 
         Timers.tic('total')
         time_frames = int(np.ceil(self.time_horizon / self.tau))
-        tvars = []
+        tvars_list = []
 
         init_poly = Polyhedron(self.init_coeff, self.init_col)
         vertices = init_poly.get_vertices()
 
-        init_set_lb = tvar(np.amin(vertices, axis=0))
-        init_set_ub = tvar(np.amax(vertices, axis=0))
-        tvars.append(init_set_lb)
-        tvars.append(init_set_ub)
+        init_set_lb = np.amin(vertices, axis=0)
+        init_set_ub = np.amax(vertices, axis=0)
 
         # init_set_lb = np.amin(vertices, axis=0)
         # init_set_ub = np.amax(vertices, axis=0)
 
         # reachable states in dense time
-        tube_lb = tvar(init_set_lb.get_val())
-        tube_ub = tvar(init_set_ub.get_val())
-        tvars.append(tube_lb)
-        tvars.append(tube_ub)
+        tube_lb = tvar(init_set_lb)
+        tube_ub = tvar(init_set_ub)
+        tvars_list.append(tube_lb)
+        tvars_list.append(tube_ub)
         # tube_lb, tube_ub = init_set_lb, init_set_ub
 
         # temporary variables for reachable states in dense time
-        temp_tube_lb = tvar(init_set_lb.get_val())
-        temp_tube_ub = tvar(init_set_ub.get_val())
-        tvars.append(temp_tube_lb)
-        tvars.append(temp_tube_ub)
+        temp_tube_lb = tvar(init_set_lb)
+        temp_tube_ub = tvar(init_set_ub)
+        tvars_list.append(temp_tube_lb)
+        tvars_list.append(temp_tube_ub)
 
         # temp_tube_lb, temp_tube_ub = init_set_lb, init_set_ub
         # initial reachable set in discrete time in the current abstract domain
         # changes when the abstract domain is large enough to contain next image in alfa step
-        current_init_set_lb = tvar(init_set_lb.get_val())
-        current_init_set_ub = tvar(init_set_ub.get_val())
-        tvars.append(current_init_set_lb)
-        tvars.append(current_init_set_ub)
+        current_init_set_lb = tvar(init_set_lb)
+        current_init_set_ub = tvar(init_set_ub)
+        tvars_list.append(current_init_set_lb)
+        tvars_list.append(current_init_set_ub)
 
         # current_init_set_lb, current_init_set_ub = init_set_lb, init_set_ub
 
-        input_lb_seq = tvar(init_set_lb.get_val())
-        input_ub_seq = tvar(init_set_ub.get_val())
-        tvars.append(input_lb_seq)
-        tvars.append(input_ub_seq)
+        input_lb_seq = tvar(init_set_lb)
+        input_ub_seq = tvar(init_set_ub)
+        tvars_list.append(input_lb_seq)
+        tvars_list.append(input_ub_seq)
         # input_lb_seq, input_ub_seq = init_set_lb, init_set_ub
 
         phi_list = tvar([])
-        tvars.append(phi_list)
+        tvars_list.append(phi_list)
         # phi_list = []
 
         # B := \bb(X0)
@@ -165,11 +163,12 @@ class NonlinPostOpt:
         ct = 0
         current_vol = 1e10
 
-        use_time_scaling = True
-        if use_time_scaling:
-            scaled = False
+        # use_time_scaling = True
+        use_time_scaling = False
+        scaled = False
+        # if use_time_scaling:
             # # vanderpol. time step = 0.01, d=0.2
-            dwell_from = [200]#, 650]
+            # dwell_from = [200]#, 650]
             # dwell_steps = [100, 100]
 
             # vanderpol, time step = 0.03, small init [1.25, 1.55], [2.28, 2.32]
@@ -230,9 +229,9 @@ class NonlinPostOpt:
             # dwell_steps = [20]
             # d = [0.3]
 
-        else:
-            dwell_from = []
-            dwell_steps = [0]
+        # else:
+        #     dwell_from = []
+        #     dwell_steps = [0]
 
         total_walltime = 0
         start_walltime = time.time()
@@ -270,16 +269,16 @@ class NonlinPostOpt:
             if hyperbox_contain_by_bounds(self.abs_domain.bounds, [temp_tube_lb.get_val(), temp_tube_ub.get_val()]):
                 tube_lb.set_val(temp_tube_lb.get_val())
                 tube_ub.set_val(temp_tube_ub.get_val())
-                # tube_lb, tube_ub = temp_tube_lb, temp_tube_ub
 
                 prev_vol = current_vol
                 current_vol = self.compute_vol(tube_lb.get_val(), tube_ub.get_val())
 
                 phi_list.set_val(self.update_phi_list(phi_list.get_val()))
                 res_update_wb = self.update_wb_seq(input_lb_seq.get_val(),
-                                                                input_ub_seq.get_val(),
-                                                                current_input_lb,
-                                                                current_input_ub)
+                                                   input_ub_seq.get_val(),
+                                                   current_input_lb,
+                                                   current_input_ub
+                                                   )
                 input_lb_seq.set_val(res_update_wb[0])
                 input_ub_seq.set_val(res_update_wb[1])
 
@@ -295,10 +294,7 @@ class NonlinPostOpt:
                 current_init_set_lb.set_val(next_init_set_lb)
                 current_init_set_ub.set_val(next_init_set_ub)
 
-                #                 sf_mat[i] = np.append(next_init_set_lb, next_init_set_ub)
-                # sf_mat[i] = next_init_sf
                 sf_mat.append(next_init_sf)
-                # epsilon = self.start_epsilon
                 epsilon /= 4
 
                 i += 1
@@ -312,28 +308,34 @@ class NonlinPostOpt:
                     start_walltime = now
 
                 if use_time_scaling:
-                    flag_scaling = i in dwell_from
-                    if flag_scaling:
-                        print('start time scaling at step {}'.format(i))
-                        scaling_config = self.get_scaling_configs(tube_lb.get_val(), tube_ub.get_val())
-                        self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
-                        self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
-                        self.dyn_linearizer.is_scaled = True
-                        scaled = True
-
                     if scaled:
-                        time_frames += 1
-                        stop_scaling = current_vol > prev_vol and not flag_scaling
+                        imprv_rate = (prev_vol - current_vol)/prev_vol
+                        stop_scaling = imprv_rate < self.scaling_cutoff
+                        # stop_scaling = current_vol > prev_vol
                         if stop_scaling:
                             self.dyn_linearizer.set_nonlin_dyn(self.nonlin_dyn)
                             self.dyn_linearizer.is_scaled = False
                             scaled = False
 
+                            for tv in tvars_list:
+                                tv.rollback()
+
                             print('stopped at {} scaling steps'.format(ct))
                             ct = 0
+                            i -= 1
                         else:
+                            time_frames += 1
                             ct += 1
-                            # print(ct)
+                    else:
+                        scaling_stepsize = max(int(time_frames * self.scaling_per), 1)
+                        start_scaling = i % scaling_stepsize == 0
+                        if start_scaling:
+                            print('start time scaling at step {}'.format(i))
+                            scaling_config = self.get_scaling_configs(tube_lb.get_val(), tube_ub.get_val())
+                            self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
+                            self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
+                            self.dyn_linearizer.is_scaled = True
+                            scaled = True
 
         print('Completed flowpipe computation in {:.2f} secs.\n'.format(total_walltime))
         Timers.toc('total')
@@ -419,9 +421,9 @@ class NonlinPostOpt:
         reach_tube_lb = np.amin([Xi_lb, reach_tube_lb], axis=0)
         reach_tube_ub = np.amax([Xi_ub, reach_tube_ub], axis=0)
 
-        if self.pseudo_var:
-            reach_tube_lb[self.pseudo_dim - 1] = 1
-            reach_tube_ub[self.pseudo_dim - 1] = 1
+        # if self.pseudo_var:
+        #     reach_tube_lb[self.pseudo_dim - 1] = 1
+        #     reach_tube_ub[self.pseudo_dim - 1] = 1
 
         return reach_tube_lb, reach_tube_ub
 
@@ -656,35 +658,11 @@ class NonlinPostOpt:
     def update_input_bounds_seq(self, ub, lb, next_ub, next_lb):
         return np.append(lb, next_lb), np.append(ub, next_ub)
 
-    def get_projections(self, directions, opdims, sf_mat):
-        # " sloppy implementation, change later on"
-        #
-        # directions = np.array([[-1, 0], [0, -1], [1, 0], [0, 1]])
-        # ret = []
-        #
-        # for sf_row in sf_mat:
-        #     sf_row = np.multiply(sf_row, [-1, -1, 1, 1]).reshape(sf_row.shape[0], 1)
-        #     ret.append(Polyhedron(directions, sf_row))
-        #     # exit()
-        # return ret
-
-        " sloppy implementation, change later on"
-        directions = np.array([[-1, 0], [0, -1], [1, 0], [0, 1]])
-        ret = []
-
-        for sf_row in sf_mat:
-            sf_row = sf_row.reshape(2, -1)[:, 0:-1]
-            sf_row = sf_row.reshape(1, -1).flatten()
-            sf_row = np.multiply(sf_row, [-1, -1, 1, 1]).reshape(sf_row.shape[0], 1)
-            ret.append(Polyhedron(directions, sf_row))
-        return ret
-
     def get_scaling_configs(self, tube_lb, tube_ub):
         # domain center
         c = np.sum(self.abs_domain.bounds, axis=0) / 2
 
         # compute derivative
-        print(self.nonlin_dyn.str_rep)
         deriv = self.nonlin_dyn.eval(c)
 
         # get norm vector

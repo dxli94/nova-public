@@ -11,7 +11,7 @@ class TrackedVar:
         return self.curr
 
     def rollback(self):
-        assert self.prev, "No previous value found."
+        assert self.prev is not None, "No previous value found."
 
         self.curr = self.prev
         self.prev = None
