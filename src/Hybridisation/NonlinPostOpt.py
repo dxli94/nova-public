@@ -3,6 +3,7 @@ import numpy as np
 import SuppFuncUtils
 from ConvexSet.HyperBox import HyperBox, hyperbox_contain_by_bounds
 from ConvexSet.Polyhedron import Polyhedron
+from Hybridisation.TrackedVar import TrackedVar as tvar
 from Hybridisation.Linearizer import Linearizer
 from SysDynamics import AffineDynamics, GeneralDynamics
 from timerutil import Timers
@@ -108,24 +109,51 @@ class NonlinPostOpt:
 
         Timers.tic('total')
         time_frames = int(np.ceil(self.time_horizon / self.tau))
+        tvars = []
 
         init_poly = Polyhedron(self.init_coeff, self.init_col)
         vertices = init_poly.get_vertices()
 
-        init_set_lb = np.amin(vertices, axis=0)
-        init_set_ub = np.amax(vertices, axis=0)
+        init_set_lb = tvar(np.amin(vertices, axis=0))
+        init_set_ub = tvar(np.amax(vertices, axis=0))
+        tvars.append(init_set_lb)
+        tvars.append(init_set_ub)
+
+        # init_set_lb = np.amin(vertices, axis=0)
+        # init_set_ub = np.amax(vertices, axis=0)
 
         # reachable states in dense time
-        tube_lb, tube_ub = init_set_lb, init_set_ub
+        tube_lb = tvar(init_set_lb.get_val())
+        tube_ub = tvar(init_set_ub.get_val())
+        tvars.append(tube_lb)
+        tvars.append(tube_ub)
+        # tube_lb, tube_ub = init_set_lb, init_set_ub
+
         # temporary variables for reachable states in dense time
-        temp_tube_lb, temp_tube_ub = init_set_lb, init_set_ub
+        temp_tube_lb = tvar(init_set_lb.get_val())
+        temp_tube_ub = tvar(init_set_ub.get_val())
+        tvars.append(temp_tube_lb)
+        tvars.append(temp_tube_ub)
+
+        # temp_tube_lb, temp_tube_ub = init_set_lb, init_set_ub
         # initial reachable set in discrete time in the current abstract domain
         # changes when the abstract domain is large enough to contain next image in alfa step
-        current_init_set_lb, current_init_set_ub = init_set_lb, init_set_ub
+        current_init_set_lb = tvar(init_set_lb.get_val())
+        current_init_set_ub = tvar(init_set_ub.get_val())
+        tvars.append(current_init_set_lb)
+        tvars.append(current_init_set_ub)
 
-        input_lb_seq, input_ub_seq = init_set_lb, init_set_ub
+        # current_init_set_lb, current_init_set_ub = init_set_lb, init_set_ub
 
-        phi_list = []
+        input_lb_seq = tvar(init_set_lb.get_val())
+        input_ub_seq = tvar(init_set_ub.get_val())
+        tvars.append(input_lb_seq)
+        tvars.append(input_ub_seq)
+        # input_lb_seq, input_ub_seq = init_set_lb, init_set_ub
+
+        phi_list = tvar([])
+        tvars.append(phi_list)
+        # phi_list = []
 
         # B := \bb(X0)
         bbox = HyperBox(init_poly.vertices)
@@ -213,7 +241,11 @@ class NonlinPostOpt:
         sf_mat = []
 
         while i < time_frames:
-            bbox = self.refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_ub)
+            bbox = self.refine_domain(tube_lb.get_val(),
+                                      tube_ub.get_val(),
+                                      temp_tube_lb.get_val(),
+                                      temp_tube_ub.get_val()
+                                      )
             bbox.bloat(epsilon)
 
             Timers.tic('hybridize')
@@ -222,34 +254,46 @@ class NonlinPostOpt:
             epsilon *= 2
 
             # P_{i+1} := \alpha(X_{i})
-            temp_tube_lb, temp_tube_ub = self.compute_alpha_step(current_init_set_lb,
-                                                                 current_init_set_ub,
-                                                                 current_input_lb,
-                                                                 current_input_ub)
+            res_alpha_step = self.compute_alpha_step(current_init_set_lb.get_val(),
+                                                     current_init_set_ub.get_val(),
+                                                     current_input_lb,
+                                                     current_input_ub)
+            temp_tube_lb.set_val(res_alpha_step[0])
+            temp_tube_ub.set_val(res_alpha_step[1])
 
-            if any(np.abs(temp_tube_lb) >= self.max_tolerance) or any(np.abs(temp_tube_ub) >= self.max_tolerance):
+            if any(np.abs(temp_tube_lb.get_val()) >= self.max_tolerance) or \
+                    any(np.abs(temp_tube_ub.get_val()) >= self.max_tolerance):
                 print('Computation not completed after {} iterations. Abort now.'.format(i))
                 break
 
             # if P_{i+1} \subset B
-            if hyperbox_contain_by_bounds(self.abs_domain.bounds, [temp_tube_lb, temp_tube_ub]):
-                tube_lb, tube_ub = temp_tube_lb, temp_tube_ub
+            if hyperbox_contain_by_bounds(self.abs_domain.bounds, [temp_tube_lb.get_val(), temp_tube_ub.get_val()]):
+                tube_lb.set_val(temp_tube_lb.get_val())
+                tube_ub.set_val(temp_tube_ub.get_val())
+                # tube_lb, tube_ub = temp_tube_lb, temp_tube_ub
 
                 prev_vol = current_vol
-                current_vol = self.compute_vol(current_init_set_lb, current_input_ub)
+                current_vol = self.compute_vol(tube_lb.get_val(), tube_ub.get_val())
 
-                phi_list = self.update_phi_list(phi_list)
-                input_lb_seq, input_ub_seq = self.update_wb_seq(input_lb_seq, input_ub_seq,
-                                                                current_input_lb, current_input_ub)
+                phi_list.set_val(self.update_phi_list(phi_list.get_val()))
+                res_update_wb = self.update_wb_seq(input_lb_seq.get_val(),
+                                                                input_ub_seq.get_val(),
+                                                                current_input_lb,
+                                                                current_input_ub)
+                input_lb_seq.set_val(res_update_wb[0])
+                input_ub_seq.set_val(res_update_wb[1])
 
-                next_init_sf = self.compute_gamma_step(input_lb_seq, input_ub_seq, phi_list)
+                next_init_sf = self.compute_gamma_step(input_lb_seq.get_val(),
+                                                       input_ub_seq.get_val(),
+                                                       phi_list.get_val())
                 next_init_set_lb, next_init_set_ub = extract_bounds_from_sf(next_init_sf, self.canno_dir_indices)
-                if self.pseudo_var:
-                    next_init_set_lb = np.hstack((next_init_set_lb, 1))
-                    next_init_set_ub = np.hstack((next_init_set_ub, 1))
+                # if self.pseudo_var:
+                #     next_init_set_lb = np.hstack((next_init_set_lb, 1))
+                #     next_init_set_ub = np.hstack((next_init_set_ub, 1))
 
                 # initial reachable set in discrete time
-                current_init_set_lb, current_init_set_ub = next_init_set_lb, next_init_set_ub
+                current_init_set_lb.set_val(next_init_set_lb)
+                current_init_set_ub.set_val(next_init_set_ub)
 
                 #                 sf_mat[i] = np.append(next_init_set_lb, next_init_set_ub)
                 # sf_mat[i] = next_init_sf
@@ -271,9 +315,7 @@ class NonlinPostOpt:
                     flag_scaling = i in dwell_from
                     if flag_scaling:
                         print('start time scaling at step {}'.format(i))
-                        # idx = dwell_from.index(i)
-                        # j = dwell_steps[idx]  # number of steps dwelling in time scaling mode
-                        scaling_config = self.get_scaling_configs(tube_lb, tube_ub)
+                        scaling_config = self.get_scaling_configs(tube_lb.get_val(), tube_ub.get_val())
                         self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
                         self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
                         self.dyn_linearizer.is_scaled = True

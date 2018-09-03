@@ -8,8 +8,6 @@ class TrackedVar:
         self.curr = val
 
     def get_val(self):
-        assert self.curr, "No current value found."
-
         return self.curr
 
     def rollback(self):
