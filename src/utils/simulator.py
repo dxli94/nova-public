@@ -200,6 +200,18 @@ def controller_2d_deriv(x, t):
     return res
 
 
+def controller_3d_deriv(x, t):
+    # "10*(x1-x0)",
+    # "x0^3",
+    # "x0*x1-2.667*x2"
+    nx0 = 10*(x[1]-x[0])
+    nx1 = x[0]**3
+    nx2 = x[0]*x[1]-2.6667*x[2]
+
+    res = np.array([nx0, nx1, nx2])
+    return res
+
+
 def simulate_one_run(horizon, model, init_point):
     ts = np.linspace(0, horizon, horizon*5000)
 
@@ -221,6 +233,8 @@ def simulate_one_run(horizon, model, init_point):
         xs = odeint(pbt_deriv, init_point, ts)
     elif model == '2d_controller':
         xs = odeint(controller_2d_deriv, init_point, ts)
+    elif model == '3d_controller':
+        xs = odeint(controller_3d_deriv, init_point, ts)
     elif model == 'lacoperon':
         xs = odeint(lacoperon_deriv, init_point, ts)
     elif model == 'coupled_vanderpol':

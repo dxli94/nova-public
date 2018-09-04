@@ -1,0 +1,46 @@
+{
+    "dim": 3,
+    "direction_type": 1,
+    "dynamics": [
+        "10*(x1-x0)",
+        "x0^3",
+        "x0*x1-2.667*x2"
+    ],
+    "init_coeff": [
+        [ 1,  0,  0],
+        [-1,  0,  0],
+        [ 0,  1,  0],
+        [ 0, -1,  0],
+        [ 0,  0,  1],
+        [ 0,  0, -1]
+    ],
+    "init_col": [
+        [1.81],
+        [-1.79],
+        [1.1],
+        [-1],
+        [0.6],
+        [-0.5]
+    ],
+    "is_linear": [
+        true,
+        false,
+        false
+    ],
+    "opvars": [
+        0,
+        1
+    ],
+    "sampling_time": 0.002,
+    "start_epsilon": 1e-05,
+    "state_variables": [
+        "x0",
+        "x1",
+        "x2"
+    ],
+    "time_horizon": 0.51,
+    "scaling_per": 0.01,
+    "scaling_cutoff": 2e-2,
+    "pseudo_var": false,
+    "simu_model": "3d_controller"
+}
