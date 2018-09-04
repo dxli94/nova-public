@@ -63,7 +63,7 @@ class NonlinPostOpt:
         self.scaling_cutoff = scaling_cutoff
 
         # if the bound is larger than this, give up to avoid any further numeric issue in libs.
-        self.max_tolerance = 1e3
+        self.max_tolerance = 1e5
 
         self.id_to_vars = id_to_vars
 
@@ -164,7 +164,7 @@ class NonlinPostOpt:
         current_vol = 1e10
 
         # use_time_scaling = True
-        use_time_scaling = False
+        use_time_scaling = True
         scaled = False
         # if use_time_scaling:
             # # vanderpol. time step = 0.01, d=0.2
@@ -311,6 +311,7 @@ class NonlinPostOpt:
                     if scaled:
                         imprv_rate = (prev_vol - current_vol)/prev_vol
                         stop_scaling = imprv_rate < self.scaling_cutoff
+                        # print('{}%'.format(imprv_rate*100))
                         # stop_scaling = current_vol > prev_vol
                         if stop_scaling:
                             self.dyn_linearizer.set_nonlin_dyn(self.nonlin_dyn)
@@ -320,7 +321,7 @@ class NonlinPostOpt:
                             for tv in tvars_list:
                                 tv.rollback()
 
-                            print('stopped at {} scaling steps'.format(ct))
+                            # print('stopped at {} scaling steps'.format(ct))
                             ct = 0
                             i -= 1
                         else:
@@ -330,7 +331,7 @@ class NonlinPostOpt:
                         scaling_stepsize = max(int(time_frames * self.scaling_per), 1)
                         start_scaling = i % scaling_stepsize == 0
                         if start_scaling:
-                            print('start time scaling at step {}'.format(i))
+                            # print('start time scaling at step {}'.format(i))
                             scaling_config = self.get_scaling_configs(tube_lb.get_val(), tube_ub.get_val())
                             self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
                             self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)

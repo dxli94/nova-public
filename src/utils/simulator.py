@@ -190,6 +190,16 @@ def laub_loomis_deriv(x, t):
     return res
 
 
+def controller_2d_deriv(x, t):
+    # "x0*x1+x1^3+2",
+    # "x0^2+2*x0-3*x1"
+    nx0 = x[0]*x[1]+x[1]**3+2
+    nx1 = x[0]**2+2*x[0]-3*x[1]
+
+    res = np.array([nx0, nx1])
+    return res
+
+
 def simulate_one_run(horizon, model, init_point):
     ts = np.linspace(0, horizon, horizon*5000)
 
@@ -209,6 +219,8 @@ def simulate_one_run(horizon, model, init_point):
         xs = odeint(buckling_column_deriv, init_point, ts)
     elif model == 'pbt':
         xs = odeint(pbt_deriv, init_point, ts)
+    elif model == '2d_controller':
+        xs = odeint(controller_2d_deriv, init_point, ts)
     elif model == 'lacoperon':
         xs = odeint(lacoperon_deriv, init_point, ts)
     elif model == 'coupled_vanderpol':

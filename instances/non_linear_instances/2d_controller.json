@@ -1,9 +1,9 @@
 {
     "dim": 2,
-    "direction_type": 16,
+    "direction_type": 1,
     "dynamics": [
-        "x1",
-        "x0^2"
+        "x0*x1+x1^3+2",
+        "x0^2+2*x0-3*x1"
 
     ],
     "init_coeff": [
@@ -26,35 +26,35 @@
     ],
     "init_col": [
         [
-            1
+            30.1
         ],
         [
-            -1
+            -29.9
         ],
         [
-            -0.95
+            -36
         ],
         [
-            1.05
+            38
         ]
     ],
     "is_linear": [
-        true,
+        false,
         false
     ],
     "opvars": [
         0,
         1
     ],
-    "sampling_time": 0.005,
+    "sampling_time": 0.00001,
     "start_epsilon": 1e-09,
     "state_variables": [
         "x0",
         "x1"
     ],
-    "time_horizon": 6.6,
+    "time_horizon": 0.0125,
     "pseudo_var": false,
-    "scaling_per": 0.1,
-    "scaling_cutoff": 2e-3,
-    "simu_model": "pbt"
+    "scaling_per": 0.01,
+    "scaling_cutoff": 5e-4,
+    "simu_model": "2d_controller"
 }
