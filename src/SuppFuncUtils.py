@@ -95,7 +95,6 @@ def compute_beta_no_offset(sys_dynamics, tau):
         return 0
 
     norm_a = np.linalg.norm(dyn_matrix_A, np.inf)
-
     dyn_coeff_matrix_U = sys_dynamics.get_dyn_coeff_matrix_U()
     dyn_col_vec_U = sys_dynamics.get_dyn_col_vec_U()
 

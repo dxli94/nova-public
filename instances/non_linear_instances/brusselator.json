@@ -46,7 +46,7 @@
         0,
         1
     ],
-    "sampling_time": 0.01,
+    "sampling_time": 0.02,
     "start_epsilon": 1e-09,
     "state_variables": [
         "x0",
@@ -55,6 +55,6 @@
     "time_horizon": 12,
     "pseudo_var": false,
     "scaling_per": 0.1,
-    "scaling_cutoff": 1e-3,
+    "scaling_cutoff": 1e-2,
     "simu_model": "brusselator"
 }

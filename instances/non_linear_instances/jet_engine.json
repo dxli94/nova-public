@@ -46,14 +46,14 @@
         0,
         1
     ],
-    "sampling_time": 0.02,
+    "sampling_time": 0.01,
     "start_epsilon": 1e-09,
     "state_variables": [
         "x0",
         "x1"
     ],
     "time_horizon": 10,
-    "scaling_per": 0.05,
+    "scaling_per": 0.01,
     "scaling_cutoff": 1e-1,
     "simu_model": "jet_engine"
 }

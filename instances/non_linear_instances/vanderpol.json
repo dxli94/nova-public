@@ -53,7 +53,7 @@
         "x1"
     ],
     "time_horizon": 6.74,
-    "scaling_per": 0.02,
+    "scaling_per": 0.1,
     "scaling_cutoff": 3e-2,
     "pseudo_var": false,
     "simu_model": "vanderpol"

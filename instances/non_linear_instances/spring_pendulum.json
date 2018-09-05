@@ -47,7 +47,7 @@
     ],
     "time_horizon": 10,
     "scaling_per": 0.01,
-    "scaling_cutoff": 1e-4,
+    "scaling_cutoff": 5e-3,
     "pseudo_var": false,
     "simu_model": "spring_pendulum"
 }

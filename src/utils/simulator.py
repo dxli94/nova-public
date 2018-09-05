@@ -212,6 +212,19 @@ def controller_3d_deriv(x, t):
     return res
 
 
+def wattsteam_deriv(x, t):
+    # "x1",
+    # "(x2^2*cos(x0)-1)*sin(x0)-3*x1",
+    # "cos(x0)-1"
+
+    nx0 = x[1]
+    nx1 = (x[2]**2*math.cos(x[0])-1)*math.sin(x[0])-3*x[1]
+    nx2 = math.cos(x[0])-1
+
+    res = np.array([nx0, nx1, nx2])
+    return res
+
+
 def simulate_one_run(horizon, model, init_point):
     ts = np.linspace(0, horizon, horizon*5000)
 
@@ -237,6 +250,8 @@ def simulate_one_run(horizon, model, init_point):
         xs = odeint(controller_3d_deriv, init_point, ts)
     elif model == 'lacoperon':
         xs = odeint(lacoperon_deriv, init_point, ts)
+    elif model == 'watt_steam':
+        xs = odeint(wattsteam_deriv, init_point, ts)
     elif model == 'coupled_vanderpol':
         xs = odeint(coupled_vanderpol_deriv, init_point, ts)
     elif model == 'spring_pendulum':

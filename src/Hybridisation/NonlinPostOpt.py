@@ -166,72 +166,6 @@ class NonlinPostOpt:
         # use_time_scaling = True
         use_time_scaling = True
         scaled = False
-        # if use_time_scaling:
-            # # vanderpol. time step = 0.01, d=0.2
-            # dwell_from = [200]#, 650]
-            # dwell_steps = [100, 100]
-
-            # vanderpol, time step = 0.03, small init [1.25, 1.55], [2.28, 2.32]
-            # dwell_from = [65, 210]
-            # dwell_steps = [60, 40]
-            # d = [0.2, 0.2]
-
-            # # vanderpol. time step = 0.005, larger init: [1, 1.5], [2, 2.45]
-            # dwell_from = [300]  ##, 1300]
-            # dwell_steps = [500]  #, 100]
-            # d = [0.5]  #, 0.4]
-
-            # vanderpol. time step = 0.01, d=0.2
-            # dwell_from = [200, 650]
-            # dwell_steps = [100, 100]
-            # d = [0.1, 0.1]
-
-            # coupled vanderpol, time step = 0.005
-            # dwell_from = [400, 1150]
-            # dwell_steps = [200, 200]
-            # d = [0.2, 0.2]
-
-            # coupled vanderpol, time step = 0.01
-            # dwell_from = [220, 650]
-            # dwell_steps = [10, 50]
-            # d = [0.1, 0.1]
-
-            # brusselator, time step = 0.01 (scale times 20)
-            # dwell_from = [200]
-            # dwell_steps = [50]
-            # d = [0.3]
-
-            # buckling_column. time step = 0.01
-            # dwell_from = [50, 200, 700, 1100]
-            # dwell_steps = [100, 100, 100, 100]
-            # d = [0.2, 0.2, 0.2, 0.2]
-
-            # dwell_from = [50, 200, 700]
-            # dwell_steps = [100, 100, 100]
-
-            # predator-prey (not working)
-            # dwell_from = [550]
-            # dwell_steps = [50]
-            # d = [0.5]
-
-            # lac operon
-            # dwell_from = [50]
-            # dwell_steps = [50]
-            # d = [5]
-
-            # pbt (wrong)
-            # dwell_from = [300, 1400, 1700]
-            # dwell_steps = [400, 200, 1000]
-            # d = [0.3, 0.3, 0.3]
-
-            # lorentz
-            # dwell_from = [300]
-            # dwell_steps = [20]
-            # d = [0.3]
-
-        # else:
-        #     dwell_from = []
-        #     dwell_steps = [0]
 
         total_walltime = 0
         start_walltime = time.time()
@@ -294,9 +228,7 @@ class NonlinPostOpt:
                 current_init_set_lb.set_val(next_init_set_lb)
                 current_init_set_ub.set_val(next_init_set_ub)
 
-                sf_mat.append(next_init_sf)
-                epsilon /= 4
-
+                # print(self.abs_dynamics.matrix_A)
                 i += 1
                 if i % 100 == 0:
                     now = time.time()
@@ -321,23 +253,28 @@ class NonlinPostOpt:
                             for tv in tvars_list:
                                 tv.rollback()
 
-                            # print('stopped at {} scaling steps'.format(ct))
+                            print('stopped at {} scaling steps'.format(ct))
                             ct = 0
                             i -= 1
                         else:
                             time_frames += 1
                             ct += 1
+                            sf_mat.append(next_init_sf)
                     else:
+                        # check whether to do dynamic scaling at the current step
+                        sf_mat.append(next_init_sf)
                         scaling_stepsize = max(int(time_frames * self.scaling_per), 1)
                         start_scaling = i % scaling_stepsize == 0
                         if start_scaling:
-                            # print('start time scaling at step {}'.format(i))
+                            print('start time scaling at step {}'.format(i))
                             scaling_config = self.get_scaling_configs(tube_lb.get_val(), tube_ub.get_val())
                             self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
                             self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
                             self.dyn_linearizer.is_scaled = True
                             scaled = True
-
+                else:
+                    sf_mat.append(next_init_sf)
+                epsilon /= 4
         print('Completed flowpipe computation in {:.2f} secs.\n'.format(total_walltime))
         Timers.toc('total')
         Timers.print_stats()
@@ -680,7 +617,34 @@ class NonlinPostOpt:
         with open('../out/pivots.out', 'a') as opfile:
             opfile.write(' '.join(str(elem) for elem in p.tolist()) + '\n')
 
-        return norm_vec, p
+        # =======
+        # b = np.dot(norm_vec, p)
+        #
+        # # a = norm_vec / norm
+        # a_prime = [-elem for elem in norm_vec]
+        #
+        # scaling_func_str = ''
+        # for idx, elem in enumerate(a_prime):
+        #     scaling_func_str += '{}*x{}+'.format(elem, idx)
+        # scaling_func_str = '{}+{}'.format(scaling_func_str, b)
+        #
+        # # =============
+        # norm_a = np.linalg.norm(self.abs_dynamics.matrix_A, np.inf)
+        # # print(self.abs_dynamics.matrix_A)
+        # if norm_a > 20:
+        #     print(self.nonlin_dyn.str_rep)
+        #     print(self.scaled_nonlin_dyn.str_rep)
+        #     print(self.abs_dynamics.matrix_A)
+        #     print(norm_a)
+        #
+        #     dist_func = GeneralDynamics(self.id_to_vars, scaling_func_str)
+        #     print('dist func: {}'.format(scaling_func_str))
+        #     print('center: {}'.format(c))
+        #     print('distance: {}'.format(dist_func.eval(c)))
+        #     print('\n')
+        # =============
+
+        return norm_vec, p, c
 
     @staticmethod
     def get_pedal_point(l, tube_lb, tube_ub):
@@ -695,7 +659,7 @@ class NonlinPostOpt:
         widths = tube_ub - tube_lb
         return np.prod(widths)
 
-    def scale_dynamics(self, norm_vec, p):
+    def scale_dynamics(self, norm_vec, p, c):
         """
         1. Compute center of the abstraction domain;
         2. Evaluate the derivative of the center as the normal vector (v) direction;
@@ -717,9 +681,21 @@ class NonlinPostOpt:
             scaling_func_str += '{}*x{}+'.format(elem, idx)
         scaling_func_str = '{}+{}'.format(scaling_func_str, b)
 
-        scaled_dynamics = []
+        temp_scaled_dynamics = []
         for dyn in self.nonlin_dyn.dynamics:
-            scaled_dynamics.append('({})*({})'.format(scaling_func_str, dyn))
+            temp_scaled_dynamics.append('({})*({})'.format(scaling_func_str, dyn))
+
+        # =====
+        temp_gd = GeneralDynamics(self.id_to_vars, *temp_scaled_dynamics)
+        gd_norm = np.linalg.norm(temp_gd.eval_jacobian(c), np.inf)
+        norm = np.linalg.norm(self.abs_dynamics.matrix_A, np.inf)
+        m = norm / gd_norm
+        scaled_dynamics = []
+        for dyn in temp_scaled_dynamics:
+            scaled_dynamics.append('{}*({})'.format(m, dyn))
+        # =====
+
+        # return temp_gd
 
         return GeneralDynamics(self.id_to_vars, *scaled_dynamics)
 

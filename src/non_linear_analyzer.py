@@ -23,7 +23,7 @@ def main():
     try:
         path = sys.argv[1]
     except IndexError:
-        path = '../instances/non_linear_instances/vanderpol.json'
+        # path = '../instances/non_linear_instances/vanderpol.json'
         # path = '../instances/non_linear_instances/predator_prey.json'
         # path = '../instances/non_linear_instances/2d_water_tank.json'
         # path = '../instances/non_linear_instances/brusselator.json'
@@ -34,6 +34,8 @@ def main():
         # path = '../instances/non_linear_instances/pbt.json'
         # path = '../instances/non_linear_instances/pbt_y.json'
         # path = '../instances/non_linear_instances/2d_controller.json'
+        # path = '../instances/non_linear_instances/3d_controller.json'
+        path = '../instances/non_linear_instances/watt_steam.json'
         # path = '../instances/non_linear_instances/lacoperon.json'
         # path = '../instances/non_linear_instances/roessler_attractor.json'
         # path = '../instances/non_linear_instances/coupled_vanderpol.json'
@@ -42,6 +44,7 @@ def main():
         # path = '../instances/non_linear_instances/biology_1.json'
         # path = '../instances/non_linear_instances/biology_2.json'
         # path = '../instances/non_linear_instances/laub_loomis.json'
+        # path = '../instances/non_linear_instances/laub_loomis_large_init.json'
 
     model_name = path.split('/')[-1].split('.')[0]
     print('reading model file: {}'.format(model_name))

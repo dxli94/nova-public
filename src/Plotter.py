@@ -202,8 +202,8 @@ if __name__ == '__main__':
         Plotter.plot_points_from_file(simu_path, opdims, xlabel=str(opdims[0]), ylabel=str(opdims[1]))
 
         # plot scaling points
-        Plotter.plot_pivots('../out/pivots.out', opdims, 'green')
-        Plotter.plot_pivots('../out/sca_cent.out', opdims, 'yellow')
+        # Plotter.plot_pivots('../out/pivots.out', opdims, 'green')
+        # Plotter.plot_pivots('../out/sca_cent.out', opdims, 'yellow')
 
         print('Showing plot now.')
     plt.show()
