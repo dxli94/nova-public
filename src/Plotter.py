@@ -47,7 +47,8 @@ class Plotter:
         if not isinstance(filelist, list):
             filelist = [filelist]
 
-        colors = ['red', 'blue']
+        # 'palegreen', 'navy', 'mediumseagreen'
+        colors = ['crimson', 'blue']
         linewidths = [0.5, 0.5]
         linestyles = ['solid', 'dashed']
 
