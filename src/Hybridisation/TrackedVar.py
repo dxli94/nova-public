@@ -1,5 +1,9 @@
 class TrackedVar:
-    def __init__(self, val):
+    def __init__(self, val=None):
+        self.prev = None
+        self.curr = val
+
+    def reset(self, val):
         self.prev = None
         self.curr = val
 

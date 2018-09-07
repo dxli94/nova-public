@@ -4,6 +4,7 @@ import SuppFuncUtils
 from ConvexSet.HyperBox import HyperBox, hyperbox_contain_by_bounds
 from ConvexSet.Polyhedron import Polyhedron
 from Hybridisation.TrackedVar import TrackedVar as tvar
+from Hybridisation.PostOptStateholder import PostOptStateholder
 from Hybridisation.Linearizer import Linearizer
 from SysDynamics import AffineDynamics, GeneralDynamics
 from timerutil import Timers
@@ -109,7 +110,6 @@ class NonlinPostOpt:
 
         Timers.tic('total')
         time_frames = int(np.ceil(self.time_horizon / self.tau))
-        tvars_list = []
 
         init_poly = Polyhedron(self.init_coeff, self.init_col)
         vertices = init_poly.get_vertices()
@@ -117,41 +117,7 @@ class NonlinPostOpt:
         init_set_lb = np.amin(vertices, axis=0)
         init_set_ub = np.amax(vertices, axis=0)
 
-        # init_set_lb = np.amin(vertices, axis=0)
-        # init_set_ub = np.amax(vertices, axis=0)
-
-        # reachable states in dense time
-        tube_lb = tvar(init_set_lb)
-        tube_ub = tvar(init_set_ub)
-        tvars_list.append(tube_lb)
-        tvars_list.append(tube_ub)
-        # tube_lb, tube_ub = init_set_lb, init_set_ub
-
-        # temporary variables for reachable states in dense time
-        temp_tube_lb = tvar(init_set_lb)
-        temp_tube_ub = tvar(init_set_ub)
-        tvars_list.append(temp_tube_lb)
-        tvars_list.append(temp_tube_ub)
-
-        # temp_tube_lb, temp_tube_ub = init_set_lb, init_set_ub
-        # initial reachable set in discrete time in the current abstract domain
-        # changes when the abstract domain is large enough to contain next image in alfa step
-        current_init_set_lb = tvar(init_set_lb)
-        current_init_set_ub = tvar(init_set_ub)
-        tvars_list.append(current_init_set_lb)
-        tvars_list.append(current_init_set_ub)
-
-        # current_init_set_lb, current_init_set_ub = init_set_lb, init_set_ub
-
-        input_lb_seq = tvar(init_set_lb)
-        input_ub_seq = tvar(init_set_ub)
-        tvars_list.append(input_lb_seq)
-        tvars_list.append(input_ub_seq)
-        # input_lb_seq, input_ub_seq = init_set_lb, init_set_ub
-
-        phi_list = tvar([])
-        tvars_list.append(phi_list)
-        # phi_list = []
+        posh = PostOptStateholder(init_set_lb, init_set_ub)
 
         # B := \bb(X0)
         bbox = HyperBox(init_poly.vertices)
@@ -174,10 +140,10 @@ class NonlinPostOpt:
         sf_mat = []
 
         while i < time_frames:
-            bbox = self.refine_domain(tube_lb.get_val(),
-                                      tube_ub.get_val(),
-                                      temp_tube_lb.get_val(),
-                                      temp_tube_ub.get_val()
+            bbox = self.refine_domain(posh.tube_lb.get_val(),
+                                      posh.tube_ub.get_val(),
+                                      posh.temp_tube_lb.get_val(),
+                                      posh.temp_tube_ub.get_val()
                                       )
             bbox.bloat(epsilon)
 
@@ -187,46 +153,44 @@ class NonlinPostOpt:
             epsilon *= 2
 
             # P_{i+1} := \alpha(X_{i})
-            res_alpha_step = self.compute_alpha_step(current_init_set_lb.get_val(),
-                                                     current_init_set_ub.get_val(),
+            res_alpha_step = self.compute_alpha_step(posh.current_init_set_lb.get_val(),
+                                                     posh.current_init_set_ub.get_val(),
                                                      current_input_lb,
                                                      current_input_ub)
-            temp_tube_lb.set_val(res_alpha_step[0])
-            temp_tube_ub.set_val(res_alpha_step[1])
+            posh.temp_tube_lb.set_val(res_alpha_step[0])
+            posh.temp_tube_ub.set_val(res_alpha_step[1])
 
-            if any(np.abs(temp_tube_lb.get_val()) >= self.max_tolerance) or \
-                    any(np.abs(temp_tube_ub.get_val()) >= self.max_tolerance):
+            if any(np.abs(posh.temp_tube_lb.get_val()) >= self.max_tolerance) or \
+                    any(np.abs(posh.temp_tube_ub.get_val()) >= self.max_tolerance):
                 print('Computation not completed after {} iterations. Abort now.'.format(i))
                 break
 
             # if P_{i+1} \subset B
-            if hyperbox_contain_by_bounds(self.abs_domain.bounds, [temp_tube_lb.get_val(), temp_tube_ub.get_val()]):
-                tube_lb.set_val(temp_tube_lb.get_val())
-                tube_ub.set_val(temp_tube_ub.get_val())
+            if hyperbox_contain_by_bounds(self.abs_domain.bounds,
+                                          [posh.temp_tube_lb.get_val(), posh.temp_tube_ub.get_val()]):
+                posh.tube_lb.set_val(posh.temp_tube_lb.get_val())
+                posh.tube_ub.set_val(posh.temp_tube_ub.get_val())
 
                 prev_vol = current_vol
-                current_vol = self.compute_vol(tube_lb.get_val(), tube_ub.get_val())
+                current_vol = self.compute_vol(posh.tube_lb.get_val(), posh.tube_ub.get_val())
 
-                phi_list.set_val(self.update_phi_list(phi_list.get_val()))
-                res_update_wb = self.update_wb_seq(input_lb_seq.get_val(),
-                                                   input_ub_seq.get_val(),
+                posh.phi_list.set_val(self.update_phi_list(posh.phi_list.get_val()))
+                res_update_wb = self.update_wb_seq(posh.input_lb_seq.get_val(),
+                                                   posh.input_ub_seq.get_val(),
                                                    current_input_lb,
                                                    current_input_ub
                                                    )
-                input_lb_seq.set_val(res_update_wb[0])
-                input_ub_seq.set_val(res_update_wb[1])
+                posh.input_lb_seq.set_val(res_update_wb[0])
+                posh.input_ub_seq.set_val(res_update_wb[1])
 
-                next_init_sf = self.compute_gamma_step(input_lb_seq.get_val(),
-                                                       input_ub_seq.get_val(),
-                                                       phi_list.get_val())
+                next_init_sf = self.compute_gamma_step(posh.input_lb_seq.get_val(),
+                                                       posh.input_ub_seq.get_val(),
+                                                       posh.phi_list.get_val())
                 next_init_set_lb, next_init_set_ub = extract_bounds_from_sf(next_init_sf, self.canno_dir_indices)
-                # if self.pseudo_var:
-                #     next_init_set_lb = np.hstack((next_init_set_lb, 1))
-                #     next_init_set_ub = np.hstack((next_init_set_ub, 1))
 
                 # initial reachable set in discrete time
-                current_init_set_lb.set_val(next_init_set_lb)
-                current_init_set_ub.set_val(next_init_set_ub)
+                posh.current_init_set_lb.set_val(next_init_set_lb)
+                posh.current_init_set_ub.set_val(next_init_set_ub)
 
                 # print(self.abs_dynamics.matrix_A)
                 i += 1
@@ -250,8 +214,8 @@ class NonlinPostOpt:
                             self.dyn_linearizer.is_scaled = False
                             scaled = False
 
-                            for tv in tvars_list:
-                                tv.rollback()
+                            # rollbacks to the previous state
+                            posh.rollback()
 
                             print('stopped at {} scaling steps'.format(ct))
                             ct = 0
@@ -267,7 +231,7 @@ class NonlinPostOpt:
                         start_scaling = i % scaling_stepsize == 0
                         if start_scaling:
                             print('start time scaling at step {}'.format(i))
-                            scaling_config = self.get_scaling_configs(tube_lb.get_val(), tube_ub.get_val())
+                            scaling_config = self.get_scaling_configs(posh.tube_lb.get_val(), posh.tube_ub.get_val())
                             self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
                             self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
                             self.dyn_linearizer.is_scaled = True
@@ -703,17 +667,17 @@ if __name__ == '__main__':
     nlpost = NonlinPostOpt
 
     # test get_pedal_point()
-    tube_lb = np.array([0, 0])
-    tube_ub = np.array([1, 1])
+    main_tube_lb = np.array([0, 0])
+    main_tube_ub = np.array([1, 1])
     l = np.array([1, 0])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 1])
+    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, main_tube_lb, main_tube_ub), [1, 1])
     l = np.array([1, 1])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 1])
+    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, main_tube_lb, main_tube_ub), [1, 1])
     l = np.array([0.5, 1])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 1])
+    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, main_tube_lb, main_tube_ub), [1, 1])
     l = np.array([-0.5, 1])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [0, 1])
+    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, main_tube_lb, main_tube_ub), [0, 1])
     l = np.array([-0.5, -0.5])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [0, 0])
+    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, main_tube_lb, main_tube_ub), [0, 0])
     l = np.array([0.5, -0.5])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, tube_lb, tube_ub), [1, 0])
+    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, main_tube_lb, main_tube_ub), [1, 0])
