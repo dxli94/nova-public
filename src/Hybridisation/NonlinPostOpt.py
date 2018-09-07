@@ -3,7 +3,6 @@ import numpy as np
 import SuppFuncUtils
 from ConvexSet.HyperBox import HyperBox, hyperbox_contain_by_bounds
 from ConvexSet.Polyhedron import Polyhedron
-from Hybridisation.TrackedVar import TrackedVar as tvar
 from Hybridisation.PostOptStateholder import PostOptStateholder
 from Hybridisation.Linearizer import Linearizer
 from SysDynamics import AffineDynamics, GeneralDynamics
@@ -80,31 +79,8 @@ class NonlinPostOpt:
         self.dyn_linearizer = Linearizer(dim, nonlin_dyn, is_linear)
         self.pseudo_var = pseudo_var
 
-        # add initialization for psedo-variable
-        if self.pseudo_var:
-            self.pseudo_dim = self.dim + 1
-
-            self.init_coeff = np.hstack((self.init_coeff, np.zeros(shape=(self.init_coeff.shape[0], 1))))
-
-            temp_coeff_pos = np.zeros(self.pseudo_dim)
-            temp_coeff_pos[self.pseudo_dim - 1] = 1
-            temp_col_pos = np.ones(1)
-
-            temp_coeff_neg = np.zeros(self.pseudo_dim)
-            temp_coeff_neg[self.pseudo_dim - 1] = -1
-            temp_col_neg = -np.ones(1)
-
-            self.init_coeff = np.vstack((self.init_coeff, temp_coeff_neg, temp_coeff_pos))
-            self.init_col = np.vstack((self.init_col, temp_col_neg, temp_col_pos))
-
-            self.lp_solver_on_pseudo_dim = GlpkWrapper(self.pseudo_dim)
-
-            # add a zero column for all directions
-            self.template_directions = np.hstack(
-                (self.template_directions, np.zeros((self.template_directions.shape[0], 1))))
-        else:
-            self.pseudo_dim = self.dim
-            self.lp_solver_on_pseudo_dim = GlpkWrapper(self.dim)
+        self.pseudo_dim = self.dim
+        self.lp_solver_on_pseudo_dim = GlpkWrapper(self.dim)
 
     def compute_post(self):
 
@@ -279,6 +255,52 @@ class NonlinPostOpt:
 
         return err_lb, err_ub
 
+    # def compute_alpha_step(self, Xi_lb, Xi_ub, Vi_lb, Vi_ub):
+    #     """
+    #     When we have a new abstraction domain, the dynamic changes. To
+    #     preserve the conservativeness, we cannot simply repeat beta step
+    #     on the dense time reachable tube. Instead, we need to take the
+    #     discrete time reachable SET at the time point when the domain
+    #     is constructed (e.g. t_new), and then do alpha step to bloat it
+    #     to the dense time tube indicating reachable states between
+    #     time interval [t_new, t_new + τ].
+    #
+    #     Ω0 = CH(Xi, e^Aτ · Xi ⊕ τV ⊕ α_τ·B)
+    #
+    #     :param Xi_lb: lower bounds of discrete reachable set at t_new in the current (i-th) domain
+    #     :param Xi_ub: upper bounds of discrete reachable set at t_new in the current (i-th) domain
+    #     :param Vi_lb: lower bounds of input set in the current (i-th) domain (linearization error)
+    #     :param Vi_ub: upper bounds of input set in the current (i-th) domain (linearization error)
+    #     :return:
+    #     """
+    #     reach_tube_lb = np.empty(self.pseudo_dim)
+    #     reach_tube_ub = np.empty(self.pseudo_dim)
+    #
+    #     # input and bloated term W_α = τV ⊕ α_τ·B,
+    #     # using inf norm, B is a square of width 2 at origin
+    #     W_alpha_lb = Vi_lb * self.tau - self.reach_params.alpha
+    #     W_alpha_ub = Vi_ub * self.tau + self.reach_params.alpha
+    #
+    #     factors = self.reach_params.delta
+    #     for j in range(factors.shape[0]):
+    #         row = factors[j, :]
+    #
+    #         pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
+    #         neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
+    #
+    #         # e^Aτ · Xi ⊕ τV ⊕ α_τ·B
+    #         maxval = pos_clip.dot(Xi_ub) + neg_clip.dot(Xi_lb) + W_alpha_ub[j]
+    #         minval = neg_clip.dot(Xi_ub) + pos_clip.dot(Xi_lb) + W_alpha_lb[j]
+    #
+    #         reach_tube_lb[j] = minval
+    #         reach_tube_ub[j] = maxval
+    #
+    #     # Ω0 = CH(Xi, e^Aτ · X ⊕ τV ⊕ α_τ·B)
+    #     reach_tube_lb = np.amin([Xi_lb, reach_tube_lb], axis=0)
+    #     reach_tube_ub = np.amax([Xi_ub, reach_tube_ub], axis=0)
+    #
+    #     return reach_tube_lb, reach_tube_ub
+
     def compute_alpha_step(self, Xi_lb, Xi_ub, Vi_lb, Vi_ub):
         """
         When we have a new abstraction domain, the dynamic changes. To
@@ -323,64 +345,7 @@ class NonlinPostOpt:
         reach_tube_lb = np.amin([Xi_lb, reach_tube_lb], axis=0)
         reach_tube_ub = np.amax([Xi_ub, reach_tube_ub], axis=0)
 
-        # if self.pseudo_var:
-        #     reach_tube_lb[self.pseudo_dim - 1] = 1
-        #     reach_tube_ub[self.pseudo_dim - 1] = 1
-
         return reach_tube_lb, reach_tube_ub
-
-    # def compute_beta_step(self, omega_lb, omega_ub, input_lb_seq, input_ub_seq, phi_list, i, last_alpha_iter):
-    #     """
-    #     As long as the continuous post would stay within the current abstraction domain,
-    #     we could propagate the tube using beta step.
-    #
-    #     The reccurrency relation:
-    #        Ω_{i} = e^Aτ · Ω_{i-1} ⊕ τV_{i-1} ⊕ β_{i-1}·B
-    #               is unfolded as
-    #        Ω_{i} = Φ_{n} ... Φ_{1} Ω0
-    #                ⊕ Φ_{n} ... Φ_{2} W_{1}
-    #                ⊕ Φ_{n} ... Φ_{3} W_{2}
-    #                ⊕ ...
-    #                ⊕ Φ_{n} W_{n-1}
-    #                ⊕ W_{n},
-    #     where W_{i} = τV_{i} ⊕ β_{i}·τ·B
-    #
-    #     Notice that Ω0 is the initial reach tube in the current domain.
-    #     Correspondingly, Φ_{1} should be the first mat exp in the current domain.
-    #
-    #     :param omega_lb:
-    #     :param omega_ub:
-    #     :return:
-    #     """
-    #
-    #     res_lb = np.empty(self.pseudo_dim)
-    #     res_ub = np.empty(self.pseudo_dim)
-    #
-    #     # as we care only about the current domain
-    #     offset = last_alpha_iter - i - 1
-    #     sub_phi_list = phi_list[offset:]
-    #     input_lb_seq = np.hstack((omega_lb, input_lb_seq[self.dim * (offset + 1):]))
-    #     input_ub_seq = np.hstack((omega_ub, input_ub_seq[self.dim * (offset + 1):]))
-    #
-    #     # print(len(sub_phi_list), len(input_lb_seq), len(input_ub_seq))
-    #
-    #     factors = sub_phi_list.transpose(1, 0, 2).reshape(2, -1)
-    #     for j in range(factors.shape[0]):
-    #         row = factors[j, :]
-    #
-    #         pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
-    #         neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
-    #
-    #         maxval = pos_clip.dot(input_ub_seq) + neg_clip.dot(input_lb_seq)
-    #         minval = neg_clip.dot(input_ub_seq) + pos_clip.dot(input_lb_seq)
-    #
-    #         res_lb[j] = minval
-    #         res_ub[j] = maxval
-    #
-    #     res_lb[self.pseudo_dim - 1] = 1
-    #     res_ub[self.pseudo_dim - 1] = 1
-    #
-    #     return res_lb, res_ub
 
     def compute_gamma_step(self, input_lb_seq, input_ub_seq, phi_list):
         """
@@ -413,62 +378,67 @@ class NonlinPostOpt:
 
         sf_vec = np.empty(self.template_directions.shape[0])
 
-        input_bounds = np.array([input_lb_seq, input_ub_seq]).T
-
         for idx, l in enumerate(self.template_directions):
-            '''
-            Multiply each phi product in phi_list with the direction, then get a list of new directions.
-            Reshape it to a column vector. The number of rows corresponds to length of input sequence.
+            # '''
+            # Multiply each phi product in phi_list with the direction, then get a list of new directions.
+            # Reshape it to a column vector. The number of rows corresponds to length of input sequence.
+            #
+            # E.g. Given
+            #          phi_list = [ [1, 2,  [-1, 0,
+            #                        3, 4],  0, -1] ]
+            #          direction l = [1, 0]
+            #          input_lb_seq = [[1, 2], [3, 4]]
+            #          input_ub_seq = [[5, 6], [7, 8]]
+            #
+            #      1) phi_list.dot(l) gives:
+            #      [ [1,   [-1,
+            #         3],   0] ]
+            #
+            #      2) Reshaping it gives:
+            #      delta_T_l =
+            #      [ 1
+            #        3,
+            #        -1,
+            #        0 ]
+            #
+            #      3) If the element is positive, to maximize x\cdot l, we take the upper bound of input. Otherwise, lower bound.
+            #      signs_delta_T_l =
+            #      [ 1
+            #        1,
+            #        0,
+            #        0 ]
+            #
+            #      4) input_bounds zips input_lb_seq and input_ub_seq
+            #      [  [1, 5],
+            #         [2, 6],
+            #         [3, 7],
+            #         [4, 8] ]
+            #
+            #      5) index input_bounds by signs_delta_T_l, we get
+            #      [ 5,      (index 1 from [1, 5])
+            #        6,      (index 1 from [2, 6])
+            #        3,      (index 0 from [3, 7])
+            #        4 ]     (index 0 from [4, 8])
+            #
+            #      6) Now (5, 6, 3, 4) is the vector maximizing x \cdot l
+            #      einsum computes the inner product of (5, 6, 3, 4) and delta_T_l.
+            #      This is same as first reshape them into row vectors and then take the dot.
+            # '''
 
-            E.g. Given
-                     phi_list = [ [1, 2,  [-1, 0,
-                                   3, 4],  0, -1] ]
-                     direction l = [1, 0]
-                     input_lb_seq = [[1, 2], [3, 4]]
-                     input_ub_seq = [[5, 6], [7, 8]]
+            # delta_T_l = phi_list.dot(l).reshape(-1, 1)
+            # signs_delta_T_l = np.where(delta_T_l > 0, 1, 0)
+            #
+            # optm_input = input_bounds[np.arange(signs_delta_T_l.shape[0])[:, np.newaxis], signs_delta_T_l]
+            #
+            # sf_val = np.einsum('ij,ij->j', delta_T_l, optm_input)
+            # sf_vec[idx] = sf_val
 
-                 1) phi_list.dot(l) gives:
-                 [ [1,   [-1,
-                    3],   0] ]
+            delta_T_l = phi_list.dot(l).reshape(1, -1)
+            pos_clip = np.clip(a=delta_T_l, a_min=0, a_max=np.inf)
+            neg_clip = np.clip(a=delta_T_l, a_min=-np.inf, a_max=0)
 
-                 2) Reshaping it gives:
-                 delta_T_l =
-                 [ 1
-                   3,
-                   -1,
-                   0 ]
-
-                 3) If the element is positive, to maximize x\cdot l, we take the upper bound of input. Otherwise, lower bound.
-                 signs_delta_T_l =
-                 [ 1
-                   1,
-                   0,
-                   0 ]
-
-                 4) input_bounds zips input_lb_seq and input_ub_seq
-                 [  [1, 5],
-                    [2, 6],
-                    [3, 7],
-                    [4, 8] ]
-
-                 5) index input_bounds by signs_delta_T_l, we get
-                 [ 5,      (index 1 from [1, 5])
-                   6,      (index 1 from [2, 6])
-                   3,      (index 0 from [3, 7])
-                   4 ]     (index 0 from [4, 8])
-
-                 6) Now (5, 6, 3, 4) is the vector maximizing x \cdot l
-                 einsum computes the inner product of (5, 6, 3, 4) and delta_T_l.
-                 This is same as first reshape them into row vectors and then take the dot.
-            '''
-
-            delta_T_l = phi_list.dot(l).reshape(-1, 1)
-            signs_delta_T_l = np.where(delta_T_l > 0, 1, 0)
-
-            optm_input = input_bounds[np.arange(signs_delta_T_l.shape[0])[:, np.newaxis], signs_delta_T_l]
-
-            sf_val = np.einsum('ij,ij->j', delta_T_l, optm_input)
-            sf_vec[idx] = sf_val
+            maxval = pos_clip.dot(input_ub_seq) + neg_clip.dot(input_lb_seq)
+            sf_vec[idx] = maxval
 
         return sf_vec
 
@@ -494,16 +464,6 @@ class NonlinPostOpt:
         # print('after tensordot phi_list: {}'.format(phi_list))
         # print('\n')
         return phi_list
-
-    # def update_wb_seq(self, lb, ub, next_lb, next_ub):
-    #     """
-    #      W_{i} = τV_{i} ⊕ β_{i}·B
-    #     """
-    #     next_lb = next_lb * self.tau - self.reach_params.beta
-    #     next_ub = next_ub * self.tau + self.reach_params.beta
-    #
-    #     return np.append(lb, next_lb), np.append(ub, next_ub)
-        # return np.vstack((lb, next_lb)), np.vstack((ub, next_ub))
 
     def update_wb_seq(self, lb_seq, ub_seq, next_lb, next_ub):
         """
@@ -580,33 +540,6 @@ class NonlinPostOpt:
 
         with open('../out/pivots.out', 'a') as opfile:
             opfile.write(' '.join(str(elem) for elem in p.tolist()) + '\n')
-
-        # =======
-        # b = np.dot(norm_vec, p)
-        #
-        # # a = norm_vec / norm
-        # a_prime = [-elem for elem in norm_vec]
-        #
-        # scaling_func_str = ''
-        # for idx, elem in enumerate(a_prime):
-        #     scaling_func_str += '{}*x{}+'.format(elem, idx)
-        # scaling_func_str = '{}+{}'.format(scaling_func_str, b)
-        #
-        # # =============
-        # norm_a = np.linalg.norm(self.abs_dynamics.matrix_A, np.inf)
-        # # print(self.abs_dynamics.matrix_A)
-        # if norm_a > 20:
-        #     print(self.nonlin_dyn.str_rep)
-        #     print(self.scaled_nonlin_dyn.str_rep)
-        #     print(self.abs_dynamics.matrix_A)
-        #     print(norm_a)
-        #
-        #     dist_func = GeneralDynamics(self.id_to_vars, scaling_func_str)
-        #     print('dist func: {}'.format(scaling_func_str))
-        #     print('center: {}'.format(c))
-        #     print('distance: {}'.format(dist_func.eval(c)))
-        #     print('\n')
-        # =============
 
         return norm_vec, p, c
 
