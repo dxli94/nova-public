@@ -73,7 +73,10 @@ class NonlinPostOpt:
         self.poly_U = None
         self.reach_params = reachParams()
 
+        self.posh = None
+
         self.scaled_nonlin_dyn = None
+        self.tau_d = None
 
         self.lp_solver = GlpkWrapper(dim)
         self.dyn_linearizer = Linearizer(dim, nonlin_dyn, is_linear)
@@ -93,7 +96,10 @@ class NonlinPostOpt:
         init_set_lb = np.amin(vertices, axis=0)
         init_set_ub = np.amax(vertices, axis=0)
 
-        posh = PostOptStateholder(init_set_lb, init_set_ub)
+        self.posh = PostOptStateholder(init_set_lb, init_set_ub)
+        # ======
+        next_init_sf = self.compute_gamma_step(init_set_lb, init_set_ub, np.identity(self.dim))
+        # ======
 
         # B := \bb(X0)
         bbox = HyperBox(init_poly.vertices)
@@ -116,10 +122,10 @@ class NonlinPostOpt:
         sf_mat = []
 
         while i < time_frames:
-            bbox = self.refine_domain(posh.tube_lb.get_val(),
-                                      posh.tube_ub.get_val(),
-                                      posh.temp_tube_lb.get_val(),
-                                      posh.temp_tube_ub.get_val()
+            bbox = self.refine_domain(self.posh.tube_lb.get_val(),
+                                      self.posh.tube_ub.get_val(),
+                                      self.posh.temp_tube_lb.get_val(),
+                                      self.posh.temp_tube_ub.get_val()
                                       )
             bbox.bloat(epsilon)
 
@@ -128,45 +134,51 @@ class NonlinPostOpt:
             Timers.toc('hybridize')
             epsilon *= 2
 
-            # P_{i+1} := \alpha(X_{i})
-            res_alpha_step = self.compute_alpha_step(posh.current_init_set_lb.get_val(),
-                                                     posh.current_init_set_ub.get_val(),
-                                                     current_input_lb,
-                                                     current_input_ub)
-            posh.temp_tube_lb.set_val(res_alpha_step[0])
-            posh.temp_tube_ub.set_val(res_alpha_step[1])
+            Timers.tic('compute_alpha')
+            sf_tube = self.compute_alpha_step(self.posh.input_lb_seq.get_val(),
+                                              self.posh.input_ub_seq.get_val(),
+                                              current_input_lb,
+                                              current_input_ub,
+                                              self.posh.phi_list.get_val(),
+                                              next_init_sf)
+            Timers.toc('compute_alpha')
+            alpha_bounds = extract_bounds_from_sf(sf_tube, self.canno_dir_indices)
+            self.posh.temp_tube_lb.set_val(alpha_bounds[0])
+            self.posh.temp_tube_ub.set_val(alpha_bounds[1])
 
-            if any(np.abs(posh.temp_tube_lb.get_val()) >= self.max_tolerance) or \
-                    any(np.abs(posh.temp_tube_ub.get_val()) >= self.max_tolerance):
+            if any(np.abs(self.posh.temp_tube_lb.get_val()) >= self.max_tolerance) or \
+                    any(np.abs(self.posh.temp_tube_ub.get_val()) >= self.max_tolerance):
                 print('Computation not completed after {} iterations. Abort now.'.format(i))
                 break
 
             # if P_{i+1} \subset B
             if hyperbox_contain_by_bounds(self.abs_domain.bounds,
-                                          [posh.temp_tube_lb.get_val(), posh.temp_tube_ub.get_val()]):
-                posh.tube_lb.set_val(posh.temp_tube_lb.get_val())
-                posh.tube_ub.set_val(posh.temp_tube_ub.get_val())
+                                          [self.posh.temp_tube_lb.get_val(), self.posh.temp_tube_ub.get_val()]):
+                self.posh.tube_lb.set_val(self.posh.temp_tube_lb.get_val())
+                self.posh.tube_ub.set_val(self.posh.temp_tube_ub.get_val())
 
                 prev_vol = current_vol
-                current_vol = self.compute_vol(posh.tube_lb.get_val(), posh.tube_ub.get_val())
+                current_vol = self.compute_vol(self.posh.tube_lb.get_val(), self.posh.tube_ub.get_val())
 
-                posh.phi_list.set_val(self.update_phi_list(posh.phi_list.get_val()))
-                res_update_wb = self.update_wb_seq(posh.input_lb_seq.get_val(),
-                                                   posh.input_ub_seq.get_val(),
+                self.posh.phi_list.set_val(self.update_phi_list(self.posh.phi_list.get_val()))
+                res_update_wb = self.update_wb_seq(self.posh.input_lb_seq.get_val(),
+                                                   self.posh.input_ub_seq.get_val(),
                                                    current_input_lb,
                                                    current_input_ub
                                                    )
-                posh.input_lb_seq.set_val(res_update_wb[0])
-                posh.input_ub_seq.set_val(res_update_wb[1])
+                self.posh.input_lb_seq.set_val(res_update_wb[0])
+                self.posh.input_ub_seq.set_val(res_update_wb[1])
 
-                next_init_sf = self.compute_gamma_step(posh.input_lb_seq.get_val(),
-                                                       posh.input_ub_seq.get_val(),
-                                                       posh.phi_list.get_val())
+                Timers.tic('compute gamma')
+                next_init_sf = self.compute_gamma_step(self.posh.input_lb_seq.get_val(),
+                                                       self.posh.input_ub_seq.get_val(),
+                                                       self.posh.phi_list.get_val())
+                Timers.toc('compute gamma')
                 next_init_set_lb, next_init_set_ub = extract_bounds_from_sf(next_init_sf, self.canno_dir_indices)
 
                 # initial reachable set in discrete time
-                posh.current_init_set_lb.set_val(next_init_set_lb)
-                posh.current_init_set_ub.set_val(next_init_set_ub)
+                self.posh.current_init_set_lb.set_val(next_init_set_lb)
+                self.posh.current_init_set_ub.set_val(next_init_set_ub)
 
                 # print(self.abs_dynamics.matrix_A)
                 i += 1
@@ -191,29 +203,32 @@ class NonlinPostOpt:
                             scaled = False
 
                             # rollbacks to the previous state
-                            posh.rollback()
+                            self.posh.rollback()
 
-                            print('stopped at {} scaling steps'.format(ct))
+                            # print('stopped at {} scaling steps'.format(ct))
                             ct = 0
                             i -= 1
                         else:
                             time_frames += 1
                             ct += 1
-                            sf_mat.append(next_init_sf)
+                            # sf_mat.append(next_init_sf)
+                            sf_mat.append(sf_tube)
                     else:
                         # check whether to do dynamic scaling at the current step
-                        sf_mat.append(next_init_sf)
+                        # sf_mat.append(next_init_sf)
+                        sf_mat.append(sf_tube)
                         scaling_stepsize = max(int(time_frames * self.scaling_per), 1)
                         start_scaling = i % scaling_stepsize == 0
                         if start_scaling:
-                            print('start time scaling at step {}'.format(i))
-                            scaling_config = self.get_scaling_configs(posh.tube_lb.get_val(), posh.tube_ub.get_val())
+                            # print('start time scaling at step {}'.format(i))
+                            scaling_config = self.get_scaling_configs(self.posh.tube_lb.get_val(), self.posh.tube_ub.get_val())
                             self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
                             self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
                             self.dyn_linearizer.is_scaled = True
                             scaled = True
                 else:
-                    sf_mat.append(next_init_sf)
+                    # sf_mat.append(next_init_sf)
+                    sf_mat.append(sf_tube)
                 epsilon /= 4
         print('Completed flowpipe computation in {:.2f} secs.\n'.format(total_walltime))
         Timers.toc('total')
@@ -222,10 +237,7 @@ class NonlinPostOpt:
         return np.array(sf_mat)
 
     def hybridize(self, bbox):
-        if self.pseudo_var:
-            domain_bounds = bbox.bounds[:, :-1]
-        else:
-            domain_bounds = bbox.bounds
+        domain_bounds = bbox.bounds
 
         Timers.tic('gen_abs_dynamics')
         matrix_A, poly_w, c = self.dyn_linearizer.gen_abs_dynamics(abs_domain_bounds=domain_bounds)
@@ -246,7 +258,6 @@ class NonlinPostOpt:
 
         # todo This can be optimized using a hyperbox rather a polyhedron.
         Timers.tic('get_vertices')
-
         vertices = self.poly_U.get_vertices()
         Timers.toc('get_vertices')
 
@@ -301,51 +312,31 @@ class NonlinPostOpt:
     #
     #     return reach_tube_lb, reach_tube_ub
 
-    def compute_alpha_step(self, Xi_lb, Xi_ub, Vi_lb, Vi_ub):
-        """
-        When we have a new abstraction domain, the dynamic changes. To
-        preserve the conservativeness, we cannot simply repeat beta step
-        on the dense time reachable tube. Instead, we need to take the
-        discrete time reachable SET at the time point when the domain
-        is constructed (e.g. t_new), and then do alpha step to bloat it
-        to the dense time tube indicating reachable states between
-        time interval [t_new, t_new + τ].
-
-        Ω0 = CH(Xi, e^Aτ · Xi ⊕ τV ⊕ α_τ·B)
-
-        :param Xi_lb: lower bounds of discrete reachable set at t_new in the current (i-th) domain
-        :param Xi_ub: upper bounds of discrete reachable set at t_new in the current (i-th) domain
-        :param Vi_lb: lower bounds of input set in the current (i-th) domain (linearization error)
-        :param Vi_ub: upper bounds of input set in the current (i-th) domain (linearization error)
-        :return:
-        """
-        reach_tube_lb = np.empty(self.pseudo_dim)
-        reach_tube_ub = np.empty(self.pseudo_dim)
-
-        # input and bloated term W_α = τV ⊕ α_τ·B,
-        # using inf norm, B is a square of width 2 at origin
+    def compute_alpha_step(self, input_lb_seq, input_ub_seq, Vi_lb, Vi_ub, phi_list, sf_X0):
         W_alpha_lb = Vi_lb * self.tau - self.reach_params.alpha
         W_alpha_ub = Vi_ub * self.tau + self.reach_params.alpha
 
-        factors = self.reach_params.delta
-        for j in range(factors.shape[0]):
-            row = factors[j, :]
+        next_lb_seq = np.hstack((input_lb_seq, W_alpha_lb))
+        next_ub_seq = np.hstack((input_ub_seq, W_alpha_ub))
 
-            pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
-            neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
+        delta_T = self.reach_params.delta.T
 
-            # e^Aτ · Xi ⊕ τV ⊕ α_τ·B
-            maxval = pos_clip.dot(Xi_ub) + neg_clip.dot(Xi_lb) + W_alpha_ub[j]
-            minval = neg_clip.dot(Xi_ub) + pos_clip.dot(Xi_lb) + W_alpha_lb[j]
+        if len(phi_list) == 0:
+            phi_list = np.array([delta_T])
+        else:
+            phi_list = np.tensordot(phi_list, delta_T, axes=(2, 0))
+        phi_list = np.vstack((phi_list, [np.eye(self.pseudo_dim)]))
 
-            reach_tube_lb[j] = minval
-            reach_tube_ub[j] = maxval
+        sf_vec = np.empty(self.template_directions.shape[0])
+        for idx, l in enumerate(self.template_directions):
+            delta_T_l = phi_list.dot(l).reshape(1, -1)
+            pos_clip = np.clip(a=delta_T_l, a_min=0, a_max=np.inf)
+            neg_clip = np.clip(a=delta_T_l, a_min=-np.inf, a_max=0)
 
-        # Ω0 = CH(Xi, e^Aτ · X ⊕ τV ⊕ α_τ·B)
-        reach_tube_lb = np.amin([Xi_lb, reach_tube_lb], axis=0)
-        reach_tube_ub = np.amax([Xi_ub, reach_tube_ub], axis=0)
+            maxval = pos_clip.dot(next_ub_seq) + neg_clip.dot(next_lb_seq)
+            sf_vec[idx] = maxval
 
-        return reach_tube_lb, reach_tube_ub
+        return np.maximum(sf_vec, sf_X0)
 
     def compute_gamma_step(self, input_lb_seq, input_ub_seq, phi_list):
         """
@@ -448,12 +439,7 @@ class NonlinPostOpt:
         After n-times update, phi_list looks like this:
         [ Φ_{n}^T Φ_{n-1}^T … Φ_{1}^T, Φ_{n-1}^T … Φ_{1}^T, ..., Φ_{1}^T]
         """
-        dyn_coeff_mat = self.abs_dynamics.get_dyn_coeff_matrix_A()
-        delta = SuppFuncUtils.mat_exp(dyn_coeff_mat, self.tau)
-        delta_T = delta.T
-
-        # print('delta_T: {}'.format(delta_T))
-        # print('original phi_list: {}'.format(phi_list))
+        delta_T = self.reach_params.delta.T
 
         if len(phi_list) == 0:
             phi_list = np.array([delta_T])
@@ -461,8 +447,6 @@ class NonlinPostOpt:
             phi_list = np.tensordot(phi_list, delta_T, axes=(2, 0))
         phi_list = np.vstack((phi_list, [np.eye(self.pseudo_dim)]))
 
-        # print('after tensordot phi_list: {}'.format(phi_list))
-        # print('\n')
         return phi_list
 
     def update_wb_seq(self, lb_seq, ub_seq, next_lb, next_ub):
@@ -473,10 +457,10 @@ class NonlinPostOpt:
         c = (next_lb + next_ub) / 2
         A = self.abs_dynamics.get_dyn_coeff_matrix_A()
         M = SuppFuncUtils.mat_exp_int(A, t_min=0, t_max=self.tau)
-        tau_d = np.dot(M, c)
+        self.tau_d = np.dot(M, c)
 
-        next_lb = next_lb * self.tau - self.reach_params.beta + tau_d
-        next_ub = next_ub * self.tau + self.reach_params.beta + tau_d
+        next_lb = next_lb * self.tau - self.reach_params.beta + self.tau_d
+        next_ub = next_ub * self.tau + self.reach_params.beta + self.tau_d
 
         return np.append(lb_seq, next_lb), np.append(ub_seq, next_ub)
 
@@ -498,9 +482,14 @@ class NonlinPostOpt:
             poly_w = (poly_w[0], u + b)
             coeff_matrix_B = self.coeff_matrix_B
 
+        init_lb = self.posh.current_init_set_lb.get_val()
+        init_ub = self.posh.current_init_set_ub.get_val()
+
+        init_col = np.vstack((init_ub, -init_lb)).T.reshape(1, -1).flatten()
+
         abs_dynamics = AffineDynamics(dim=self.dim,
                                       init_coeff_matrix_X0=self.init_coeff,
-                                      init_col_vec_X0=self.init_col,
+                                      init_col_vec_X0=init_col,
                                       dynamics_matrix_A=matrix_A,
                                       dynamics_matrix_B=coeff_matrix_B,
                                       dynamics_coeff_matrix_U=poly_w[0],
@@ -555,6 +544,7 @@ class NonlinPostOpt:
     def compute_vol(tube_lb, tube_ub):
         widths = tube_ub - tube_lb
         return np.prod(widths)
+        # return sum(widths)
 
     def scale_dynamics(self, norm_vec, p, c):
         """
@@ -583,6 +573,7 @@ class NonlinPostOpt:
             temp_scaled_dynamics.append('({})*({})'.format(scaling_func_str, dyn))
 
         # =====
+        Timers.tic('compute m')
         temp_gd = GeneralDynamics(self.id_to_vars, *temp_scaled_dynamics)
         gd_norm = np.linalg.norm(temp_gd.eval_jacobian(c), np.inf)
         norm = np.linalg.norm(self.abs_dynamics.matrix_A, np.inf)
@@ -590,6 +581,7 @@ class NonlinPostOpt:
         scaled_dynamics = []
         for dyn in temp_scaled_dynamics:
             scaled_dynamics.append('{}*({})'.format(m, dyn))
+        Timers.toc('compute m')
         # =====
 
         # return temp_gd
