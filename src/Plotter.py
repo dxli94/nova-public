@@ -130,7 +130,7 @@ class Plotter:
         ax.set_xlabel('$x_{}$'.format(xlabel))
         ax.set_ylabel('$x_{}$'.format(ylabel))
 
-        plt.plot(x, y, color=color, ls=linestyles, lw=linewidths, alpha=0.5)
+        plt.plot(x, y, color=color, ls=linestyles, lw=linewidths, alpha=0.8)
         plt.autoscale(enable=True)
 
     @staticmethod

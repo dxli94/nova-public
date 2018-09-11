@@ -8,6 +8,7 @@ from Hybridisation.Linearizer import Linearizer
 from SysDynamics import AffineDynamics, GeneralDynamics
 from timerutil import Timers
 from utils.GlpkWrapper import GlpkWrapper
+
 import time
 
 
@@ -58,7 +59,6 @@ class NonlinPostOpt:
         self.init_col = init_col
         self.template_directions = directions
         self.canno_dir_indices = get_canno_dir_indices(directions)
-        self.pseudo_var = pseudo_var
         self.scaling_per = scaling_per
         self.scaling_cutoff = scaling_cutoff
 
@@ -78,12 +78,7 @@ class NonlinPostOpt:
         self.scaled_nonlin_dyn = None
         self.tau_d = None
 
-        self.lp_solver = GlpkWrapper(dim)
         self.dyn_linearizer = Linearizer(dim, nonlin_dyn, is_linear)
-        self.pseudo_var = pseudo_var
-
-        self.pseudo_dim = self.dim
-        self.lp_solver_on_pseudo_dim = GlpkWrapper(self.dim)
 
     def compute_post(self):
         Timers.tic('total')
@@ -188,13 +183,14 @@ class NonlinPostOpt:
                     walltime_elapsed = now - start_walltime
                     total_walltime += walltime_elapsed
                     print('{} / {} steps ({:.2f}%) completed in {:.2f} secs. '
-                          'Total time elapsed: {:.2f} secs'.format(i, time_frames, 100 * i / time_frames, walltime_elapsed,
+                          'Total time elapsed: {:.2f} secs'.format(i, time_frames, 100 * i / time_frames,
+                                                                   walltime_elapsed,
                                                                    total_walltime))
                     start_walltime = now
 
                 if use_time_scaling:
                     if scaled:
-                        imprv_rate = (prev_vol - current_vol)/prev_vol
+                        imprv_rate = (prev_vol - current_vol) / prev_vol
                         stop_scaling = imprv_rate < self.scaling_cutoff
                         # print('{}%'.format(imprv_rate*100))
                         # stop_scaling = current_vol > prev_vol
@@ -219,7 +215,8 @@ class NonlinPostOpt:
                         scaling_stepsize = max(int(time_frames * self.scaling_per), 1)
                         start_scaling = i % scaling_stepsize == 0
                         if start_scaling:
-                            scaling_config = self.get_scaling_configs(self.posh.tube_lb.get_val(), self.posh.tube_ub.get_val())
+                            scaling_config = self.get_scaling_configs(self.posh.tube_lb.get_val(),
+                                                                      self.posh.tube_ub.get_val())
                             Timers.tic('self.scale_dynamics')
                             self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
                             Timers.toc('self.scale_dynamics')
@@ -245,17 +242,12 @@ class NonlinPostOpt:
 
         # todo computing bloating factors can avoid calling LP
         self.set_abs_dynamics(matrix_A, poly_w, c)
-        # 15.9%
-        Timers.tic('compute_alpha')
-        self.reach_params.alpha = SuppFuncUtils.compute_alpha(self.abs_dynamics, self.tau, self.lp_solver_on_pseudo_dim)
-        # 6.8 %
-        Timers.toc('compute_alpha')
-        # self.reach_params.beta = SuppFuncUtils.compute_beta(self.abs_dynamics, self.tau, self.lp_solver_on_pseudo_dim)
-        Timers.tic('compute_beta')
-        self.reach_params.beta = SuppFuncUtils.compute_beta_no_offset(self.abs_dynamics, self.tau)
-        Timers.toc('compute_beta')
+        self.reach_params.alpha, self.reach_params.beta = SuppFuncUtils.compute_bloating_factors(self.abs_dynamics,
+                                                                                                 self.tau)
         # 13.2 %
+        Timers.tic('mat exp')
         self.reach_params.delta = SuppFuncUtils.mat_exp(self.abs_dynamics.matrix_A, self.tau)
+        Timers.toc('mat exp')
 
         self.set_abs_domain(bbox)
         self.poly_U = Polyhedron(self.abs_dynamics.coeff_matrix_U, self.abs_dynamics.col_vec_U)
@@ -329,7 +321,7 @@ class NonlinPostOpt:
             phi_list = np.array([delta_T])
         else:
             phi_list = np.tensordot(phi_list, delta_T, axes=(2, 0))
-        phi_list = np.vstack((phi_list, [np.eye(self.pseudo_dim)]))
+        phi_list = np.vstack((phi_list, [np.eye(self.dim)]))
 
         sf_vec = np.empty(self.template_directions.shape[0])
         for idx, l in enumerate(self.template_directions):
@@ -374,60 +366,6 @@ class NonlinPostOpt:
         sf_vec = np.empty(self.template_directions.shape[0])
 
         for idx, l in enumerate(self.template_directions):
-            # '''
-            # Multiply each phi product in phi_list with the direction, then get a list of new directions.
-            # Reshape it to a column vector. The number of rows corresponds to length of input sequence.
-            #
-            # E.g. Given
-            #          phi_list = [ [1, 2,  [-1, 0,
-            #                        3, 4],  0, -1] ]
-            #          direction l = [1, 0]
-            #          input_lb_seq = [[1, 2], [3, 4]]
-            #          input_ub_seq = [[5, 6], [7, 8]]
-            #
-            #      1) phi_list.dot(l) gives:
-            #      [ [1,   [-1,
-            #         3],   0] ]
-            #
-            #      2) Reshaping it gives:
-            #      delta_T_l =
-            #      [ 1
-            #        3,
-            #        -1,
-            #        0 ]
-            #
-            #      3) If the element is positive, to maximize x\cdot l, we take the upper bound of input. Otherwise, lower bound.
-            #      signs_delta_T_l =
-            #      [ 1
-            #        1,
-            #        0,
-            #        0 ]
-            #
-            #      4) input_bounds zips input_lb_seq and input_ub_seq
-            #      [  [1, 5],
-            #         [2, 6],
-            #         [3, 7],
-            #         [4, 8] ]
-            #
-            #      5) index input_bounds by signs_delta_T_l, we get
-            #      [ 5,      (index 1 from [1, 5])
-            #        6,      (index 1 from [2, 6])
-            #        3,      (index 0 from [3, 7])
-            #        4 ]     (index 0 from [4, 8])
-            #
-            #      6) Now (5, 6, 3, 4) is the vector maximizing x \cdot l
-            #      einsum computes the inner product of (5, 6, 3, 4) and delta_T_l.
-            #      This is same as first reshape them into row vectors and then take the dot.
-            # '''
-
-            # delta_T_l = phi_list.dot(l).reshape(-1, 1)
-            # signs_delta_T_l = np.where(delta_T_l > 0, 1, 0)
-            #
-            # optm_input = input_bounds[np.arange(signs_delta_T_l.shape[0])[:, np.newaxis], signs_delta_T_l]
-            #
-            # sf_val = np.einsum('ij,ij->j', delta_T_l, optm_input)
-            # sf_vec[idx] = sf_val
-
             delta_T_l = phi_list.dot(l).reshape(1, -1)
             pos_clip = np.clip(a=delta_T_l, a_min=0, a_max=np.inf)
             neg_clip = np.clip(a=delta_T_l, a_min=-np.inf, a_max=0)
@@ -449,7 +387,7 @@ class NonlinPostOpt:
             phi_list = np.array([delta_T])
         else:
             phi_list = np.tensordot(phi_list, delta_T, axes=(2, 0))
-        phi_list = np.vstack((phi_list, [np.eye(self.pseudo_dim)]))
+        phi_list = np.vstack((phi_list, [np.eye(self.dim)]))
 
         return phi_list
 
@@ -469,22 +407,10 @@ class NonlinPostOpt:
         return np.append(lb_seq, next_lb), np.append(ub_seq, next_ub)
 
     def set_abs_dynamics(self, matrix_A, poly_w, c):
-        if self.pseudo_var:
-            matrix_A = np.hstack((matrix_A, c.reshape(len(c), 1)))
-            matrix_A = np.vstack((matrix_A, np.zeros(shape=(1, self.pseudo_dim))))
-
-            coeff_matrix_B = np.identity(n=self.pseudo_dim)
-
-            pos_iden = np.identity(self.pseudo_dim)
-            neg_iden = -np.identity(self.pseudo_dim)
-            w_mat = np.hstack((pos_iden, neg_iden)).reshape(self.pseudo_dim * 2, -1)
-            w_vec = np.vstack((poly_w[1], 0, 0))
-            poly_w = (w_mat, w_vec)
-        else:
-            u = poly_w[1]
-            b = np.dstack((c, -c)).reshape((self.dim * 2, -1))
-            poly_w = (poly_w[0], u + b)
-            coeff_matrix_B = self.coeff_matrix_B
+        u = poly_w[1]
+        b = np.dstack((c, -c)).reshape((self.dim * 2, -1))
+        poly_w = (poly_w[0], u + b)
+        coeff_matrix_B = self.coeff_matrix_B
 
         init_lb = self.posh.current_init_set_lb.get_val()
         init_ub = self.posh.current_init_set_ub.get_val()
@@ -506,7 +432,7 @@ class NonlinPostOpt:
     def refine_domain(self, tube_lb, tube_ub, temp_tube_lb, temp_tube_ub):
         bbox_lb = np.amin([tube_lb, temp_tube_lb], axis=0)
         bbox_ub = np.amax([tube_ub, temp_tube_ub], axis=0)
-        bbox = HyperBox([bbox_lb, bbox_ub])
+        bbox = HyperBox([bbox_lb, bbox_ub], opt=1)
 
         return bbox
 
@@ -528,11 +454,11 @@ class NonlinPostOpt:
         # along the normal vector direction.
         p = self.get_pedal_point(norm_vec, tube_lb, tube_ub)
 
-        with open('../out/sca_cent.out', 'a') as opfile:
-            opfile.write(' '.join(str(elem) for elem in c.tolist()) + '\n')
-
-        with open('../out/pivots.out', 'a') as opfile:
-            opfile.write(' '.join(str(elem) for elem in p.tolist()) + '\n')
+        # with open('../out/sca_cent.out', 'a') as opfile:
+        #     opfile.write(' '.join(str(elem) for elem in c.tolist()) + '\n')
+        #
+        # with open('../out/pivots.out', 'a') as opfile:
+        #     opfile.write(' '.join(str(elem) for elem in p.tolist()) + '\n')
 
         return norm_vec, p, c
 
@@ -591,6 +517,7 @@ class NonlinPostOpt:
         # return temp_gd
 
         return GeneralDynamics(self.id_to_vars, *scaled_dynamics)
+
 
 if __name__ == '__main__':
     nlpost = NonlinPostOpt
