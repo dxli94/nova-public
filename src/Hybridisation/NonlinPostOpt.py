@@ -160,11 +160,13 @@ class NonlinPostOpt:
                 current_vol = self.compute_vol(self.posh.tube_lb.get_val(), self.posh.tube_ub.get_val())
 
                 self.posh.phi_list.set_val(self.update_phi_list(self.posh.phi_list.get_val()))
+                Timers.tic('update_wb_seq')
                 res_update_wb = self.update_wb_seq(self.posh.input_lb_seq.get_val(),
                                                    self.posh.input_ub_seq.get_val(),
                                                    current_input_lb,
                                                    current_input_ub
                                                    )
+                Timers.toc('update_wb_seq')
                 self.posh.input_lb_seq.set_val(res_update_wb[0])
                 self.posh.input_ub_seq.set_val(res_update_wb[1])
 
@@ -218,7 +220,9 @@ class NonlinPostOpt:
                         start_scaling = i % scaling_stepsize == 0
                         if start_scaling:
                             scaling_config = self.get_scaling_configs(self.posh.tube_lb.get_val(), self.posh.tube_ub.get_val())
+                            Timers.tic('self.scale_dynamics')
                             self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
+                            Timers.toc('self.scale_dynamics')
                             self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
                             self.dyn_linearizer.is_scaled = True
                             scaled = True
@@ -242,10 +246,14 @@ class NonlinPostOpt:
         # todo computing bloating factors can avoid calling LP
         self.set_abs_dynamics(matrix_A, poly_w, c)
         # 15.9%
+        Timers.tic('compute_alpha')
         self.reach_params.alpha = SuppFuncUtils.compute_alpha(self.abs_dynamics, self.tau, self.lp_solver_on_pseudo_dim)
         # 6.8 %
+        Timers.toc('compute_alpha')
         # self.reach_params.beta = SuppFuncUtils.compute_beta(self.abs_dynamics, self.tau, self.lp_solver_on_pseudo_dim)
+        Timers.tic('compute_beta')
         self.reach_params.beta = SuppFuncUtils.compute_beta_no_offset(self.abs_dynamics, self.tau)
+        Timers.toc('compute_beta')
         # 13.2 %
         self.reach_params.delta = SuppFuncUtils.mat_exp(self.abs_dynamics.matrix_A, self.tau)
 
