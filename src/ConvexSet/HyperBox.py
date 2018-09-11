@@ -52,14 +52,6 @@ class HyperBox:
             lb = arg[0]
             ub = arg[1]
 
-            if lb.isinstance(np.ndarray):
-                assert ub.shape[0] == lb.shape[0]
-                self.dim = lb.shape[0]
-            elif lb.isinstance(list):
-                assert len(ub) == len(lb)
-                self.dim = len(lb)
-            else:
-                raise ValueError("unsupported bound type, require list or numpy.ndarray, found {}.".format(type(lb)))
             self.bounds = np.array([lb, ub])
             self.update_vertices()
 
