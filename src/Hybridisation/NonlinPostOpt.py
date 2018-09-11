@@ -86,8 +86,10 @@ class NonlinPostOpt:
         self.lp_solver_on_pseudo_dim = GlpkWrapper(self.dim)
 
     def compute_post(self):
-
         Timers.tic('total')
+        total_walltime = 0
+        start_walltime = time.time()
+
         time_frames = int(np.ceil(self.time_horizon / self.tau))
 
         init_poly = Polyhedron(self.init_coeff, self.init_col)
@@ -114,9 +116,6 @@ class NonlinPostOpt:
         # use_time_scaling = True
         use_time_scaling = True
         scaled = False
-
-        total_walltime = 0
-        start_walltime = time.time()
 
         # sf_mat = np.zeros((time_frames + sum(dwell_steps), self.template_directions.shape[0]))
         sf_mat = []
@@ -211,16 +210,13 @@ class NonlinPostOpt:
                         else:
                             time_frames += 1
                             ct += 1
-                            # sf_mat.append(next_init_sf)
                             sf_mat.append(sf_tube)
                     else:
                         # check whether to do dynamic scaling at the current step
-                        # sf_mat.append(next_init_sf)
                         sf_mat.append(sf_tube)
                         scaling_stepsize = max(int(time_frames * self.scaling_per), 1)
                         start_scaling = i % scaling_stepsize == 0
                         if start_scaling:
-                            # print('start time scaling at step {}'.format(i))
                             scaling_config = self.get_scaling_configs(self.posh.tube_lb.get_val(), self.posh.tube_ub.get_val())
                             self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
                             self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
@@ -544,7 +540,7 @@ class NonlinPostOpt:
     def compute_vol(tube_lb, tube_ub):
         widths = tube_ub - tube_lb
         return np.prod(widths)
-        # return sum(widths)
+        # return max(widths)
 
     def scale_dynamics(self, norm_vec, p, c):
         """

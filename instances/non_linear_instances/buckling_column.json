@@ -55,6 +55,6 @@
     "time_horizon": 10,
     "pseudo_var": false,
     "scaling_per": 0.1,
-    "scaling_cutoff": 5e-3,
+    "scaling_cutoff": 1e-3,
     "simu_model": "buckling_column"
 }

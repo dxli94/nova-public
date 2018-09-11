@@ -122,7 +122,7 @@ class Plotter:
     def plot_points(x, y, xlabel, ylabel):
         # print('Start reading file...')
         color = 'darkblue'
-        linewidths = 0.5
+        linewidths = 0.2
         linestyles = 'solid'
 
         fig = plt.figure(1, dpi=90)

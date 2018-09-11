@@ -35,7 +35,7 @@
             -36
         ],
         [
-            38
+            37
         ]
     ],
     "is_linear": [
@@ -46,7 +46,7 @@
         0,
         1
     ],
-    "sampling_time": 0.00001,
+    "sampling_time": 0.00002,
     "start_epsilon": 1e-09,
     "state_variables": [
         "x0",
@@ -55,6 +55,6 @@
     "time_horizon": 0.0125,
     "pseudo_var": false,
     "scaling_per": 0.01,
-    "scaling_cutoff": 5e-4,
+    "scaling_cutoff": 1e-2,
     "simu_model": "2d_controller"
 }

@@ -2,13 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 import math
-
-mu = 1
+import sys
 
 
 def van_der_pol_oscillator_deriv(x, t):
     nx0 = x[1]
-    nx1 = -mu * (x[0] ** 2.0 - 1.0) * x[1] - x[0]
+    nx1 = -1 * (x[0] ** 2.0 - 1.0) * x[1] - x[0]
     # nx1 = -x[0] - x[1]
     res = np.array([nx0, nx1])
     return res
@@ -94,9 +93,9 @@ def constant_moving_deriv(x, t):
 
 def coupled_vanderpol_deriv(x, t):
     nx0 = x[1]
-    nx1 = -(x[0] ** 2.0 - 1.0) * x[1] - x[0] - (x[2] - x[0])
+    nx1 = -(x[0] ** 2.0 - 1.0) * x[1] - x[0] + (x[2] - x[0])
     nx2 = x[3]
-    nx3 = -(x[2] ** 2.0 - 1.0) * x[3] - x[2] - (x[0] - x[2])
+    nx3 = -(x[2] ** 2.0 - 1.0) * x[3] - x[2] + (x[0] - x[2])
     # nx1 = -x[0] - x[1]
     res = np.array([nx0, nx1, nx2, nx3])
     return res
@@ -269,25 +268,22 @@ def simulate_one_run(horizon, model, init_point):
     else:
         raise ValueError('Simulate eigen: invalid model name!')
     return xs
-    # return xs[:, opdims[0]], xs[:, opdims[1]]
 
 
-def simulate(horizon, model, init_coeff, init_col):
-    from ConvexSet.Polyhedron import Polyhedron
-    vertices = Polyhedron(init_coeff, init_col).get_vertices()
-    # center = np.average(vertices, axis=0)
-    center = vertices[-1]
-    print('simulate starting point is: {}'.format(center))
-    return simulate_one_run(horizon, model, center)
+def simulate(horizon, model, start_points):
+    return list(simulate_one_run(horizon, model, p) for p in start_points)
 
 
-def save_simu_traj(xs, filename):
+def save_simu_traj(simu_traj, filename):
+    c = 0
     with open(filename, 'w') as simu_op:
-        for row in xs:
-        # with open('../out/simu.out', 'w') as simu_op:
-            for elem in row:
-                simu_op.write(str(elem) + ' ')
-            simu_op.write('\n')
+        for traj in simu_traj:
+            c+=1
+            print(c)
+            for row in traj:
+                for elem in row:
+                    simu_op.write(str(elem) + ' ')
+                simu_op.write('\n')
 
 def main(horizon):
     ts = np.linspace(0, 2, 1500)
