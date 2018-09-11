@@ -169,15 +169,17 @@ class Polyhedron:
         dim_for_max_norm = coeff_matrix.shape[1]
 
         generator_directions = []
-        direction = np.zeros(dim_for_max_norm)
         for i in range(0, dim_for_max_norm):
+            direction = np.zeros(dim_for_max_norm)
+
             direction[i] = 1
             generator_directions.append(direction.copy())
 
             direction[i] = -1
             generator_directions.append(direction.copy())
 
-        return max([self.compute_support_function(cvx.matrix(d, tc='d'), lp) for d in generator_directions])
+        vals = [self.compute_support_function(cvx.matrix(d, tc='d'), lp) for d in generator_directions]
+        return max(vals)
 
 
 if __name__ == '__main__':
