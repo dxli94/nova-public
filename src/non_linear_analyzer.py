@@ -33,6 +33,9 @@ def main():
         # path = '../instances/non_linear_instances/buckling_column.json'
         # path = '../instances/non_linear_instances/pbt.json'
         # path = '../instances/non_linear_instances/pbt_y.json'
+        # path = '../instances/non_linear_instances/2d_controller.json'
+        # path = '../instances/non_linear_instances/3d_controller.json'
+        # path = '../instances/non_linear_instances/watt_steam.json'
         # path = '../instances/non_linear_instances/lacoperon.json'
         # path = '../instances/non_linear_instances/roessler_attractor.json'
         # path = '../instances/non_linear_instances/coupled_vanderpol.json'
@@ -41,6 +44,7 @@ def main():
         # path = '../instances/non_linear_instances/biology_1.json'
         # path = '../instances/non_linear_instances/biology_2.json'
         # path = '../instances/non_linear_instances/laub_loomis.json'
+        # path = '../instances/non_linear_instances/laub_loomis_large_init.json'
 
     model_name = path.split('/')[-1].split('.')[0]
     print('reading model file: {}'.format(model_name))
@@ -58,7 +62,10 @@ def main():
     init_col = np.array(data['init_col'])
     opdims = data['opvars']
     simu_model = data['simu_model']
-    pseudo_var = data['pseudo_var']
+    # pseudo_var = data['pseudo_var']
+    pseudo_var = False
+    scaling_per = data['scaling_per']
+    scaling_cutoff = data['scaling_cutoff']
 
     directions = SuppFuncUtils.generate_directions(direction_type, dim)
 
@@ -70,8 +77,19 @@ def main():
 
     # ============== start flowpipe construction. ============== #
     np.set_printoptions(precision=100)
-    nonlin_post_opt = NonlinPostOpt(dim, non_linear_dynamics, time_horizon, tau, directions,
-                                    init_coeff, init_col, is_linear, start_epsilon, pseudo_var, id_to_vars)
+    nonlin_post_opt = NonlinPostOpt(dim=dim,
+                                    nonlin_dyn=non_linear_dynamics,
+                                    time_horizon=time_horizon,
+                                    tau=tau,
+                                    init_coeff=init_coeff,
+                                    init_col=init_col,
+                                    is_linear=is_linear,
+                                    directions=directions,
+                                    start_epsilon=start_epsilon,
+                                    pseudo_var=pseudo_var,
+                                    scaling_per=scaling_per,
+                                    scaling_cutoff=scaling_cutoff,
+                                    id_to_vars=id_to_vars)
     sf_mat = nonlin_post_opt.compute_post()
     # ============== Flowpipe construction done. ============== #
 
@@ -86,19 +104,37 @@ def main():
     create_pickle(pickle_path, sf_mat)
     print('Finished in {} secs.'.format(time.time() - pickle_start_time))
 
-    xs = run_simulate(time_horizon, simu_model, init_coeff, init_col)
-    simu.save_simu_traj(xs, simu_dir_path)
+    print('\nStart simulations.')
+    simu_traj = run_simulate(time_horizon, simu_model, init_coeff, init_col)
+    # simu.save_simu_traj(simu_traj, simu_dir_path)
+    print('\nSimulations done.')
 
     print('Saving images...')
     img_start_time = time.time()
-    make_plot(dim, directions, sf_mat, model_name, xs, poly_dir_path)
+    make_plot(dim, directions, sf_mat, model_name, simu_traj, poly_dir_path)
     print('Finished in {} secs.'.format(time.time() - img_start_time))
     print('Total running time: {:.2f}'.format(time.time() - start_time))
 
 
 def run_simulate(time_horizon, model, init_coeff, init_col):
-    xs = simu.simulate(time_horizon, model, init_coeff, init_col)
-    return xs
+    from ConvexSet.Polyhedron import Polyhedron
+    from ConvexSet.HyperBox import HyperBox
+    import random
+    vertices = Polyhedron(init_coeff, init_col).get_vertices()
+    init_set = HyperBox(vertices)
+    n = 100
+
+    bounds = init_set.bounds.T
+
+    simu_points = []
+    for i in range(n):
+        p = tuple(random.uniform(*b) for b in bounds)
+        simu_points.append(p)
+
+    simu_points.extend(list(vertices))
+
+    simu_traj = simu.simulate(time_horizon, model, simu_points)
+    return simu_traj
 
 
 def create_pickle(filename, data):
@@ -106,7 +142,7 @@ def create_pickle(filename, data):
         pickle.dump(data, opfile)
 
 
-def make_plot(dim, directions, sf_mat, model_name, xs, poly_dir):
+def make_plot(dim, directions, sf_mat, model_name, simu_traj, poly_dir):
     for i in range(dim):
         for j in range(i, dim):
             if i == j:
@@ -122,8 +158,9 @@ def make_plot(dim, directions, sf_mat, model_name, xs, poly_dir):
             plotter = Plotter(ppl_polys, opdims)
 
             # plot simulation
-            x, y = xs[:, opdims[0]], xs[:, opdims[1]]
-            plotter.plot_points(x, y, xlabel=str(i), ylabel=str(j))
+            for xs in simu_traj:
+                x, y = xs[:, opdims[0]], xs[:, opdims[1]]
+                plotter.plot_points(x, y, xlabel=str(i), ylabel=str(j))
 
             # plot polygons
             poly_dir_path = os.path.join(poly_dir, model_name)

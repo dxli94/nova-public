@@ -44,13 +44,15 @@
         false,
         false
     ],
-    "sampling_time": 0.005,
+    "sampling_time": 0.001,
     "start_epsilon": 1e-05,
     "state_variables": [
         "x0",
         "x1"
     ],
-    "time_horizon": 8,
-    "pseudo_var": true,
+    "time_horizon": 10,
+    "pseudo_var": false,
+    "scaling_per": 0.02,
+    "scaling_cutoff": 1e-2,
     "simu_model": "predator_prev"
 }

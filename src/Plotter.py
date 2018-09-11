@@ -47,7 +47,8 @@ class Plotter:
         if not isinstance(filelist, list):
             filelist = [filelist]
 
-        colors = ['red', 'blue']
+        # 'palegreen', 'navy', 'mediumseagreen'
+        colors = ['crimson', 'blue']
         linewidths = [0.5, 0.5]
         linestyles = ['solid', 'dashed']
 
@@ -68,8 +69,8 @@ class Plotter:
             # print('Finished. \nStart plotting...')
 
             i = 0
-            stepsize = max(len(vertices_sorted) // 50, 1)
-            # stepsize = min(len(vertices_sorted) // 50, 1)
+            # stepsize = max(len(vertices_sorted) // 50, 1)
+            stepsize = 1
 
             for vertices in vertices_sorted:
                 if i % stepsize == 0:
@@ -121,7 +122,7 @@ class Plotter:
     def plot_points(x, y, xlabel, ylabel):
         # print('Start reading file...')
         color = 'darkblue'
-        linewidths = 0.5
+        linewidths = 0.2
         linestyles = 'solid'
 
         fig = plt.figure(1, dpi=90)
@@ -129,7 +130,7 @@ class Plotter:
         ax.set_xlabel('$x_{}$'.format(xlabel))
         ax.set_ylabel('$x_{}$'.format(ylabel))
 
-        plt.plot(x, y, color=color, ls=linestyles, lw=linewidths)
+        plt.plot(x, y, color=color, ls=linestyles, lw=linewidths, alpha=0.5)
         plt.autoscale(enable=True)
 
     @staticmethod
@@ -153,7 +154,7 @@ class Plotter:
         except FileNotFoundError:
             print('File does not exist %s' % ipfile_path)
 
-        plt.plot(x, y, 'o', color=color, markersize=8)
+        plt.plot(x, y, 'o', color=color, markersize=8, alpha=0.5)
         plt.autoscale(enable=True)
 
 
@@ -202,8 +203,8 @@ if __name__ == '__main__':
         Plotter.plot_points_from_file(simu_path, opdims, xlabel=str(opdims[0]), ylabel=str(opdims[1]))
 
         # plot scaling points
-        Plotter.plot_pivots('../out/pivots.out', opdims, 'green')
-        Plotter.plot_pivots('../out/sca_cent.out', opdims, 'yellow')
+        # Plotter.plot_pivots('../out/pivots.out', opdims, 'green')
+        # Plotter.plot_pivots('../out/sca_cent.out', opdims, 'yellow')
 
         print('Showing plot now.')
     plt.show()

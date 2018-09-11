@@ -6,6 +6,8 @@ from pyibex import Function, IntervalVector
 
 from multiprocessing import Process
 
+from timerutil import Timers
+
 
 def get_generator_matrix(dim):
     rv = np.zeros(shape=(2*dim, dim))
@@ -81,9 +83,10 @@ class Linearizer:
                 x0 = abs_domain_centre
 
                 minimizer_kwargs = dict(method='L-BFGS-B', bounds=bounds, args=args)
+                Timers.tic('basinhopping')
                 u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=2).fun
                 u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=2).fun
-
+                Timers.toc('basinhopping')
             u_bounds.extend([u_max, u_min])
 
             # if self.is_scaled:

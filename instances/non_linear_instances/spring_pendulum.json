@@ -37,7 +37,7 @@
         1,
         0
     ],
-    "sampling_time": 0.005,
+    "sampling_time": 0.008,
     "start_epsilon": 1e-05,
     "state_variables": [
         "x0",
@@ -46,6 +46,8 @@
         "x3"
     ],
     "time_horizon": 10,
+    "scaling_per": 0.01,
+    "scaling_cutoff": 5e-3,
     "pseudo_var": false,
     "simu_model": "spring_pendulum"
 }

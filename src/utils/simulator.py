@@ -2,13 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 import math
-
-mu = 1
+import sys
 
 
 def van_der_pol_oscillator_deriv(x, t):
     nx0 = x[1]
-    nx1 = -mu * (x[0] ** 2.0 - 1.0) * x[1] - x[0]
+    nx1 = -1 * (x[0] ** 2.0 - 1.0) * x[1] - x[0]
     # nx1 = -x[0] - x[1]
     res = np.array([nx0, nx1])
     return res
@@ -94,9 +93,9 @@ def constant_moving_deriv(x, t):
 
 def coupled_vanderpol_deriv(x, t):
     nx0 = x[1]
-    nx1 = -(x[0] ** 2.0 - 1.0) * x[1] - x[0] - (x[2] - x[0])
+    nx1 = -(x[0] ** 2.0 - 1.0) * x[1] - x[0] + (x[2] - x[0])
     nx2 = x[3]
-    nx3 = -(x[2] ** 2.0 - 1.0) * x[3] - x[2] - (x[0] - x[2])
+    nx3 = -(x[2] ** 2.0 - 1.0) * x[3] - x[2] + (x[0] - x[2])
     # nx1 = -x[0] - x[1]
     res = np.array([nx0, nx1, nx2, nx3])
     return res
@@ -190,6 +189,41 @@ def laub_loomis_deriv(x, t):
     return res
 
 
+def controller_2d_deriv(x, t):
+    # "x0*x1+x1^3+2",
+    # "x0^2+2*x0-3*x1"
+    nx0 = x[0]*x[1]+x[1]**3+2
+    nx1 = x[0]**2+2*x[0]-3*x[1]
+
+    res = np.array([nx0, nx1])
+    return res
+
+
+def controller_3d_deriv(x, t):
+    # "10*(x1-x0)",
+    # "x0^3",
+    # "x0*x1-2.667*x2"
+    nx0 = 10*(x[1]-x[0])
+    nx1 = x[0]**3
+    nx2 = x[0]*x[1]-2.6667*x[2]
+
+    res = np.array([nx0, nx1, nx2])
+    return res
+
+
+def wattsteam_deriv(x, t):
+    # "x1",
+    # "(x2^2*cos(x0)-1)*sin(x0)-3*x1",
+    # "cos(x0)-1"
+
+    nx0 = x[1]
+    nx1 = (x[2]**2*math.cos(x[0])-1)*math.sin(x[0])-3*x[1]
+    nx2 = math.cos(x[0])-1
+
+    res = np.array([nx0, nx1, nx2])
+    return res
+
+
 def simulate_one_run(horizon, model, init_point):
     ts = np.linspace(0, horizon, horizon*5000)
 
@@ -209,8 +243,14 @@ def simulate_one_run(horizon, model, init_point):
         xs = odeint(buckling_column_deriv, init_point, ts)
     elif model == 'pbt':
         xs = odeint(pbt_deriv, init_point, ts)
+    elif model == '2d_controller':
+        xs = odeint(controller_2d_deriv, init_point, ts)
+    elif model == '3d_controller':
+        xs = odeint(controller_3d_deriv, init_point, ts)
     elif model == 'lacoperon':
         xs = odeint(lacoperon_deriv, init_point, ts)
+    elif model == 'watt_steam':
+        xs = odeint(wattsteam_deriv, init_point, ts)
     elif model == 'coupled_vanderpol':
         xs = odeint(coupled_vanderpol_deriv, init_point, ts)
     elif model == 'spring_pendulum':
@@ -228,25 +268,22 @@ def simulate_one_run(horizon, model, init_point):
     else:
         raise ValueError('Simulate eigen: invalid model name!')
     return xs
-    # return xs[:, opdims[0]], xs[:, opdims[1]]
 
 
-def simulate(horizon, model, init_coeff, init_col):
-    from ConvexSet.Polyhedron import Polyhedron
-    vertices = Polyhedron(init_coeff, init_col).get_vertices()
-    # center = np.average(vertices, axis=0)
-    center = vertices[-1]
-    print('simulate starting point is: {}'.format(center))
-    return simulate_one_run(horizon, model, center)
+def simulate(horizon, model, start_points):
+    return list(simulate_one_run(horizon, model, p) for p in start_points)
 
 
-def save_simu_traj(xs, filename):
+def save_simu_traj(simu_traj, filename):
+    c = 0
     with open(filename, 'w') as simu_op:
-        for row in xs:
-        # with open('../out/simu.out', 'w') as simu_op:
-            for elem in row:
-                simu_op.write(str(elem) + ' ')
-            simu_op.write('\n')
+        for traj in simu_traj:
+            c+=1
+            print(c)
+            for row in traj:
+                for elem in row:
+                    simu_op.write(str(elem) + ' ')
+                simu_op.write('\n')
 
 def main(horizon):
     ts = np.linspace(0, 2, 1500)

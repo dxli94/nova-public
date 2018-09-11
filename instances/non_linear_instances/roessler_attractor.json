@@ -39,6 +39,8 @@
         "x2"
     ],
     "time_horizon": 3,
+    "scaling_per": 0.02,
+    "scaling_cutoff": 1e-2,
     "pseudo_var": false,
     "simu_model": "roessler_attractor"
 }
