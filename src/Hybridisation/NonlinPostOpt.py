@@ -470,8 +470,8 @@ class NonlinPostOpt:
         pp = pos_clip * tube_ub + neg_clip * tube_lb
         return pp
 
-    @staticmethod
-    def compute_vol(tube_lb, tube_ub):
+    # @staticmethod
+    def compute_vol(self, tube_lb, tube_ub):
         widths = tube_ub - tube_lb
         return np.prod(widths)
         # return max(widths)
