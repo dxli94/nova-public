@@ -23,10 +23,10 @@ def main():
     try:
         path = sys.argv[1]
     except IndexError:
-        # path = '../instances/non_linear_instances/vanderpol.json'
+        path = '../instances/non_linear_instances/vanderpol.json'
         # path = '../instances/non_linear_instances/predator_prey.json'
         # path = '../instances/non_linear_instances/2d_water_tank.json'
-        path = '../instances/non_linear_instances/brusselator.json'
+        # path = '../instances/non_linear_instances/brusselator.json'
         # path = '../instances/non_linear_instances/jet_engine.json'
         # path = '../instances/non_linear_instances/free_ball.json'
         # path = '../instances/non_linear_instances/constant_moving.json'
@@ -38,7 +38,9 @@ def main():
         # path = '../instances/non_linear_instances/watt_steam.json'
         # path = '../instances/non_linear_instances/lacoperon.json'
         # path = '../instances/non_linear_instances/roessler_attractor.json'
-        # path = '../instances/non_linear_instances/coupled_vanderpol.json'
+        # path = '../instances/non_linear_instances/coupled_vanderpol_4d.json'
+        # path = '../instances/non_linear_instances/coupled_vanderpol_6d.json'
+        # path = '../instances/non_linear_instances/coupled_vanderpol_8d.json'
         # path = '../instances/non_linear_instances/spring_pendulum.json'
         # path = '../instances/non_linear_instances/lorentz_system.json'
         # path = '../instances/non_linear_instances/biology_1.json'
