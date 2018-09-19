@@ -1,4 +1,6 @@
 import numpy as np
+import itertools
+
 
 def hyperbox_contain(sf_1, sf_2):
     for elem in zip(sf_1, sf_2):
@@ -41,11 +43,8 @@ class HyperBox:
                     if v[idx] > upper_bounds[idx]:
                         upper_bounds[idx] = v[idx]
 
-            # self.bounds = np.array([[lower_bounds[idx], upper_bounds[idx]] for idx in range(len(upper_bounds))])
             self.bounds = np.array([lower_bounds, upper_bounds])
             self.update_vertices()
-            # print('vertices are :')
-            # print(self.vertices)
 
         if opt == 1:
             # constructor with bounds
@@ -78,6 +77,26 @@ class HyperBox:
         for lb in lower_bounds:
             for ub in upper_bounds:
                 self.vertices.append([lb, ub])
+
+    @staticmethod
+    def get_vertices_from_constr(coeff, col):
+        """Input is assumed to be a hyperbox. Otherwise behaviour undefined."""
+        dim = coeff.shape[1]
+        bounds = np.zeros(shape=(dim, 2))
+
+        for row_idx, row in enumerate(coeff):
+            for col_idx, cell in enumerate(row):
+                # print(col_idx, cell)
+
+                if cell < 0:
+                    bounds[col_idx][1] = col[row_idx] / cell
+                    # lower_bounds[col_idx] = col[row_idx] / cell
+                elif cell > 0:
+                    bounds[col_idx][0] = col[row_idx] / cell
+                    # upper_bounds[col_idx] = col[row_idx] / cell
+
+        rv = list(itertools.product(*bounds))
+        return rv
 
 
 if __name__ == '__main__':
