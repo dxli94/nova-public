@@ -123,7 +123,7 @@ def compute_beta_no_offset(sys_dynamics, tau):
     return (tt1 - 1 - tau * norm_a) * (R_w / norm_a)
 
 
-def compute_bloating_factors(sys_dynamics, tau):
+def compute_reach_params(sys_dynamics, tau):
     dyn_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
 
     # if dyn_matrix_A is a zero-matrix, no need to perform bloating
@@ -171,8 +171,9 @@ def compute_bloating_factors(sys_dynamics, tau):
 
     alpha = tt2 * (I_max_norm + (v_max_norm / norm_a))
     beta = tt2 * (R_w / norm_a)
+    delta = mat_exp(dyn_matrix_A, tau)
 
-    return alpha, beta
+    return alpha, beta, delta
 
 
 def generate_directions(direction_type, dim):

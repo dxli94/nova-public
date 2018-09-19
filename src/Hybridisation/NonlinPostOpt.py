@@ -46,6 +46,10 @@ def extract_bounds_from_sf(sf_vec, canno_dir_indices):
 
 
 class NonlinPostOpt:
+    from multiprocessing import Pool
+
+    p = Pool(4)
+
     def __init__(self, dim, nonlin_dyn, time_horizon, tau, init_coeff, init_col, is_linear, directions, start_epsilon,
                  pseudo_var, scaling_per, scaling_cutoff, id_to_vars):
         self.dim = dim
@@ -73,7 +77,7 @@ class NonlinPostOpt:
         self.poly_U = None
         self.reach_params = reachParams()
 
-        self.posh = None
+        self.handler = None
 
         self.scaled_nonlin_dyn = None
         self.tau_d = None
@@ -86,20 +90,18 @@ class NonlinPostOpt:
         start_walltime = time.time()
 
         time_frames = int(np.ceil(self.time_horizon / self.tau))
-
-        init_poly = Polyhedron(self.init_coeff, self.init_col)
-        vertices = init_poly.get_vertices()
+        vertices = HyperBox.get_vertices_from_constr(self.init_coeff, self.init_col)
 
         init_set_lb = np.amin(vertices, axis=0)
         init_set_ub = np.amax(vertices, axis=0)
 
-        self.posh = PostOptStateholder(init_set_lb, init_set_ub)
+        self.handler = PostOptStateholder(init_set_lb, init_set_ub)
         # ======
         next_init_sf = self.compute_gamma_step(init_set_lb, init_set_ub, np.identity(self.dim))
         # ======
 
         # B := \bb(X0)
-        bbox = HyperBox(init_poly.vertices)
+        bbox = HyperBox(vertices)
         # (A, V) := L(f, B), such that f(x) = (A, V) over-approx. g(x)
         bbox.bloat(1e-6)
         epsilon = self.start_epsilon
@@ -116,11 +118,11 @@ class NonlinPostOpt:
         sf_mat = []
 
         while i < time_frames:
-            bbox = self.refine_domain(self.posh.tube_lb.get_val(),
-                                      self.posh.tube_ub.get_val(),
-                                      self.posh.temp_tube_lb.get_val(),
-                                      self.posh.temp_tube_ub.get_val()
-                                      )
+            bbox = self._refine_domain(self.handler.tube_lb.get_val(),
+                                       self.handler.tube_ub.get_val(),
+                                       self.handler.temp_tube_lb.get_val(),
+                                       self.handler.temp_tube_ub.get_val()
+                                       )
             bbox.bloat(epsilon)
 
             Timers.tic('hybridize')
@@ -129,52 +131,52 @@ class NonlinPostOpt:
             epsilon *= 2
 
             Timers.tic('compute_alpha')
-            sf_tube = self.compute_alpha_step(self.posh.input_lb_seq.get_val(),
-                                              self.posh.input_ub_seq.get_val(),
+            sf_tube = self.compute_alpha_step(self.handler.input_lb_seq.get_val(),
+                                              self.handler.input_ub_seq.get_val(),
                                               current_input_lb,
                                               current_input_ub,
-                                              self.posh.phi_list.get_val(),
+                                              self.handler.phi_list.get_val(),
                                               next_init_sf)
             Timers.toc('compute_alpha')
             alpha_bounds = extract_bounds_from_sf(sf_tube, self.canno_dir_indices)
-            self.posh.temp_tube_lb.set_val(alpha_bounds[0])
-            self.posh.temp_tube_ub.set_val(alpha_bounds[1])
+            self.handler.temp_tube_lb.set_val(alpha_bounds[0])
+            self.handler.temp_tube_ub.set_val(alpha_bounds[1])
 
-            if any(np.abs(self.posh.temp_tube_lb.get_val()) >= self.max_tolerance) or \
-                    any(np.abs(self.posh.temp_tube_ub.get_val()) >= self.max_tolerance):
+            if any(np.abs(self.handler.temp_tube_lb.get_val()) >= self.max_tolerance) or \
+                    any(np.abs(self.handler.temp_tube_ub.get_val()) >= self.max_tolerance):
                 print('Computation not completed after {} iterations. Abort now.'.format(i))
                 break
 
             # if P_{i+1} \subset B
             if hyperbox_contain_by_bounds(self.abs_domain.bounds,
-                                          [self.posh.temp_tube_lb.get_val(), self.posh.temp_tube_ub.get_val()]):
-                self.posh.tube_lb.set_val(self.posh.temp_tube_lb.get_val())
-                self.posh.tube_ub.set_val(self.posh.temp_tube_ub.get_val())
+                                          [self.handler.temp_tube_lb.get_val(), self.handler.temp_tube_ub.get_val()]):
+                self.handler.tube_lb.set_val(self.handler.temp_tube_lb.get_val())
+                self.handler.tube_ub.set_val(self.handler.temp_tube_ub.get_val())
 
                 prev_vol = current_vol
-                current_vol = self.compute_vol(self.posh.tube_lb.get_val(), self.posh.tube_ub.get_val())
+                current_vol = self._compute_vol(self.handler.tube_lb.get_val(), self.handler.tube_ub.get_val())
 
-                self.posh.phi_list.set_val(self.update_phi_list(self.posh.phi_list.get_val()))
+                self.handler.phi_list.set_val(self.update_phi_list(self.handler.phi_list.get_val()))
                 Timers.tic('update_wb_seq')
-                res_update_wb = self.update_wb_seq(self.posh.input_lb_seq.get_val(),
-                                                   self.posh.input_ub_seq.get_val(),
+                res_update_wb = self.update_wb_seq(self.handler.input_lb_seq.get_val(),
+                                                   self.handler.input_ub_seq.get_val(),
                                                    current_input_lb,
                                                    current_input_ub
                                                    )
                 Timers.toc('update_wb_seq')
-                self.posh.input_lb_seq.set_val(res_update_wb[0])
-                self.posh.input_ub_seq.set_val(res_update_wb[1])
+                self.handler.input_lb_seq.set_val(res_update_wb[0])
+                self.handler.input_ub_seq.set_val(res_update_wb[1])
 
                 Timers.tic('compute gamma')
-                next_init_sf = self.compute_gamma_step(self.posh.input_lb_seq.get_val(),
-                                                       self.posh.input_ub_seq.get_val(),
-                                                       self.posh.phi_list.get_val())
+                next_init_sf = self.compute_gamma_step(self.handler.input_lb_seq.get_val(),
+                                                       self.handler.input_ub_seq.get_val(),
+                                                       self.handler.phi_list.get_val())
                 Timers.toc('compute gamma')
                 next_init_set_lb, next_init_set_ub = extract_bounds_from_sf(next_init_sf, self.canno_dir_indices)
 
                 # initial reachable set in discrete time
-                self.posh.current_init_set_lb.set_val(next_init_set_lb)
-                self.posh.current_init_set_ub.set_val(next_init_set_ub)
+                self.handler.current_init_set_lb.set_val(next_init_set_lb)
+                self.handler.current_init_set_ub.set_val(next_init_set_ub)
 
                 # print(self.abs_dynamics.matrix_A)
                 i += 1
@@ -200,7 +202,7 @@ class NonlinPostOpt:
                             scaled = False
 
                             # rollbacks to the previous state
-                            self.posh.rollback()
+                            self.handler.rollback()
 
                             # print('stopped at {} scaling steps'.format(ct))
                             ct = 0
@@ -215,8 +217,8 @@ class NonlinPostOpt:
                         scaling_stepsize = max(int(time_frames * self.scaling_per), 1)
                         start_scaling = i % scaling_stepsize == 0
                         if start_scaling:
-                            scaling_config = self.get_scaling_configs(self.posh.tube_lb.get_val(),
-                                                                      self.posh.tube_ub.get_val())
+                            scaling_config = self.get_scaling_configs(self.handler.tube_lb.get_val(),
+                                                                      self.handler.tube_ub.get_val())
                             Timers.tic('self.scale_dynamics')
                             self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
                             Timers.toc('self.scale_dynamics')
@@ -241,71 +243,19 @@ class NonlinPostOpt:
         Timers.toc('gen_abs_dynamics')
 
         self.set_abs_dynamics(matrix_A, poly_w, c)
-        self.reach_params.alpha, self.reach_params.beta = SuppFuncUtils.compute_bloating_factors(self.abs_dynamics,
-                                                                                                 self.tau)
-        # 13.2 %
-        Timers.tic('mat exp')
-        self.reach_params.delta = SuppFuncUtils.mat_exp(self.abs_dynamics.matrix_A, self.tau)
-        Timers.toc('mat exp')
+        self.reach_params.alpha, self.reach_params.beta, self.reach_params.delta = \
+            SuppFuncUtils.compute_reach_params(self.abs_dynamics, self.tau)
 
-        self.set_abs_domain(bbox)
-        self.poly_U = Polyhedron(self.abs_dynamics.coeff_matrix_U, self.abs_dynamics.col_vec_U)
+        self.abs_domain = bbox
 
-        # todo This can be optimized using a hyperbox rather a polyhedron.
         Timers.tic('get_vertices')
-        vertices = self.poly_U.get_vertices()
+        vertices = HyperBox.get_vertices_from_constr(self.abs_dynamics.coeff_matrix_U, self.abs_dynamics.col_vec_U)
         Timers.toc('get_vertices')
 
         err_lb = np.amin(vertices, axis=0)
         err_ub = np.amax(vertices, axis=0)
 
         return err_lb, err_ub
-
-    # def compute_alpha_step(self, Xi_lb, Xi_ub, Vi_lb, Vi_ub):
-    #     """
-    #     When we have a new abstraction domain, the dynamic changes. To
-    #     preserve the conservativeness, we cannot simply repeat beta step
-    #     on the dense time reachable tube. Instead, we need to take the
-    #     discrete time reachable SET at the time point when the domain
-    #     is constructed (e.g. t_new), and then do alpha step to bloat it
-    #     to the dense time tube indicating reachable states between
-    #     time interval [t_new, t_new + τ].
-    #
-    #     Ω0 = CH(Xi, e^Aτ · Xi ⊕ τV ⊕ α_τ·B)
-    #
-    #     :param Xi_lb: lower bounds of discrete reachable set at t_new in the current (i-th) domain
-    #     :param Xi_ub: upper bounds of discrete reachable set at t_new in the current (i-th) domain
-    #     :param Vi_lb: lower bounds of input set in the current (i-th) domain (linearization error)
-    #     :param Vi_ub: upper bounds of input set in the current (i-th) domain (linearization error)
-    #     :return:
-    #     """
-    #     reach_tube_lb = np.empty(self.pseudo_dim)
-    #     reach_tube_ub = np.empty(self.pseudo_dim)
-    #
-    #     # input and bloated term W_α = τV ⊕ α_τ·B,
-    #     # using inf norm, B is a square of width 2 at origin
-    #     W_alpha_lb = Vi_lb * self.tau - self.reach_params.alpha
-    #     W_alpha_ub = Vi_ub * self.tau + self.reach_params.alpha
-    #
-    #     factors = self.reach_params.delta
-    #     for j in range(factors.shape[0]):
-    #         row = factors[j, :]
-    #
-    #         pos_clip = np.clip(a=row, a_min=0, a_max=np.inf)
-    #         neg_clip = np.clip(a=row, a_min=-np.inf, a_max=0)
-    #
-    #         # e^Aτ · Xi ⊕ τV ⊕ α_τ·B
-    #         maxval = pos_clip.dot(Xi_ub) + neg_clip.dot(Xi_lb) + W_alpha_ub[j]
-    #         minval = neg_clip.dot(Xi_ub) + pos_clip.dot(Xi_lb) + W_alpha_lb[j]
-    #
-    #         reach_tube_lb[j] = minval
-    #         reach_tube_ub[j] = maxval
-    #
-    #     # Ω0 = CH(Xi, e^Aτ · X ⊕ τV ⊕ α_τ·B)
-    #     reach_tube_lb = np.amin([Xi_lb, reach_tube_lb], axis=0)
-    #     reach_tube_ub = np.amax([Xi_ub, reach_tube_ub], axis=0)
-    #
-    #     return reach_tube_lb, reach_tube_ub
 
     def compute_alpha_step(self, input_lb_seq, input_ub_seq, Vi_lb, Vi_ub, phi_list, sf_X0):
         W_alpha_lb = Vi_lb * self.tau - self.reach_params.alpha
@@ -323,6 +273,7 @@ class NonlinPostOpt:
         phi_list = np.vstack((phi_list, [np.eye(self.dim)]))
 
         sf_vec = np.empty(self.template_directions.shape[0])
+
         for idx, l in enumerate(self.template_directions):
             delta_T_l = phi_list.dot(l).reshape(1, -1)
             pos_clip = np.clip(a=delta_T_l, a_min=0, a_max=np.inf)
@@ -411,8 +362,8 @@ class NonlinPostOpt:
         poly_w = (poly_w[0], u + b)
         coeff_matrix_B = self.coeff_matrix_B
 
-        init_lb = self.posh.current_init_set_lb.get_val()
-        init_ub = self.posh.current_init_set_ub.get_val()
+        init_lb = self.handler.current_init_set_lb.get_val()
+        init_ub = self.handler.current_init_set_ub.get_val()
 
         init_col = np.vstack((init_ub, -init_lb)).T.reshape(1, -1).flatten()
 
@@ -425,17 +376,16 @@ class NonlinPostOpt:
                                       dynamics_col_vec_U=poly_w[1])
         self.abs_dynamics = abs_dynamics
 
-    def set_abs_domain(self, abs_domain):
-        self.abs_domain = abs_domain
-
-    def refine_domain(self, tube_lb, tube_ub, temp_tube_lb, temp_tube_ub):
+    @staticmethod
+    def _refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_ub):
         bbox_lb = np.amin([tube_lb, temp_tube_lb], axis=0)
         bbox_ub = np.amax([tube_ub, temp_tube_ub], axis=0)
         bbox = HyperBox([bbox_lb, bbox_ub], opt=1)
 
         return bbox
 
-    def update_input_bounds_seq(self, ub, lb, next_ub, next_lb):
+    @staticmethod
+    def update_input_bounds_seq(ub, lb, next_ub, next_lb):
         return np.append(lb, next_lb), np.append(ub, next_ub)
 
     def get_scaling_configs(self, tube_lb, tube_ub):
@@ -451,7 +401,7 @@ class NonlinPostOpt:
 
         # get the minimal distance between the domain center and the reachable set boundary
         # along the normal vector direction.
-        p = self.get_pedal_point(norm_vec, tube_lb, tube_ub)
+        p = self._get_pedal_point(norm_vec, tube_lb, tube_ub)
 
         # with open('../out/sca_cent.out', 'a') as opfile:
         #     opfile.write(' '.join(str(elem) for elem in c.tolist()) + '\n')
@@ -462,7 +412,7 @@ class NonlinPostOpt:
         return norm_vec, p, c
 
     @staticmethod
-    def get_pedal_point(l, tube_lb, tube_ub):
+    def _get_pedal_point(l, tube_lb, tube_ub):
         pos_clip = np.where(l >= 0, 1, 0)
         neg_clip = np.where(l < 0, 1, 0)
 
@@ -470,7 +420,7 @@ class NonlinPostOpt:
         return pp
 
     @staticmethod
-    def compute_vol(tube_lb, tube_ub):
+    def _compute_vol(tube_lb, tube_ub):
         widths = tube_ub - tube_lb
         return np.prod(widths)
         # return max(widths)
@@ -525,14 +475,14 @@ if __name__ == '__main__':
     main_tube_lb = np.array([0, 0])
     main_tube_ub = np.array([1, 1])
     l = np.array([1, 0])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, main_tube_lb, main_tube_ub), [1, 1])
+    np.testing.assert_almost_equal(nlpost._get_pedal_point(l, main_tube_lb, main_tube_ub), [1, 1])
     l = np.array([1, 1])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, main_tube_lb, main_tube_ub), [1, 1])
+    np.testing.assert_almost_equal(nlpost._get_pedal_point(l, main_tube_lb, main_tube_ub), [1, 1])
     l = np.array([0.5, 1])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, main_tube_lb, main_tube_ub), [1, 1])
+    np.testing.assert_almost_equal(nlpost._get_pedal_point(l, main_tube_lb, main_tube_ub), [1, 1])
     l = np.array([-0.5, 1])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, main_tube_lb, main_tube_ub), [0, 1])
+    np.testing.assert_almost_equal(nlpost._get_pedal_point(l, main_tube_lb, main_tube_ub), [0, 1])
     l = np.array([-0.5, -0.5])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, main_tube_lb, main_tube_ub), [0, 0])
+    np.testing.assert_almost_equal(nlpost._get_pedal_point(l, main_tube_lb, main_tube_ub), [0, 0])
     l = np.array([0.5, -0.5])
-    np.testing.assert_almost_equal(nlpost.get_pedal_point(l, main_tube_lb, main_tube_ub), [1, 0])
+    np.testing.assert_almost_equal(nlpost._get_pedal_point(l, main_tube_lb, main_tube_ub), [1, 0])
