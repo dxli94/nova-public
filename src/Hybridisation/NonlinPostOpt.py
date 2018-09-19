@@ -240,7 +240,6 @@ class NonlinPostOpt:
         matrix_A, poly_w, c = self.dyn_linearizer.gen_abs_dynamics(abs_domain_bounds=domain_bounds)
         Timers.toc('gen_abs_dynamics')
 
-        # todo computing bloating factors can avoid calling LP
         self.set_abs_dynamics(matrix_A, poly_w, c)
         self.reach_params.alpha, self.reach_params.beta = SuppFuncUtils.compute_bloating_factors(self.abs_dynamics,
                                                                                                  self.tau)
@@ -470,8 +469,8 @@ class NonlinPostOpt:
         pp = pos_clip * tube_ub + neg_clip * tube_lb
         return pp
 
-    # @staticmethod
-    def compute_vol(self, tube_lb, tube_ub):
+    @staticmethod
+    def compute_vol(tube_lb, tube_ub):
         widths = tube_ub - tube_lb
         return np.prod(widths)
         # return max(widths)

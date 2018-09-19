@@ -84,8 +84,8 @@ class Linearizer:
 
                 minimizer_kwargs = dict(method='L-BFGS-B', bounds=bounds, args=args)
                 Timers.tic('basinhopping')
-                u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=2).fun
-                u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=2).fun
+                u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=5).fun
+                u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=5).fun
                 Timers.toc('basinhopping')
             u_bounds.extend([u_max, u_min])
 
@@ -155,13 +155,7 @@ class Linearizer:
                 minvec = elem
                 minval = val[0]
 
-        # print(minval, maxval)
-        # print(minvec, maxvec)
-        # print(f)
-        # exit()
-
         return minvec, maxvec
-        # return minval, maxval
 
 def sympy2ibex(sympy_str):
     ibex_str = ''

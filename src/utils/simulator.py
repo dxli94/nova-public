@@ -100,6 +100,45 @@ def coupled_vanderpol_deriv(x, t):
     res = np.array([nx0, nx1, nx2, nx3])
     return res
 
+def coupled_vanderpol_6d_deriv(x, t):
+    # "x1",
+    # "(1 - x0^2)*x1 - x0 + (x2 - x0)",
+    # "x3",
+    # "(1 - x2^2)*x3 - x2 + (x0 - x2) + (x4 - x2)",
+    # "x5",
+    # "(1 - x4^2)*x5 - x4 + (x2 - x4)"
+    nx0 = x[1]
+    nx1 = -(x[0] ** 2.0 - 1.0) * x[1] - x[0] + (x[2] - x[0])
+    nx2 = x[3]
+    nx3 = -(x[2] ** 2.0 - 1.0) * x[3] - x[2] + (x[0] - x[2]) + (x[4] - x[2])
+    nx4 = x[5]
+    nx5 = -(x[4] ** 2.0 - 1.0) * x[5] - x[4] + (x[2] - x[4])
+    # nx1 = -x[0] - x[1]
+    res = np.array([nx0, nx1, nx2, nx3, nx4, nx5])
+    return res
+
+
+def coupled_vanderpol_8d_deriv(x, t):
+    # "x1",
+    # "(1 - x0^2)*x1 - x0 + (x2 - x0)",
+    # "x3",
+    # "(1 - x2^2)*x3 - x2 + (x0 - x2) + (x4 - x2)",
+    # "x5",
+    # "(1 - x4^2)*x5 - x4 + (x2 - x4) + (x6 - x4)",
+    # "x7",
+    # "(1 - x6^2)*x7 - x6 + (x4 - x6)"
+    nx0 = x[1]
+    nx1 = -(x[0] ** 2.0 - 1.0) * x[1] - x[0] + (x[2] - x[0])
+    nx2 = x[3]
+    nx3 = -(x[2] ** 2.0 - 1.0) * x[3] - x[2] + (x[0] - x[2]) + (x[4] - x[2])
+    nx4 = x[5]
+    nx5 = -(x[4] ** 2.0 - 1.0) * x[5] - x[4] + (x[2] - x[4]) + (x[6] - x[4])
+    nx6 = x[7]
+    nx7 = -(x[6] ** 2.0 - 1.0) * x[7] - x[6] + (x[4] - x[6])
+    # nx1 = -x[0] - x[1]
+    res = np.array([nx0, nx1, nx2, nx3, nx4, nx5, nx6, nx7])
+    return res
+
 
 def spring_pendulum_deriv(x, t):
     # "x2",
@@ -253,6 +292,10 @@ def simulate_one_run(horizon, model, init_point):
         xs = odeint(wattsteam_deriv, init_point, ts)
     elif model == 'coupled_vanderpol':
         xs = odeint(coupled_vanderpol_deriv, init_point, ts)
+    elif model == 'coupled_vanderpol_6d':
+        xs = odeint(coupled_vanderpol_6d_deriv, init_point, ts)
+    elif model == 'coupled_vanderpol_8d':
+        xs = odeint(coupled_vanderpol_8d_deriv, init_point, ts)
     elif model == 'spring_pendulum':
         xs = odeint(spring_pendulum_deriv, init_point, ts)
     elif model == 'lorentz_system':
