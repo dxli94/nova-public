@@ -46,25 +46,48 @@ def extract_bounds_from_sf(sf_vec, canno_dir_indices):
 
 
 class NonlinPostOpt:
-    from multiprocessing import Pool
-
-    p = Pool(4)
+    VERIFY_RES_CODE_SAFE = 0
+    VERIFY_RES_CODE_UNKNOWN = 1
+    VERIFY_RES_CODE_UNSAFE = 2
 
     def __init__(self, dim, nonlin_dyn, time_horizon, tau, init_coeff, init_col, is_linear, directions, start_epsilon,
-                 pseudo_var, scaling_per, scaling_cutoff, id_to_vars):
-        self.dim = dim
-        self.nonlin_dyn = nonlin_dyn
-        self.time_horizon = time_horizon
-        self.tau = tau
-        self.coeff_matrix_B = np.identity(dim)
-        self.is_linear = is_linear
-        self.start_epsilon = start_epsilon
-        self.init_coeff = init_coeff
-        self.init_col = init_col
-        self.template_directions = directions
-        self.canno_dir_indices = get_canno_dir_indices(directions)
-        self.scaling_per = scaling_per
-        self.scaling_cutoff = scaling_cutoff
+                 scaling_per, scaling_cutoff, id_to_vars, unsafe_coeff=None, unsafe_col=None):
+        self._dim = dim
+        self._nonlin_dyn = nonlin_dyn
+        self._time_horizon = time_horizon
+        self._tau = tau
+        self._coeff_matrix_B = np.identity(dim)
+        self._is_linear = is_linear
+        self._start_epsilon = start_epsilon
+        self._init_coeff = init_coeff
+        self._init_col = init_col
+        self._template_directions = directions
+
+        # safety checking
+        if unsafe_coeff is not None and unsafe_col is not None:
+            self._unsafe_dir_idx = [-1, -1]
+            for idx, l in enumerate(self._template_directions):
+                if (unsafe_coeff[0] == l).all():
+                    self._unsafe_dir_idx[0] = idx
+                elif (-unsafe_coeff[0] == l).all():
+                    self._unsafe_dir_idx[1] = idx
+
+            if self._unsafe_dir_idx[0] == -1:
+                self._template_directions = np.vstack((self._template_directions, unsafe_coeff[0]))
+                self._unsafe_dir_idx[0] = self._template_directions.shape[0] - 1
+            if self._unsafe_dir_idx[1] == -1:
+                self._template_directions = np.vstack((self._template_directions, -unsafe_coeff[0]))
+                self._unsafe_dir_idx[1] = self._template_directions.shape[0] - 1
+
+            self._unsafe_col = unsafe_col[0]
+            self._verify_res = self.VERIFY_RES_CODE_SAFE
+        else:
+            self._unsafe_dir_idx = None
+            self._unsafe_col = None
+
+        self._canno_dir_indices = get_canno_dir_indices(directions)
+        self._scaling_per = scaling_per
+        self._scaling_cutoff = scaling_cutoff
 
         # if the bound is larger than this, give up to avoid any further numeric issue in libs.
         self.max_tolerance = 1e5
@@ -89,22 +112,22 @@ class NonlinPostOpt:
         total_walltime = 0
         start_walltime = time.time()
 
-        time_frames = int(np.ceil(self.time_horizon / self.tau))
-        vertices = HyperBox.get_vertices_from_constr(self.init_coeff, self.init_col)
+        time_frames = int(np.ceil(self._time_horizon / self._tau))
+        vertices = HyperBox.get_vertices_from_constr(self._init_coeff, self._init_col)
 
         init_set_lb = np.amin(vertices, axis=0)
         init_set_ub = np.amax(vertices, axis=0)
 
         self.handler = PostOptStateholder(init_set_lb, init_set_ub)
         # ======
-        next_init_sf = self.compute_gamma_step(init_set_lb, init_set_ub, np.identity(self.dim))
+        next_init_sf = self.compute_gamma_step(init_set_lb, init_set_ub, np.identity(self._dim))
         # ======
 
         # B := \bb(X0)
         bbox = HyperBox(vertices)
         # (A, V) := L(f, B), such that f(x) = (A, V) over-approx. g(x)
         bbox.bloat(1e-6)
-        epsilon = self.start_epsilon
+        epsilon = self._start_epsilon
         i = 0
         # current_input_lb, current_input_ub = self.hybridize(bbox)
         ct = 0
@@ -138,7 +161,7 @@ class NonlinPostOpt:
                                               self.handler.phi_list.get_val(),
                                               next_init_sf)
             Timers.toc('compute_alpha')
-            alpha_bounds = extract_bounds_from_sf(sf_tube, self.canno_dir_indices)
+            alpha_bounds = extract_bounds_from_sf(sf_tube, self._canno_dir_indices)
             self.handler.temp_tube_lb.set_val(alpha_bounds[0])
             self.handler.temp_tube_ub.set_val(alpha_bounds[1])
 
@@ -172,7 +195,7 @@ class NonlinPostOpt:
                                                        self.handler.input_ub_seq.get_val(),
                                                        self.handler.phi_list.get_val())
                 Timers.toc('compute gamma')
-                next_init_set_lb, next_init_set_ub = extract_bounds_from_sf(next_init_sf, self.canno_dir_indices)
+                next_init_set_lb, next_init_set_ub = extract_bounds_from_sf(next_init_sf, self._canno_dir_indices)
 
                 # initial reachable set in discrete time
                 self.handler.current_init_set_lb.set_val(next_init_set_lb)
@@ -193,11 +216,11 @@ class NonlinPostOpt:
                 if use_time_scaling:
                     if scaled:
                         imprv_rate = (prev_vol - current_vol) / prev_vol
-                        stop_scaling = imprv_rate < self.scaling_cutoff
+                        stop_scaling = imprv_rate < self._scaling_cutoff
                         # print('{}%'.format(imprv_rate*100))
                         # stop_scaling = current_vol > prev_vol
                         if stop_scaling:
-                            self.dyn_linearizer.set_nonlin_dyn(self.nonlin_dyn)
+                            self.dyn_linearizer.set_nonlin_dyn(self._nonlin_dyn)
                             self.dyn_linearizer.is_scaled = False
                             scaled = False
 
@@ -214,8 +237,8 @@ class NonlinPostOpt:
                     else:
                         # check whether to do dynamic scaling at the current step
                         sf_mat.append(sf_tube)
-                        scaling_stepsize = max(int(time_frames * self.scaling_per), 1)
-                        start_scaling = i % scaling_stepsize == 0
+                        scaling_stepsize = max(int(time_frames * self._scaling_per), 1)
+                        start_scaling = (i-1) % scaling_stepsize == 0
                         if start_scaling:
                             scaling_config = self.get_scaling_configs(self.handler.tube_lb.get_val(),
                                                                       self.handler.tube_ub.get_val())
@@ -228,12 +251,33 @@ class NonlinPostOpt:
                 else:
                     # sf_mat.append(next_init_sf)
                     sf_mat.append(sf_tube)
+
+                # safety verification part
+                if self._unsafe_col:
+                    # print(self._unsafe_dir_idx)
+                    # print(-sf_tube[self._unsafe_dir_idx[1]], sf_tube[self._unsafe_dir_idx[0]])
+                    # -supp_val(-a) <= b <= supp_val(a)
+                    unknown_condition = -sf_tube[self._unsafe_dir_idx[1]] <= self._unsafe_col <= sf_tube[self._unsafe_dir_idx[0]]
+                    if unknown_condition:
+                        self._verify_res = self.VERIFY_RES_CODE_UNKNOWN
+                    unsafe_condition = sf_tube[self._unsafe_dir_idx[0]] < self._unsafe_col
+                    if unsafe_condition:
+                        self._verify_res = self.VERIFY_RES_CODE_UNSAFE
+                        break
                 epsilon /= 4
         print('Completed flowpipe computation in {:.2f} secs.\n'.format(total_walltime))
         Timers.toc('total')
         Timers.print_stats()
 
-        return np.array(sf_mat)
+        if self._unsafe_col:
+            if self._verify_res == self.VERIFY_RES_CODE_SAFE:
+                print('Safety verification result: Safe.')
+            elif self._verify_res == self.VERIFY_RES_CODE_UNSAFE:
+                print('Safety verification result: Unsafe.')
+            elif self._verify_res == self.VERIFY_RES_CODE_UNKNOWN:
+                print('Safety verification result: Unknown.')
+
+        return sf_mat
 
     def hybridize(self, bbox):
         domain_bounds = bbox.bounds
@@ -244,7 +288,13 @@ class NonlinPostOpt:
 
         self.set_abs_dynamics(matrix_A, poly_w, c)
         self.reach_params.alpha, self.reach_params.beta, self.reach_params.delta = \
-            SuppFuncUtils.compute_reach_params(self.abs_dynamics, self.tau)
+            SuppFuncUtils.compute_reach_params(self.abs_dynamics, self._tau)
+
+        # with open('/home/dxli/Desktop/offset-beta.dat', 'a') as opfile:
+        #     opfile.write(str(self.reach_params.beta) + '\n')
+        # lp = GlpkWrapper(2)
+        # with open('/home/dxli/Desktop/no-offset-beta.dat', 'a') as opfile:
+        #     opfile.write(str(SuppFuncUtils.compute_beta(self.abs_dynamics, self._tau, lp)) + '\n')
 
         self.abs_domain = bbox
 
@@ -258,8 +308,8 @@ class NonlinPostOpt:
         return err_lb, err_ub
 
     def compute_alpha_step(self, input_lb_seq, input_ub_seq, Vi_lb, Vi_ub, phi_list, sf_X0):
-        W_alpha_lb = Vi_lb * self.tau - self.reach_params.alpha
-        W_alpha_ub = Vi_ub * self.tau + self.reach_params.alpha
+        W_alpha_lb = Vi_lb * self._tau - self.reach_params.alpha
+        W_alpha_ub = Vi_ub * self._tau + self.reach_params.alpha
 
         next_lb_seq = np.hstack((input_lb_seq, W_alpha_lb))
         next_ub_seq = np.hstack((input_ub_seq, W_alpha_ub))
@@ -270,11 +320,11 @@ class NonlinPostOpt:
             phi_list = np.array([delta_T])
         else:
             phi_list = np.tensordot(phi_list, delta_T, axes=(2, 0))
-        phi_list = np.vstack((phi_list, [np.eye(self.dim)]))
+        phi_list = np.vstack((phi_list, [np.eye(self._dim)]))
 
-        sf_vec = np.empty(self.template_directions.shape[0])
+        sf_vec = np.empty(self._template_directions.shape[0])
 
-        for idx, l in enumerate(self.template_directions):
+        for idx, l in enumerate(self._template_directions):
             delta_T_l = phi_list.dot(l).reshape(1, -1)
             pos_clip = np.clip(a=delta_T_l, a_min=0, a_max=np.inf)
             neg_clip = np.clip(a=delta_T_l, a_min=-np.inf, a_max=0)
@@ -313,9 +363,9 @@ class NonlinPostOpt:
                  res_ub: upper bounds of X_i
         """
 
-        sf_vec = np.empty(self.template_directions.shape[0])
+        sf_vec = np.empty(self._template_directions.shape[0])
 
-        for idx, l in enumerate(self.template_directions):
+        for idx, l in enumerate(self._template_directions):
             delta_T_l = phi_list.dot(l).reshape(1, -1)
             pos_clip = np.clip(a=delta_T_l, a_min=0, a_max=np.inf)
             neg_clip = np.clip(a=delta_T_l, a_min=-np.inf, a_max=0)
@@ -337,7 +387,7 @@ class NonlinPostOpt:
             phi_list = np.array([delta_T])
         else:
             phi_list = np.tensordot(phi_list, delta_T, axes=(2, 0))
-        phi_list = np.vstack((phi_list, [np.eye(self.dim)]))
+        phi_list = np.vstack((phi_list, [np.eye(self._dim)]))
 
         return phi_list
 
@@ -347,28 +397,28 @@ class NonlinPostOpt:
          c is the center of the boxed uncertainty region.
         """
         c = (next_lb + next_ub) / 2
-        A = self.abs_dynamics.get_dyn_coeff_matrix_A()
-        M = SuppFuncUtils.mat_exp_int(A, t_min=0, t_max=self.tau)
+        A = self.abs_dynamics.matrix_A
+        M = SuppFuncUtils.mat_exp_int(A, t_min=0, t_max=self._tau)
         self.tau_d = np.dot(M, c)
 
-        next_lb = next_lb * self.tau - self.reach_params.beta + self.tau_d
-        next_ub = next_ub * self.tau + self.reach_params.beta + self.tau_d
+        next_lb = next_lb * self._tau - self.reach_params.beta + self.tau_d
+        next_ub = next_ub * self._tau + self.reach_params.beta + self.tau_d
 
         return np.append(lb_seq, next_lb), np.append(ub_seq, next_ub)
 
     def set_abs_dynamics(self, matrix_A, poly_w, c):
         u = poly_w[1]
-        b = np.dstack((c, -c)).reshape((self.dim * 2, -1))
+        b = np.dstack((c, -c)).reshape((self._dim * 2, -1))
         poly_w = (poly_w[0], u + b)
-        coeff_matrix_B = self.coeff_matrix_B
+        coeff_matrix_B = self._coeff_matrix_B
 
         init_lb = self.handler.current_init_set_lb.get_val()
         init_ub = self.handler.current_init_set_ub.get_val()
 
         init_col = np.vstack((init_ub, -init_lb)).T.reshape(1, -1).flatten()
 
-        abs_dynamics = AffineDynamics(dim=self.dim,
-                                      init_coeff_matrix_X0=self.init_coeff,
+        abs_dynamics = AffineDynamics(dim=self._dim,
+                                      init_coeff_matrix_X0=self._init_coeff,
                                       init_col_vec_X0=init_col,
                                       dynamics_matrix_A=matrix_A,
                                       dynamics_matrix_B=coeff_matrix_B,
@@ -393,7 +443,7 @@ class NonlinPostOpt:
         c = np.sum(self.abs_domain.bounds, axis=0) / 2
 
         # compute derivative
-        deriv = self.nonlin_dyn.eval(c)
+        deriv = self._nonlin_dyn.eval(c)
 
         # get norm vector
         norm = np.dot(deriv, deriv) ** 0.5
@@ -448,7 +498,7 @@ class NonlinPostOpt:
         scaling_func_str = '{}+{}'.format(scaling_func_str, b)
 
         temp_scaled_dynamics = []
-        for dyn in self.nonlin_dyn.dynamics:
+        for dyn in self._nonlin_dyn.dynamics:
             temp_scaled_dynamics.append('({})*({})'.format(scaling_func_str, dyn))
 
         # =====

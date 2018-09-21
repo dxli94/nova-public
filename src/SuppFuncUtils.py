@@ -234,7 +234,7 @@ def generate_directions(direction_type, dim):
             l = np.array([np.cos(k*theta), np.sin(k*theta)])
             direction_generator.append(l)
 
-    return np.array(direction_generator)
+    return np.array(direction_generator, dtype=float)
 
 
 def compute_support_function_singular(c, l):

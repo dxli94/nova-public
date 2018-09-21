@@ -50,24 +50,29 @@ def main():
 
     model_name = path.split('/')[-1].split('.')[0]
     print('reading model file: {}'.format(model_name))
-    data = JsonReader(path).read()
+    configs = JsonReader(path).read()
     print('Finished.')
-    time_horizon = data['time_horizon']
-    tau = data['sampling_time']
-    direction_type = data['direction_type']
-    dim = data['dim']
-    start_epsilon = data['start_epsilon']
-    non_linear_dynamics = data['dynamics']
-    state_vars = data['state_variables']
-    is_linear = data['is_linear']
-    init_coeff = np.array(data['init_coeff'])
-    init_col = np.array(data['init_col'])
-    opdims = data['opvars']
-    simu_model = data['simu_model']
-    # pseudo_var = data['pseudo_var']
+    time_horizon = configs['time_horizon']
+    tau = configs['sampling_time']
+    direction_type = configs['direction_type']
+    dim = configs['dim']
+    start_epsilon = configs['start_epsilon']
+    non_linear_dynamics = configs['dynamics']
+    state_vars = configs['state_variables']
+    is_linear = configs['is_linear']
+    init_coeff = np.array(configs['init_coeff'])
+    init_col = np.array(configs['init_col'])
+    opdims = configs['opvars']
+    simu_model = configs['simu_model']
     pseudo_var = False
-    scaling_per = data['scaling_per']
-    scaling_cutoff = data['scaling_cutoff']
+    scaling_per = configs['scaling_per']
+    scaling_cutoff = configs['scaling_cutoff']
+
+    try:
+        unsafe_coeff = np.array(configs['unsafe_coeff'])
+        unsafe_col = np.array(configs['unsafe_col'])
+    except KeyError:
+        unsafe_coeff = unsafe_col = None
 
     directions = SuppFuncUtils.generate_directions(direction_type, dim)
 
@@ -88,10 +93,11 @@ def main():
                                     is_linear=is_linear,
                                     directions=directions,
                                     start_epsilon=start_epsilon,
-                                    pseudo_var=pseudo_var,
                                     scaling_per=scaling_per,
                                     scaling_cutoff=scaling_cutoff,
-                                    id_to_vars=id_to_vars)
+                                    id_to_vars=id_to_vars,
+                                    unsafe_coeff=unsafe_coeff,
+                                    unsafe_col=unsafe_col)
     sf_mat = nonlin_post_opt.compute_post()
     # ============== Flowpipe construction done. ============== #
 
