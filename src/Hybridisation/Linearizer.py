@@ -1,10 +1,9 @@
-from ConvexSet.Polyhedron import Polyhedron
-import numpy as np
-from scipy.optimize import minimize, basinhopping
 from itertools import product
-from pyibex import Function, IntervalVector
 
-from multiprocessing import Process
+import numpy as np
+import sympy
+from pyibex import Function, IntervalVector
+from scipy.optimize import basinhopping
 
 from timerutil import Timers
 
@@ -50,6 +49,37 @@ class Linearizer:
         err = lin_func - non_lin_func[i]
         return err
 
+    # def get_jac(self, i, coeff, bias):
+    #     nonlin_dyn_str = self.nonlin_dyn.str_rep
+    #     err_func_sp = []
+    #     minus_err_func_sp = []
+    #
+    #     lin_dyn_str = '+'.join([str(ele)+'*x{}'.format(idx) for idx, ele in enumerate(coeff)])
+    #
+    #     err_func_sp.append('{}+{}-({})'.format(nonlin_dyn_str[i], bias, lin_dyn_str))
+    #     minus_err_func_sp.append('{}+{}-({})'.format(lin_dyn_str, bias, nonlin_dyn_str[i]))
+    #
+    #     err_func_sp = sympy.Matrix(err_func_sp)
+    #     minus_err_func_sp = sympy.Matrix(minus_err_func_sp)
+    #
+    #     err_func_jac = sympy.lambdify(self.nonlin_dyn.state_vars, err_func_sp.jacobian(self.nonlin_dyn.state_vars))
+    #     minus_err_func_jac = sympy.lambdify(self.nonlin_dyn.state_vars, minus_err_func_sp.jacobian(self.nonlin_dyn.state_vars))
+    #     return err_func_jac, minus_err_func_jac
+
+    def err_func_jac(self, x, args):
+        coeff = args[0]
+        i = args[2]
+        nonlin_jac = self.nonlin_dyn.eval_jacobian(x)[i]
+
+        return nonlin_jac - coeff
+
+    def minus_err_func_jac(self, x, args):
+        coeff = args[0]
+        i = args[2]
+        nonlin_jac = self.nonlin_dyn.eval_jacobian(x)[i]
+
+        return coeff - nonlin_jac
+
     def gen_abs_dynamics(self, abs_domain_bounds):
         # Timers.tic('total')
 
@@ -71,22 +101,20 @@ class Linearizer:
             else:
                 coeff = matrix_A[i]
                 bias = b[i]
-                affine_dyn_rep = coeff2ibex(coeff, bias)
-                nonlin_dyn_rep = sympy2ibex(self.nonlin_dyn.str_rep[i])
-
-                diff_rep = '{}-({})'.format(nonlin_dyn_rep, affine_dyn_rep)
-                # res = self.interval_diff(diff_rep, bounds)
 
                 bounds = [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)]
 
                 args = (coeff, bias, i, self.nonlin_dyn)
+                args = (coeff, bias, i)
                 x0 = abs_domain_centre
 
-                minimizer_kwargs = dict(method='L-BFGS-B', bounds=bounds, args=args)
-                Timers.tic('basinhopping')
-                u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=3).fun
-                u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=3).fun
-                Timers.toc('basinhopping')
+                minimizer_kwargs_1 = dict(method='L-BFGS-B', bounds=bounds, args=args, jac=lambda *args: self.err_func_jac(args[0], args[1:]))
+                minimizer_kwargs_2 = dict(method='L-BFGS-B', bounds=bounds, args=args, jac=lambda *args: self.minus_err_func_jac(args[0], args[1:]))
+
+                # Timers.tic('basinhopping')
+                u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs_1, niter_success=3).fun
+                u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs_2, niter_success=3).fun
+                # Timers.toc('basinhopping')
             u_bounds.extend([u_max, u_min])
 
             # if self.is_scaled:
@@ -180,46 +208,6 @@ def coeff2ibex(coeff_vec, bias):
 
     ibex_str += str(bias)
     return ibex_str
-
-
-# def err_func(x, *args):
-#     coeff_vec = args[0]
-#     bias = args[1]
-#     i = args[2]
-#     nonlin_dyn = args[3]
-#
-#     lin_func = np.dot(coeff_vec, x) + bias
-#     non_lin_func = nonlin_dyn.eval(x)
-#     err = non_lin_func[i] - lin_func
-#     return err
-#
-# def minus_err_func(x, *args):
-#     coeff_vec = args[0]
-#     bias = args[1]
-#     i = args[2]
-#     nonlin_dyn = args[3]
-#
-#     lin_func = np.dot(coeff_vec, x) + bias
-#     non_lin_func = nonlin_dyn.eval(x)
-#     err = lin_func - non_lin_func[i]
-#     return err
-
-# if __name__ == '__main__':
-#     s = '1+x0^2*x1-1.5*x0-x0'
-#     sympy_s = sympy2ibex(s)
-#     # print(sympy2ibex(s))
-#     f = Function('x[2]', sympy_s)
-#     bounds = IntervalVector([[0, 1], [1, 2]])
-#
-#     import time
-#     start_time = time.time()
-#     for i in range(100000):
-#         f.eval(bounds)
-#     print(time.time() - start_time)
-#
-#     a = [1, 2, 3]
-#     bias = 0.1
-    # print(coeff2ibex(a, bias))
 
 if __name__ == '__main__':
     def err_func(x, *args):

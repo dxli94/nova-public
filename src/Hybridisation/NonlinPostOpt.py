@@ -141,11 +141,7 @@ class NonlinPostOpt:
         sf_mat = []
 
         while i < time_frames:
-            bbox = self._refine_domain(self.handler.tube_lb.get_val(),
-                                       self.handler.tube_ub.get_val(),
-                                       self.handler.temp_tube_lb.get_val(),
-                                       self.handler.temp_tube_ub.get_val()
-                                       )
+            bbox = self._refine_domain()
             bbox.bloat(epsilon)
 
             Timers.tic('hybridize')
@@ -180,21 +176,21 @@ class NonlinPostOpt:
                 current_vol = self._compute_vol(self.handler.tube_lb.get_val(), self.handler.tube_ub.get_val())
 
                 self.handler.phi_list.set_val(self.update_phi_list(self.handler.phi_list.get_val()))
-                Timers.tic('update_wb_seq')
+                # Timers.tic('update_wb_seq')
                 res_update_wb = self.update_wb_seq(self.handler.input_lb_seq.get_val(),
                                                    self.handler.input_ub_seq.get_val(),
                                                    current_input_lb,
                                                    current_input_ub
                                                    )
-                Timers.toc('update_wb_seq')
+                # Timers.toc('update_wb_seq')
                 self.handler.input_lb_seq.set_val(res_update_wb[0])
                 self.handler.input_ub_seq.set_val(res_update_wb[1])
 
-                Timers.tic('compute gamma')
+                # Timers.tic('compute gamma')
                 next_init_sf = self.compute_gamma_step(self.handler.input_lb_seq.get_val(),
                                                        self.handler.input_ub_seq.get_val(),
                                                        self.handler.phi_list.get_val())
-                Timers.toc('compute gamma')
+                # Timers.toc('compute gamma')
                 next_init_set_lb, next_init_set_ub = extract_bounds_from_sf(next_init_sf, self._canno_dir_indices)
 
                 # initial reachable set in discrete time
@@ -242,9 +238,9 @@ class NonlinPostOpt:
                         if start_scaling:
                             scaling_config = self.get_scaling_configs(self.handler.tube_lb.get_val(),
                                                                       self.handler.tube_ub.get_val())
-                            Timers.tic('self.scale_dynamics')
+                            # Timers.tic('self.scale_dynamics')
                             self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
-                            Timers.toc('self.scale_dynamics')
+                            # Timers.toc('self.scale_dynamics')
                             self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
                             self.dyn_linearizer.is_scaled = True
                             scaled = True
@@ -426,8 +422,12 @@ class NonlinPostOpt:
                                       dynamics_col_vec_U=poly_w[1])
         self.abs_dynamics = abs_dynamics
 
-    @staticmethod
-    def _refine_domain(tube_lb, tube_ub, temp_tube_lb, temp_tube_ub):
+    def _refine_domain(self):
+        tube_lb = self.handler.tube_lb.get_val()
+        tube_ub = self.handler.tube_ub.get_val()
+        temp_tube_lb = self.handler.temp_tube_lb.get_val()
+        temp_tube_ub = self.handler.temp_tube_ub.get_val()
+
         bbox_lb = np.amin([tube_lb, temp_tube_lb], axis=0)
         bbox_ub = np.amax([tube_ub, temp_tube_ub], axis=0)
         bbox = HyperBox([bbox_lb, bbox_ub], opt=1)
