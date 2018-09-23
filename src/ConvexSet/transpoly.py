@@ -1,7 +1,7 @@
 import cvxopt as cvx
 import numpy as np
 
-from ConvexSet.Polyhedron import Polyhedron
+from ConvexSet.polyhedron import Polyhedron
 
 
 class TransPoly(Polyhedron):

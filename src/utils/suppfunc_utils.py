@@ -2,9 +2,9 @@ import numpy as np
 from scipy.linalg import expm
 import cvxopt as cvx
 
-from ConvexSet.Polyhedron import Polyhedron
-from ConvexSet.TransPoly import TransPoly
-from SysDynamics import AffineDynamics
+from ConvexSet.polyhedron import Polyhedron
+from ConvexSet.transpoly import TransPoly
+from sys_dynamics import AffineDynamics
 
 
 def mat_exp(A, tau):

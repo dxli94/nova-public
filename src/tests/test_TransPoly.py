@@ -1,6 +1,6 @@
 import numpy as np
 
-from ConvexSet.TransPoly import TransPoly
+from ConvexSet.transpoly import TransPoly
 
 
 def test_no_rotation():

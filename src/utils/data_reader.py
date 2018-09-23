@@ -1,7 +1,7 @@
 import numpy as np
 import json
 
-from SysDynamics import AffineDynamics
+from sys_dynamics import AffineDynamics
 
 
 def read_next_block(ins_file):

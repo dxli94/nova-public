@@ -2,11 +2,11 @@ import time
 
 import numpy as np
 
-from ConvexSet.HyperBox import HyperBox, hyperbox_contain_by_bounds
-from Hybridisation.Linearizer import Linearizer
-from Hybridisation.PostOptStateholder import PostOptStateholder
-from SysDynamics import AffineDynamics, GeneralDynamics
-from utils import SuppFuncUtils
+from ConvexSet.hyperbox import HyperBox, hyperbox_contain_by_bounds
+from Hybridisation.linearizer import Linearizer
+from Hybridisation.postopt_stateholder import PostOptStateholder
+from sys_dynamics import AffineDynamics, GeneralDynamics
+from utils import suppfunc_utils
 from utils.timerutil import Timers
 
 
@@ -282,7 +282,7 @@ class NonlinPostOpt:
 
         self.set_abs_dynamics(matrix_A, poly_w, c)
         self.reach_params.alpha, self.reach_params.beta, self.reach_params.delta = \
-            SuppFuncUtils.compute_reach_params(self.abs_dynamics, self._tau)
+            suppfunc_utils.compute_reach_params(self.abs_dynamics, self._tau)
 
         # with open('/home/dxli/Desktop/offset-beta.dat', 'a') as opfile:
         #     opfile.write(str(self.reach_params.beta) + '\n')
@@ -392,7 +392,7 @@ class NonlinPostOpt:
         """
         c = (next_lb + next_ub) / 2
         A = self.abs_dynamics.matrix_A
-        M = SuppFuncUtils.mat_exp_int(A, t_min=0, t_max=self._tau)
+        M = suppfunc_utils.mat_exp_int(A, t_min=0, t_max=self._tau)
         self.tau_d = np.dot(M, c)
 
         next_lb = next_lb * self._tau - self.reach_params.beta + self.tau_d

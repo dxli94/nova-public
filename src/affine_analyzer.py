@@ -1,10 +1,10 @@
 import argparse
 
-from AffinePostOpt import PostOperator
-from utils import SuppFuncUtils
-from utils.DataReader import DataReader
-from utils.GlpkWrapper import GlpkWrapper
-from utils.Plotter import Plotter
+from affine_post_opt import PostOperator
+from utils import suppfunc_utils
+from utils.data_reader import DataReader
+from utils.glpk_wrapper import GlpkWrapper
+from utils.plotter import Plotter
 
 
 def parse_args():
@@ -37,8 +37,8 @@ def main():
     data_reader = DataReader(path2instance=instance_file)
 
     sys_dynamics = data_reader.read_data()
-    directions = SuppFuncUtils.generate_directions(direction_type=direction_type,
-                                                   dim=sys_dynamics.get_dim())
+    directions = suppfunc_utils.generate_directions(direction_type=direction_type,
+                                                    dim=sys_dynamics.get_dim())
 
     lp = GlpkWrapper(sys_dynamics.get_dim())
 

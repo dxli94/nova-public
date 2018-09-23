@@ -1,6 +1,6 @@
 import cvxopt as cvx
 
-import utils.PPLHelper as pplHelper
+import utils.ppl_helper as pplHelper
 from misc.basic_vector_operations import *
 
 

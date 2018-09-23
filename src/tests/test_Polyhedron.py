@@ -1,5 +1,5 @@
 import numpy as np
-from ConvexSet.Polyhedron import Polyhedron
+from ConvexSet.polyhedron import Polyhedron
 
 coeff_matrix = np.array([[1, 1], [-1, 0], [0, -1]])
 col_vec = np.array([[2], [0], [0]])

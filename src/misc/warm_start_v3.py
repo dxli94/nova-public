@@ -2,10 +2,10 @@ import time
 
 import numpy as np
 
-from ConvexSet.Polyhedron import Polyhedron
-from utils import SuppFuncUtils as SuppFuncUtils
-from utils.DataReader import DataReader
-from utils.GlpkWrapper import GlpkWrapper
+from ConvexSet.polyhedron import Polyhedron
+from utils import suppfunc_utils as SuppFuncUtils
+from utils.data_reader import DataReader
+from utils.glpk_wrapper import GlpkWrapper
 from utils.timerutil import Timers
 
 

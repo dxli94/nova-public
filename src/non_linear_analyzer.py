@@ -6,13 +6,13 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
-import utils.Simulator as simu
-from AffinePostOpt import PostOperator as AffinePostOperator
-from Hybridisation.NonlinPostOpt import NonlinPostOpt
-from SysDynamics import GeneralDynamics
-from utils import SuppFuncUtils
-from utils.DataReader import JsonReader
-from utils.Plotter import Plotter
+import utils.simulator as simu
+from affine_post_opt import PostOperator as AffinePostOperator
+from Hybridisation.nonlin_post_opt import NonlinPostOpt
+from sys_dynamics import GeneralDynamics
+from utils import suppfunc_utils
+from utils.data_reader import JsonReader
+from utils.plotter import Plotter
 
 
 def main():
@@ -72,7 +72,7 @@ def main():
     except KeyError:
         unsafe_coeff = unsafe_col = None
 
-    directions = SuppFuncUtils.generate_directions(direction_type, dim)
+    directions = suppfunc_utils.generate_directions(direction_type, dim)
 
     id_to_vars = {}
     for i, var in enumerate(state_vars):
@@ -123,8 +123,8 @@ def main():
 
 
 def run_simulate(time_horizon, model, init_coeff, init_col):
-    from ConvexSet.Polyhedron import Polyhedron
-    from ConvexSet.HyperBox import HyperBox
+    from ConvexSet.polyhedron import Polyhedron
+    from ConvexSet.hyperbox import HyperBox
     import random
     vertices = Polyhedron(init_coeff, init_col).get_vertices()
     init_set = HyperBox(vertices)

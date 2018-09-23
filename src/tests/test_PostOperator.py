@@ -1,10 +1,10 @@
 import numpy as np
 
-from AffinePostOpt import PostOperator
-from ConvexSet.Polyhedron import Polyhedron
-from ConvexSet.TransPoly import TransPoly
-from SysDynamics import AffineDynamics
-from utils import SuppFuncUtils
+from affine_post_opt import PostOperator
+from ConvexSet.polyhedron import Polyhedron
+from ConvexSet.transpoly import TransPoly
+from sys_dynamics import AffineDynamics
+from utils import suppfunc_utils
 
 dynamics_matrix_A = np.array([[0, 1], [0, 0]])
 dynamics_matrix_B = np.array([[1, 0], [0, 1]])
@@ -24,7 +24,7 @@ sys_dynamics = AffineDynamics(init_coeff_matrix_X0=dynamics_init_coeff_matrix_X0
                               dynamics_coeff_matrix_U=dynamics_coeff_matrix_U,
                               dynamics_col_vec_U=dynamics_col_vec_U,
                               dim=2)
-directions = SuppFuncUtils.generate_directions(direction_type=0, dim=2)
+directions = suppfunc_utils.generate_directions(direction_type=0, dim=2)
 post_opt = PostOperator(sys_dynamics, directions)
 
 
@@ -34,7 +34,7 @@ def test_compute_initial_sf():
     tau = 0.1
 
     delta_tp = np.transpose(
-        SuppFuncUtils.mat_exp(sys_dynamics.get_dyn_coeff_matrix_A(), 1 * tau))
+        suppfunc_utils.mat_exp(sys_dynamics.get_dyn_coeff_matrix_A(), 1 * tau))
 
     trans_poly_U = TransPoly(trans_matrix_B=sys_dynamics.get_dyn_matrix_B(),
                              coeff_matrix_U=sys_dynamics.get_dyn_coeff_matrix_U(),
@@ -50,7 +50,7 @@ def test_compute_initial_sf():
                  1.08447007069]
 
     # max(sf_X0, sf_tp_X0 + self.tau * sf_V + alpha * sf_ball)
-    alpha = SuppFuncUtils.compute_alpha(sys_dynamics, tau)
+    alpha = suppfunc_utils.compute_alpha(sys_dynamics, tau)
     np.testing.assert_almost_equal(alpha, 0.1034700706937106)
 
     for elem in zip(post_opt.directions, true_sf_X0, true_sf_tp_X0, true_sf_V, sf_omega0):
@@ -58,7 +58,7 @@ def test_compute_initial_sf():
         sf_X0 = poly_init.compute_support_function(l)
         sf_tp_X0 = poly_init.compute_support_function(np.dot(delta_tp, l))
         sf_V = trans_poly_U.compute_support_function(l)
-        sf_ball = SuppFuncUtils.support_unitball_infnorm(l)
+        sf_ball = suppfunc_utils.support_unitball_infnorm(l)
         sf_omega0 = max(sf_X0, sf_tp_X0 + tau * sf_V + alpha * sf_ball)
 
         np.testing.assert_almost_equal(sf_X0, elem[1])

@@ -3,9 +3,9 @@ import time
 import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix
 
-from utils import SuppFuncUtils as SuppFuncUtils
-from utils.DataReader import DataReader
-from utils.GlpkWrapper import GlpkWrapper
+from utils import suppfunc_utils as SuppFuncUtils
+from utils.data_reader import DataReader
+from utils.glpk_wrapper import GlpkWrapper
 from utils.python_sparse_glpk.python_sparse_glpk import LpInstance
 
 
