@@ -6,7 +6,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
-import utils.simulator as simu
+import utils.Simulator as simu
 from AffinePostOpt import PostOperator as AffinePostOperator
 from Hybridisation.NonlinPostOpt import NonlinPostOpt
 from SysDynamics import GeneralDynamics

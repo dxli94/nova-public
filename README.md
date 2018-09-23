@@ -1,13 +1,13 @@
-# PyFlow
+# NOVA
 
 Project by ANU Hybrid System Group.
 
 ## Getting Started
 
-First, clone PyFlow-assignment into your workplace by
+First, clone NOVA into your workplace by
 
 ```
-git clone git@gitlab.com:dxli-private/HyPyFlow.git
+git clone git@gitlab.com:dxli-private/nova.git
 ```
 
 ### Installing dependencies
@@ -16,12 +16,12 @@ The easiest way to install all the dependencies is by creating a virtual environ
 
 After installing Anaconda,
 ```
-cd HyPyFlow/
-conda env create --name HyPy --file environment.yml
+cd NOVA
+conda env create --name nova --file environment.yml
 ```
 then activate the virtual environment by
 ```
-source activate HyPy
+source activate nova
 ```
 You will see your prompt is now prefixed with "PyFlow-assignment", which is the virtual environment with dependencies installed.
 
@@ -39,23 +39,6 @@ In case Anaconda is not available or does not work as expected, you could instal
 They should all be available if you are using pip.
 
 ### Running
-
-Try affine analyzer, see options
-```
-cd HyPyFlow/src
-python affine_analyzer.py --help
-```
-
-For example:
-```
-python affine_analyzer.py --path ../instances/single_mode_affine_instances/free_ball.txt --dt 0 --horizon 1 --sampling_time 0.1 --opvars 0 1
-
-```
-
-Plot from outfile.out:
-```
-python Plotter.py --path ../out/outfile.out
-```
 
 Try nonlinear analyzer (dev.),
  
