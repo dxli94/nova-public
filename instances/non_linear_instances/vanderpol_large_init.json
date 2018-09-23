@@ -3,7 +3,7 @@
     "direction_type": 1,
     "dynamics": [
         "x1",
-        "2*x0-x0^3-0.2*x1+0.1"
+        "(1-x0^2)*x1-x0"
 
     ],
     "init_coeff": [
@@ -26,16 +26,16 @@
     ],
     "init_col": [
         [
-            -0.4
+            1.70
         ],
         [
-            0.5
+            -1.25
         ],
         [
-            -0.4
+            2.65
         ],
         [
-            0.5
+            -2.45
         ]
     ],
     "is_linear": [
@@ -46,15 +46,15 @@
         0,
         1
     ],
-    "sampling_time": 0.005,
-    "start_epsilon": 1e-09,
+    "sampling_time": 0.03,
+    "start_epsilon": 1e-05,
     "state_variables": [
         "x0",
         "x1"
     ],
-    "time_horizon": 12,
-    "pseudo_var": false,
+    "time_horizon": 6.74,
     "scaling_per": 0.1,
-    "scaling_cutoff": 1e-3,
-    "simu_model": "buckling_column"
+    "scaling_cutoff": 1e-2,
+    "pseudo_var": false,
+    "simu_model": "vanderpol"
 }

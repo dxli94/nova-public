@@ -1,4 +1,4 @@
-name: HyPyFlow
+name: nova
 channels:
   - conda-forge
   - defaults
@@ -14,4 +14,4 @@ dependencies:
   - cysignals
   - pip:
     - pycddlib==2.0.0
-prefix: /anaconda3/envs/HyPyFlow
+prefix: /anaconda3/envs/nova

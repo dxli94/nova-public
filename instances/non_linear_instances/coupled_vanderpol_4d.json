@@ -37,7 +37,7 @@
         1,
         2
     ],
-    "sampling_time": 0.01,
+    "sampling_time": 0.005,
     "start_epsilon": 1e-05,
     "state_variables": [
         "x0",
