@@ -5,8 +5,6 @@ import cloudpickle
 import pickle
 import sympy
 
-from multiprocessing import connection
-
 
 class ForkingPickler(pickle.Pickler):
     '''Pickler subclass used by multiprocessing.'''

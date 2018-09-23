@@ -1,10 +1,10 @@
 import argparse
 
-import SuppFuncUtils
 from AffinePostOpt import PostOperator
-from Plotter import Plotter
+from utils import SuppFuncUtils
 from utils.DataReader import DataReader
 from utils.GlpkWrapper import GlpkWrapper
+from utils.Plotter import Plotter
 
 
 def parse_args():

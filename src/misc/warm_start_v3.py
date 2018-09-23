@@ -1,12 +1,13 @@
-import numpy as np
 import time
 
-import SuppFuncUtils as SuppFuncUtils
+import numpy as np
+
 from ConvexSet.Polyhedron import Polyhedron
+from utils import SuppFuncUtils as SuppFuncUtils
 from utils.DataReader import DataReader
 from utils.GlpkWrapper import GlpkWrapper
+from utils.timerutil import Timers
 
-from timerutil import Timers
 
 def update_delta_list(sys_dynamics, tau, delta_list):
     dyn_coeff_mat = sys_dynamics.get_dyn_coeff_matrix_A()

@@ -1,9 +1,9 @@
 import numpy as np
 
-import SuppFuncUtils
+import utils.PPLHelper as PPLHelper
 from ConvexSet.Polyhedron import Polyhedron
 from ConvexSet.TransPoly import TransPoly
-import utils.PPLHelper as PPLHelper
+from utils import SuppFuncUtils
 
 
 class PostOperator:

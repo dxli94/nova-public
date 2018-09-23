@@ -6,15 +6,13 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
-import SuppFuncUtils
 import utils.simulator as simu
 from AffinePostOpt import PostOperator as AffinePostOperator
 from Hybridisation.NonlinPostOpt import NonlinPostOpt
-from Plotter import Plotter
 from SysDynamics import GeneralDynamics
+from utils import SuppFuncUtils
 from utils.DataReader import JsonReader
-
-from timerutil import Timers
+from utils.Plotter import Plotter
 
 
 def main():

@@ -1,15 +1,14 @@
-import numpy as np
 import time
-from scipy.sparse import csr_matrix, csc_matrix
-
-import SuppFuncUtils as SuppFuncUtils
-from utils.python_sparse_glpk.python_sparse_glpk import LpInstance
-from utils.DataReader import DataReader
-from utils.GlpkWrapper import GlpkWrapper
-
-from plotutil import add_plot
 
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy.sparse import csr_matrix, csc_matrix
+
+from utils import SuppFuncUtils as SuppFuncUtils
+from utils.DataReader import DataReader
+from utils.GlpkWrapper import GlpkWrapper
+from utils.python_sparse_glpk.python_sparse_glpk import LpInstance
+
 
 def add_init_constraints(lp, sys_dyn, init_coeff_mat, init_col_vec):
     # n columns for state variables

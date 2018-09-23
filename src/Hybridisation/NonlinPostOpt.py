@@ -1,15 +1,13 @@
+import time
+
 import numpy as np
 
-import SuppFuncUtils
 from ConvexSet.HyperBox import HyperBox, hyperbox_contain_by_bounds
-from ConvexSet.Polyhedron import Polyhedron
-from Hybridisation.PostOptStateholder import PostOptStateholder
 from Hybridisation.Linearizer import Linearizer
+from Hybridisation.PostOptStateholder import PostOptStateholder
 from SysDynamics import AffineDynamics, GeneralDynamics
-from timerutil import Timers
-from utils.GlpkWrapper import GlpkWrapper
-
-import time
+from utils import SuppFuncUtils
+from utils.timerutil import Timers
 
 
 class reachParams:

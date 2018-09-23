@@ -1,11 +1,8 @@
 from itertools import product
 
 import numpy as np
-import sympy
 from pyibex import Function, IntervalVector
 from scipy.optimize import basinhopping
-
-from timerutil import Timers
 
 
 def get_generator_matrix(dim):

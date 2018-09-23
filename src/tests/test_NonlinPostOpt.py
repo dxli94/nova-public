@@ -1,9 +1,9 @@
-import SuppFuncUtils
 import numpy as np
 
 from ConvexSet.Polyhedron import Polyhedron
 from ConvexSet.TransPoly import TransPoly
 from SysDynamics import AffineDynamics
+from utils import SuppFuncUtils
 from utils.GlpkWrapper import GlpkWrapper
 
 
