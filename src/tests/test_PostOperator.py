@@ -1,9 +1,9 @@
 import numpy as np
-
-from affine_post_opt import PostOperator
 from ConvexSet.polyhedron import Polyhedron
 from ConvexSet.transpoly import TransPoly
-from sys_dynamics import AffineDynamics
+
+from cores.sys_dynamics import AffineDynamics
+from misc.affine_post_opt import PostOperator
 from utils import suppfunc_utils
 
 dynamics_matrix_A = np.array([[0, 1], [0, 0]])
@@ -17,12 +17,12 @@ dynamics_col_vec_U = np.array([[0], [0], [9.81], [-9.81]])
 
 dynamics_init_coeff_matrix_X0 = np.array([[-1, 0], [1, 0], [0, -1], [0, 1]])
 dynamics_init_col_vec_X0 = np.array([[-10], [10.2], [0], [0]])
-sys_dynamics = AffineDynamics(init_coeff_matrix_X0=dynamics_init_coeff_matrix_X0,
-                              init_col_vec_X0=dynamics_init_col_vec_X0,
-                              dynamics_matrix_A=dynamics_matrix_A,
-                              dynamics_matrix_B=dynamics_matrix_B,
-                              dynamics_coeff_matrix_U=dynamics_coeff_matrix_U,
-                              dynamics_col_vec_U=dynamics_col_vec_U,
+sys_dynamics = AffineDynamics(x0_matrix=dynamics_init_coeff_matrix_X0,
+                              x0_col=dynamics_init_col_vec_X0,
+                              a_matrix=dynamics_matrix_A,
+                              b_matrix=dynamics_matrix_B,
+                              u_coeff=dynamics_coeff_matrix_U,
+                              u_col=dynamics_col_vec_U,
                               dim=2)
 directions = suppfunc_utils.generate_directions(direction_type=0, dim=2)
 post_opt = PostOperator(sys_dynamics, directions)

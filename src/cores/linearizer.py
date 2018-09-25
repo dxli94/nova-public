@@ -17,7 +17,7 @@ def get_generator_matrix(dim):
 class Linearizer:
     def __init__(self, dim, nonlin_dyn, is_linear):
         self.dim = dim
-        self.nonlin_dyn = nonlin_dyn
+        self.target_dyn = nonlin_dyn
         self.is_linear = is_linear
         self.is_scaled = False
 
@@ -30,7 +30,7 @@ class Linearizer:
         i = args[2]
 
         lin_func = np.dot(coeff_vec, x) + bias
-        non_lin_func = self.nonlin_dyn.eval(x)
+        non_lin_func = self.target_dyn.eval(x)
         err = non_lin_func[i] - lin_func
         # return 1
         return err
@@ -42,38 +42,21 @@ class Linearizer:
         i = args[2]
 
         lin_func = np.dot(coeff_vec, x) + bias
-        non_lin_func = self.nonlin_dyn.eval(x)
+        non_lin_func = self.target_dyn.eval(x)
         err = lin_func - non_lin_func[i]
         return err
-
-    # def get_jac(self, i, coeff, bias):
-    #     nonlin_dyn_str = self.nonlin_dyn.str_rep
-    #     err_func_sp = []
-    #     minus_err_func_sp = []
-    #
-    #     lin_dyn_str = '+'.join([str(ele)+'*x{}'.format(idx) for idx, ele in enumerate(coeff)])
-    #
-    #     err_func_sp.append('{}+{}-({})'.format(nonlin_dyn_str[i], bias, lin_dyn_str))
-    #     minus_err_func_sp.append('{}+{}-({})'.format(lin_dyn_str, bias, nonlin_dyn_str[i]))
-    #
-    #     err_func_sp = sympy.Matrix(err_func_sp)
-    #     minus_err_func_sp = sympy.Matrix(minus_err_func_sp)
-    #
-    #     err_func_jac = sympy.lambdify(self.nonlin_dyn.state_vars, err_func_sp.jacobian(self.nonlin_dyn.state_vars))
-    #     minus_err_func_jac = sympy.lambdify(self.nonlin_dyn.state_vars, minus_err_func_sp.jacobian(self.nonlin_dyn.state_vars))
-    #     return err_func_jac, minus_err_func_jac
 
     def err_func_jac(self, x, args):
         coeff = args[0]
         i = args[2]
-        nonlin_jac = self.nonlin_dyn.eval_jacobian(x)[i]
+        nonlin_jac = self.target_dyn.eval_jacobian(x)[i]
 
         return nonlin_jac - coeff
 
     def minus_err_func_jac(self, x, args):
         coeff = args[0]
         i = args[2]
-        nonlin_jac = self.nonlin_dyn.eval_jacobian(x)[i]
+        nonlin_jac = self.target_dyn.eval_jacobian(x)[i]
 
         return coeff - nonlin_jac
 
@@ -86,22 +69,19 @@ class Linearizer:
         abs_domain_lower_bounds = abs_domain_bounds[0]
         abs_domain_upper_bounds = abs_domain_bounds[1]
 
-        matrix_A, b = self.jacobian_linearize(abs_domain_centre, self.nonlin_dyn)
+        matrix_A, b = self.jacobian_linearize(abs_domain_centre, self.target_dyn)
 
         u_bounds = []
         # Timers.tic('loop')
         for i in range(self.dim):
-            if self.is_linear[i] and not self.is_scaled:
+            if not self.is_scaled and self.is_linear[i]:
                 u_min = u_max = 0
-            # elif self.is_scaled:
-            #     u_min = u_max = 0
             else:
                 coeff = matrix_A[i]
                 bias = b[i]
 
                 bounds = [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)]
 
-                args = (coeff, bias, i, self.nonlin_dyn)
                 args = (coeff, bias, i)
                 x0 = abs_domain_centre
 
@@ -109,8 +89,8 @@ class Linearizer:
                 minimizer_kwargs_2 = dict(method='L-BFGS-B', bounds=bounds, args=args, jac=lambda *args: self.minus_err_func_jac(args[0], args[1:]))
 
                 # Timers.tic('basinhopping')
-                u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs_1, niter_success=3).fun
-                u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs_2, niter_success=3).fun
+                u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs_1, niter_success=5).fun
+                u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs_2, niter_success=5).fun
                 # Timers.toc('basinhopping')
             u_bounds.extend([u_max, u_min])
 
@@ -143,8 +123,8 @@ class Linearizer:
         b = [0] * len(abs_center)
         return mat_a, b
 
-    def set_nonlin_dyn(self, dynamics):
-        self.nonlin_dyn = dynamics
+    def set_target_dyn(self, dynamics):
+        self.target_dyn = dynamics
 
     def interval_diff(self, f, bounds):
         ibex_func = Function("x[{}]".format(self.dim), f)

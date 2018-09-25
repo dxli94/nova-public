@@ -1,51 +1,57 @@
 import sympy
 from functools import reduce
 
+import numpy as np
+
 
 class AffineDynamics:
-    def __init__(self, dim, init_coeff_matrix_X0, init_col_vec_X0, dynamics_matrix_A=None, dynamics_matrix_B=None,
-                 dynamics_coeff_matrix_U=None, dynamics_col_vec_U=None):
+    def __init__(self, dim, x0_matrix=None, x0_col=None, a_matrix=None, b_matrix=None,
+                 u_coeff=None, u_col=None):
         # x' = Ax(t) + Bu(t)
         self.dim = dim
-        self.matrix_A = dynamics_matrix_A  # A (2*2) . x(t) (2*1) = Ax(t) (2*1)
-        self.matrix_B = dynamics_matrix_B  # B (2*m) . u(t) (m*1) = Bu(t) (2*1)
-        self.coeff_matrix_U = dynamics_coeff_matrix_U  # u(t) coeff matrix
-        self.col_vec_U = dynamics_col_vec_U  # u(t) col vec
+        self.a_matrix = a_matrix
 
-        self.init_coeff_matrix = init_coeff_matrix_X0
-        self.init_col_vec = init_col_vec_X0
+        if b_matrix is not None:
+            self.matrix_B = b_matrix
+        else:
+            self.matrix_B = np.identity(dim)
+        self.u_coeff = u_coeff  # u(t) coeff matrix
+        self.u_col = u_col  # u(t) col vec
+
+        self.x0_coeff = x0_matrix
+        self.x0_col = x0_col
 
     def get_dim(self):
         return self.dim
 
     def get_dyn_coeff_matrix_A(self):
-        return self.matrix_A
+        return self.a_matrix
 
     def get_dyn_matrix_B(self):
         return self.matrix_B
 
     def get_dyn_coeff_matrix_U(self):
-        return self.coeff_matrix_U
+        return self.u_coeff
 
     def get_dyn_col_vec_U(self):
-        return self.col_vec_U
+        return self.u_col
 
     def get_dyn_init_X0(self):
-        return self.init_coeff_matrix, self.init_col_vec
+        return self.x0_coeff, self.x0_col
 
 
 class GeneralDynamics:
     def __init__(self, id_to_vars, *args):
         self.vars_dict = id_to_vars
-        self.dynamics = [sympy.sympify(arg) for arg in args]
-        num_free_vars = len(reduce((lambda x, y: x.union(y)), [d.free_symbols for d in self.dynamics]))
+        self.sp_dynamics = [sympy.sympify(arg) for arg in args]
+        num_free_vars = len(reduce((lambda x, y: x.union(y)), [d.free_symbols for d in self.sp_dynamics]))
         assert len(self.vars_dict) >= num_free_vars, \
             "inconsistent number of variables declared ({}) with used in dynamics ({})" \
                 .format(len(self.vars_dict), num_free_vars)
 
         self.state_vars = tuple(sympy.symbols(str(self.vars_dict[key])) for key in self.vars_dict)
-        self.lamdafied_dynamics = sympy.lambdify(self.state_vars, self.dynamics)
-        self.jacobian_mat = sympy.lambdify(self.state_vars, sympy.Matrix(self.dynamics).jacobian(self.state_vars))
+        self.lamdafied_dynamics = sympy.lambdify(self.state_vars, self.sp_dynamics)
+        self.jacobian_mat = sympy.lambdify(self.state_vars, sympy.Matrix(self.sp_dynamics).jacobian(self.state_vars))
 
         self.str_rep = args
 
@@ -56,7 +62,7 @@ class GeneralDynamics:
         return self.jacobian_mat(*vals)
 
     def __str__(self):
-        return str(self.dynamics)
+        return str(self.sp_dynamics)
 
     # def update_dynamics(self, *args):
     #     # todo does not work yet

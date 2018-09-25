@@ -3,4 +3,120 @@ Nova Containers File
 Dongxu Li
 
 """
+import math
 
+from utils.utils import Freezable
+from utils.utils import TrackedVar as tvar
+
+
+class AppSetting(Freezable):
+    def __init__(self, reach_setting, verif_setting=None, simu_setting=None, plot_setting=None):
+        self.reach = reach_setting
+
+        self.verif = verif_setting
+        self.simu = simu_setting
+        self.plot = plot_setting
+
+        self.freeze_attrs()
+
+
+class ReachabilitySetting(Freezable):
+    def __init__(self, horizon, stepsize, directions, error_model, scaling_freq, scaling_cutoff):
+        assert horizon > 0
+        assert stepsize > 0
+        assert error_model > 0
+        assert len(directions) > 0
+
+        self.stepsize = stepsize
+        self.num_steps = int(math.ceil(horizon / stepsize))
+        self.directions = directions
+
+        self.error_model = error_model
+        self.scaling_freq = scaling_freq
+        self.scaling_cutoff = scaling_cutoff
+
+        self.freeze_attrs()
+
+
+class VerificationSetting(Freezable):
+    def __init__(self, a_matrix, b_col):
+        """
+        Unsafe region defined by Ax <= b
+        """
+        self.a_matrix = a_matrix
+        self.b_col = b_col
+
+        self.freeze_attrs()
+
+
+class ReachParams:
+    def __init__(self, alpha=None, beta=None, delta=None, tau=None):
+        self.alpha = alpha
+        self.beta = beta
+        self.delta = delta
+        self.tau = tau
+
+
+class PostOptStateholder:
+    def __init__(self, init_set_lb, init_set_ub):
+        self.tvars_list = []
+        self.init_set_lb = tvar()
+        self.init_set_ub = tvar()
+
+        self.tube_lb = tvar()
+        self.tube_ub = tvar()
+        self.tvars_list.append(self.tube_lb)
+        self.tvars_list.append(self.tube_ub)
+        # tube_lb, tube_ub = init_set_lb, init_set_ub
+
+        # temporary variables for reachable states in dense time
+        self.temp_tube_lb = tvar()
+        self.temp_tube_ub = tvar()
+        self.tvars_list.append(self.temp_tube_lb)
+        self.tvars_list.append(self.temp_tube_ub)
+
+        # temp_tube_lb, temp_tube_ub = init_set_lb, init_set_ub
+        # initial reachable set in discrete time in the current abstract domain
+        # changes when the abstract domain is large enough to contain next image in alfa step
+        self.cur_init_set_lb = tvar()
+        self.cur_init_set_ub = tvar()
+        self.tvars_list.append(self.cur_init_set_lb)
+        self.tvars_list.append(self.cur_init_set_ub)
+
+        # current_init_set_lb, current_init_set_ub = init_set_lb, init_set_ub
+
+        self.input_lb_seq = tvar()
+        self.input_ub_seq = tvar()
+        self.tvars_list.append(self.input_lb_seq)
+        self.tvars_list.append(self.input_ub_seq)
+        # input_lb_seq, input_ub_seq = init_set_lb, init_set_ub
+
+        self.phi_list = tvar([])
+        self.tvars_list.append(self.phi_list)
+
+        self._reset(init_set_lb, init_set_ub)
+
+    def rollback(self):
+        for tv in self.tvars_list:
+            tv.rollback()
+
+    def templify(self, init_set_lb, init_set_ub):
+        self._reset(init_set_lb, init_set_ub)
+
+    def _reset(self, init_set_lb, init_set_ub):
+        self.init_set_lb = init_set_lb
+        self.init_set_ub = init_set_ub
+
+        self.tube_lb.reset(init_set_lb)
+        self.tube_ub.reset(init_set_ub)
+
+        self.temp_tube_lb.reset(init_set_lb)
+        self.temp_tube_ub.reset(init_set_ub)
+
+        self.cur_init_set_lb.reset(init_set_lb)
+        self.cur_init_set_ub.reset(init_set_ub)
+
+        self.input_lb_seq.reset(init_set_lb)
+        self.input_ub_seq.reset(init_set_ub)
+
+        self.phi_list.reset([])

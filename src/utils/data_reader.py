@@ -1,7 +1,8 @@
-import numpy as np
 import json
 
-from sys_dynamics import AffineDynamics
+import numpy as np
+
+from cores.sys_dynamics import AffineDynamics
 
 
 def read_next_block(ins_file):
@@ -58,12 +59,12 @@ class DataReader:
                     self.init_col_vec_X0 = arr
 
             return AffineDynamics(dim=dim,
-                                  init_coeff_matrix_X0=self.init_coeff_matrix_X0,
-                                  init_col_vec_X0=self.init_col_vec_X0,
-                                  dynamics_matrix_A=self.dynamics_matrix_A,
-                                  dynamics_matrix_B=self.dynamics_matrix_B,
-                                  dynamics_coeff_matrix_U=self.dynamics_coeff_matrix_U,
-                                  dynamics_col_vec_U=self.dynamics_col_vec_U)
+                                  x0_matrix=self.init_coeff_matrix_X0,
+                                  x0_col=self.init_col_vec_X0,
+                                  a_matrix=self.dynamics_matrix_A,
+                                  b_matrix=self.dynamics_matrix_B,
+                                  u_coeff=self.dynamics_coeff_matrix_U,
+                                  u_col=self.dynamics_col_vec_U)
 
 
 class JsonReader:

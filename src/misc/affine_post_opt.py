@@ -1,8 +1,8 @@
 import numpy as np
 
 import utils.ppl_helper as PPLHelper
-from ConvexSet.polyhedron import Polyhedron
-from ConvexSet.transpoly import TransPoly
+from convex_set.polyhedron import Polyhedron
+from convex_set.transpoly import TransPoly
 from utils import suppfunc_utils
 
 

@@ -15,7 +15,7 @@ def hyperbox_contain(sf_1, sf_2):
     return True
 
 
-def hyperbox_contain_by_bounds(bd1, bd2):
+def contains(bd1, bd2):
     lb1, ub1 = bd1
     lb2, ub2 = bd2
 
@@ -30,20 +30,22 @@ class HyperBox:
             # constructor with vertices
             self.dim = len(arg[0])
             if len(arg) > 0:
-                lower_bounds = [1e9] * self.dim
-                upper_bounds = [-1e9] * self.dim
+                lb = [1e9] * self.dim
+                ub = [-1e9] * self.dim
             else:
                 raise RuntimeError('Emtpy vertex set.')
 
             # print(vertices)
             for v in arg:
                 for idx in range(len(v)):
-                    if v[idx] < lower_bounds[idx]:
-                        lower_bounds[idx] = v[idx]
-                    if v[idx] > upper_bounds[idx]:
-                        upper_bounds[idx] = v[idx]
+                    if v[idx] < lb[idx]:
+                        lb[idx] = v[idx]
+                    if v[idx] > ub[idx]:
+                        ub[idx] = v[idx]
 
-            self.bounds = np.array([lower_bounds, upper_bounds])
+            self.bounds = np.array([lb, ub])
+            self.lb = np.array(lb)
+            self.ub = np.array(ub)
             self.update_vertices()
 
         if opt == 1:
@@ -52,6 +54,8 @@ class HyperBox:
             ub = arg[1]
 
             self.bounds = np.array([lb, ub])
+            self.lb = np.array(lb)
+            self.ub = np.array(ub)
             self.update_vertices()
 
     def __str__(self):

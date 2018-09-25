@@ -1,6 +1,6 @@
 import argparse
 
-from affine_post_opt import PostOperator
+from misc.affine_post_opt import PostOperator
 from utils import suppfunc_utils
 from utils.data_reader import DataReader
 from utils.glpk_wrapper import GlpkWrapper

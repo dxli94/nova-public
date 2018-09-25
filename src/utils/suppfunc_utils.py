@@ -1,10 +1,8 @@
 import numpy as np
 from scipy.linalg import expm
-import cvxopt as cvx
 
-from ConvexSet.polyhedron import Polyhedron
-from ConvexSet.transpoly import TransPoly
-from sys_dynamics import AffineDynamics
+from convex_set.polyhedron import Polyhedron
+from convex_set.transpoly import TransPoly
 
 
 def mat_exp(A, tau):
@@ -173,7 +171,7 @@ def compute_reach_params(sys_dynamics, tau):
     beta = tt2 * (R_w / norm_a)
     delta = mat_exp(dyn_matrix_A, tau)
 
-    return alpha, beta, delta
+    return alpha, beta, delta, tau
 
 
 def generate_directions(direction_type, dim):

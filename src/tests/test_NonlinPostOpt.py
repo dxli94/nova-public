@@ -1,8 +1,8 @@
 import numpy as np
-
 from ConvexSet.polyhedron import Polyhedron
 from ConvexSet.transpoly import TransPoly
-from sys_dynamics import AffineDynamics
+
+from cores.sys_dynamics import AffineDynamics
 from utils import suppfunc_utils
 from utils.glpk_wrapper import GlpkWrapper
 
@@ -64,12 +64,12 @@ def test_A():
     directions = suppfunc_utils.generate_directions(direction_type=1, dim=2)
 
     sys_dynamics = AffineDynamics(dim=2,
-                                  init_coeff_matrix_X0=mat_init,
-                                  init_col_vec_X0=col_init,
-                                  dynamics_matrix_A=mat_A,
-                                  dynamics_matrix_B=mat_B,
-                                  dynamics_coeff_matrix_U=mat_U,
-                                  dynamics_col_vec_U=col_U)
+                                  x0_matrix=mat_init,
+                                  x0_col=col_init,
+                                  a_matrix=mat_A,
+                                  b_matrix=mat_B,
+                                  u_coeff=mat_U,
+                                  u_col=col_U)
 
     lp = GlpkWrapper(sys_dim=2)
 

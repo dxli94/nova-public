@@ -2,10 +2,10 @@ import time
 
 import numpy as np
 
-from ConvexSet.hyperbox import HyperBox, hyperbox_contain_by_bounds
-from Hybridisation.linearizer import Linearizer
-from Hybridisation.postopt_stateholder import PostOptStateholder
-from sys_dynamics import AffineDynamics, GeneralDynamics
+from convex_set.hyperbox import HyperBox, contains
+from cores.linearizer import Linearizer
+from utils.containers import PostOptStateholder
+from cores.sys_dynamics import AffineDynamics, GeneralDynamics
 from utils import suppfunc_utils
 from utils.timerutil import Timers
 
@@ -111,6 +111,7 @@ class NonlinPostOpt:
         start_walltime = time.time()
 
         time_frames = int(np.ceil(self._time_horizon / self._tau))
+
         vertices = HyperBox.get_vertices_from_constr(self._init_coeff, self._init_col)
 
         init_set_lb = np.amin(vertices, axis=0)
@@ -119,6 +120,7 @@ class NonlinPostOpt:
         self.handler = PostOptStateholder(init_set_lb, init_set_ub)
         # ======
         next_init_sf = self.compute_gamma_step(init_set_lb, init_set_ub, np.identity(self._dim))
+
         # ======
 
         # B := \bb(X0)
@@ -165,8 +167,10 @@ class NonlinPostOpt:
                 break
 
             # if P_{i+1} \subset B
-            if hyperbox_contain_by_bounds(self.abs_domain.bounds,
-                                          [self.handler.temp_tube_lb.get_val(), self.handler.temp_tube_ub.get_val()]):
+            if contains(self.abs_domain.bounds,
+                        [self.handler.temp_tube_lb.get_val(), self.handler.temp_tube_ub.get_val()]):
+
+                print(sf_tube)
                 self.handler.tube_lb.set_val(self.handler.temp_tube_lb.get_val())
                 self.handler.tube_ub.set_val(self.handler.temp_tube_ub.get_val())
 
@@ -188,12 +192,15 @@ class NonlinPostOpt:
                 next_init_sf = self.compute_gamma_step(self.handler.input_lb_seq.get_val(),
                                                        self.handler.input_ub_seq.get_val(),
                                                        self.handler.phi_list.get_val())
+                # print(epsilon)
+                # exit()
+
                 # Timers.toc('compute gamma')
                 next_init_set_lb, next_init_set_ub = extract_bounds_from_sf(next_init_sf, self._canno_dir_indices)
 
                 # initial reachable set in discrete time
-                self.handler.current_init_set_lb.set_val(next_init_set_lb)
-                self.handler.current_init_set_ub.set_val(next_init_set_ub)
+                self.handler.cur_init_set_lb.set_val(next_init_set_lb)
+                self.handler.cur_init_set_ub.set_val(next_init_set_ub)
 
                 # print(self.abs_dynamics.matrix_A)
                 i += 1
@@ -214,14 +221,14 @@ class NonlinPostOpt:
                         # print('{}%'.format(imprv_rate*100))
                         # stop_scaling = current_vol > prev_vol
                         if stop_scaling:
-                            self.dyn_linearizer.set_nonlin_dyn(self._nonlin_dyn)
+                            self.dyn_linearizer.set_target_dyn(self._nonlin_dyn)
                             self.dyn_linearizer.is_scaled = False
                             scaled = False
 
                             # rollbacks to the previous state
                             self.handler.rollback()
 
-                            # print('stopped at {} scaling steps'.format(ct))
+                            print('stopped at {} scaling steps'.format(i))
                             ct = 0
                             i -= 1
                         else:
@@ -234,12 +241,13 @@ class NonlinPostOpt:
                         scaling_stepsize = max(int(time_frames * self._scaling_per), 1)
                         start_scaling = (i-1) % scaling_stepsize == 0
                         if start_scaling:
+                            print('start scaling at {} steps'.format(i))
                             scaling_config = self.get_scaling_configs(self.handler.tube_lb.get_val(),
                                                                       self.handler.tube_ub.get_val())
                             # Timers.tic('self.scale_dynamics')
                             self.scaled_nonlin_dyn = self.scale_dynamics(*scaling_config)
                             # Timers.toc('self.scale_dynamics')
-                            self.dyn_linearizer.set_nonlin_dyn(self.scaled_nonlin_dyn)
+                            self.dyn_linearizer.set_target_dyn(self.scaled_nonlin_dyn)
                             self.dyn_linearizer.is_scaled = True
                             scaled = True
                 else:
@@ -258,7 +266,7 @@ class NonlinPostOpt:
                     if unsafe_condition:
                         self._verify_res = self.VERIFY_RES_CODE_UNSAFE
                         break
-                epsilon /= 4
+                epsilon /= 8
         print('Completed flowpipe computation in {:.2f} secs.\n'.format(total_walltime))
         Timers.toc('total')
         Timers.print_stats()
@@ -281,7 +289,7 @@ class NonlinPostOpt:
         Timers.toc('gen_abs_dynamics')
 
         self.set_abs_dynamics(matrix_A, poly_w, c)
-        self.reach_params.alpha, self.reach_params.beta, self.reach_params.delta = \
+        self.reach_params.alpha, self.reach_params.beta, self.reach_params.delta, _ = \
             suppfunc_utils.compute_reach_params(self.abs_dynamics, self._tau)
 
         # with open('/home/dxli/Desktop/offset-beta.dat', 'a') as opfile:
@@ -293,7 +301,7 @@ class NonlinPostOpt:
         self.abs_domain = bbox
 
         Timers.tic('get_vertices')
-        vertices = HyperBox.get_vertices_from_constr(self.abs_dynamics.coeff_matrix_U, self.abs_dynamics.col_vec_U)
+        vertices = HyperBox.get_vertices_from_constr(self.abs_dynamics.u_coeff, self.abs_dynamics.u_col)
         Timers.toc('get_vertices')
 
         err_lb = np.amin(vertices, axis=0)
@@ -391,7 +399,7 @@ class NonlinPostOpt:
          c is the center of the boxed uncertainty region.
         """
         c = (next_lb + next_ub) / 2
-        A = self.abs_dynamics.matrix_A
+        A = self.abs_dynamics.a_matrix
         M = suppfunc_utils.mat_exp_int(A, t_min=0, t_max=self._tau)
         self.tau_d = np.dot(M, c)
 
@@ -406,18 +414,18 @@ class NonlinPostOpt:
         poly_w = (poly_w[0], u + b)
         coeff_matrix_B = self._coeff_matrix_B
 
-        init_lb = self.handler.current_init_set_lb.get_val()
-        init_ub = self.handler.current_init_set_ub.get_val()
+        init_lb = self.handler.cur_init_set_lb.get_val()
+        init_ub = self.handler.cur_init_set_ub.get_val()
 
         init_col = np.vstack((init_ub, -init_lb)).T.reshape(1, -1).flatten()
 
         abs_dynamics = AffineDynamics(dim=self._dim,
-                                      init_coeff_matrix_X0=self._init_coeff,
-                                      init_col_vec_X0=init_col,
-                                      dynamics_matrix_A=matrix_A,
-                                      dynamics_matrix_B=coeff_matrix_B,
-                                      dynamics_coeff_matrix_U=poly_w[0],
-                                      dynamics_col_vec_U=poly_w[1])
+                                      x0_matrix=self._init_coeff,
+                                      x0_col=init_col,
+                                      a_matrix=matrix_A,
+                                      b_matrix=coeff_matrix_B,
+                                      u_coeff=poly_w[0],
+                                      u_col=poly_w[1])
         self.abs_dynamics = abs_dynamics
 
     def _refine_domain(self):
@@ -496,14 +504,14 @@ class NonlinPostOpt:
         scaling_func_str = '{}+{}'.format(scaling_func_str, b)
 
         temp_scaled_dynamics = []
-        for dyn in self._nonlin_dyn.dynamics:
+        for dyn in self._nonlin_dyn.sp_dynamics:
             temp_scaled_dynamics.append('({})*({})'.format(scaling_func_str, dyn))
 
         # =====
         Timers.tic('compute m')
         temp_gd = GeneralDynamics(self.id_to_vars, *temp_scaled_dynamics)
         gd_norm = np.linalg.norm(temp_gd.eval_jacobian(c), np.inf)
-        norm = np.linalg.norm(self.abs_dynamics.matrix_A, np.inf)
+        norm = np.linalg.norm(self.abs_dynamics.a_matrix, np.inf)
         m = norm / gd_norm
         scaled_dynamics = []
         for dyn in temp_scaled_dynamics:

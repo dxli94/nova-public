@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import utils.simulator as simu
-from affine_post_opt import PostOperator as AffinePostOperator
-from Hybridisation.nonlin_post_opt import NonlinPostOpt
-from sys_dynamics import GeneralDynamics
+from cores.nonlin_postopt import NonlinPostOpt
+from cores.sys_dynamics import GeneralDynamics
+from misc.affine_post_opt import PostOperator as AffinePostOperator
 from utils import suppfunc_utils
 from utils.data_reader import JsonReader
 from utils.plotter import Plotter
@@ -123,8 +123,8 @@ def main():
 
 
 def run_simulate(time_horizon, model, init_coeff, init_col):
-    from ConvexSet.polyhedron import Polyhedron
-    from ConvexSet.hyperbox import HyperBox
+    from convex_set.polyhedron import Polyhedron
+    from convex_set.hyperbox import HyperBox
     import random
     vertices = Polyhedron(init_coeff, init_col).get_vertices()
     init_set = HyperBox(vertices)
