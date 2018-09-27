@@ -122,12 +122,11 @@ def main():
     print('Total running time: {:.2f}'.format(time.time() - start_time))
 
 
-def run_simulate(time_horizon, model, init_coeff, init_col):
-    from convex_set.polyhedron import Polyhedron
+def run_simulate(time_horizon, model, bounds):
     from convex_set.hyperbox import HyperBox
     import random
-    vertices = Polyhedron(init_coeff, init_col).get_vertices()
-    init_set = HyperBox(vertices)
+    init_set = HyperBox(bounds)
+    vertices = init_set.get_vertices()
     n = 100
 
     bounds = init_set.bounds.T
@@ -139,7 +138,7 @@ def run_simulate(time_horizon, model, init_coeff, init_col):
 
     simu_points.extend(list(vertices))
 
-    simu_traj = simu.simulate(time_horizon, model, simu_points)
+    simu_traj = simu._simulate(time_horizon, model, simu_points)
     return simu_traj
 
 
@@ -161,7 +160,7 @@ def make_plot(dim, directions, sf_mat, model_name, simu_traj, poly_dir):
             if not os.path.exists(img_dir_path):
                 os.mkdir(img_dir_path)
             img_path = os.path.join(img_dir_path, '{}-{}.png'.format(*opdims))
-            plotter = Plotter(ppl_polys, opdims)
+            plotter = Plotter(ppl_polys)
 
             # plot simulation
             for xs in simu_traj:
