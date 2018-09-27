@@ -1,12 +1,16 @@
 import numpy as np
 import sys
 
+import time
+
 from convex_set import hyperbox
 from convex_set.hyperbox import HyperBox
 from cores.fwd_continuous_opt import FwdContinuousPostOpeartor
 from cores.hybrid_automata import NonlinHybridAutomaton
 from cores.linearizer import Linearizer
 from cores.sys_dynamics import AffineDynamics, GeneralDynamics
+from utils import simulator
+from utils.plotter import Plotter
 from utils import suppfunc_utils, utils
 from utils.containers import AppSetting
 
@@ -29,7 +33,7 @@ class ReachEngine:
         self._abs_dynamics = None
         self._abs_domain = None
 
-        self._post_operator_initializer = 0
+        self._post_operator_factory = 0
         self._post_operator = None
 
         self._cur_step = 0
@@ -38,7 +42,7 @@ class ReachEngine:
         self._reach_error = False
 
         if app_settings.reach.error_model == 1:
-            self._post_operator_initializer = FwdContinuousPostOpeartor
+            self._post_operator_factory = FwdContinuousPostOpeartor
         else:
             raise ValueError("Error model type {} not understood.".format(app_settings.reach.error_model))
 
@@ -55,15 +59,25 @@ class ReachEngine:
 
         # 1. run reachability analysis
         # for now assuming we have a single initial set
-        self._post_operator = self._post_operator_initializer(continuous_set, self._settings.reach.directions)
+        self._post_operator = self._post_operator_factory(continuous_set, self._settings.reach.directions)
         self._linearizer = Linearizer(self._dim, self._cur_mode.dynamics, self._cur_mode.is_linear)
-        self._run_reachability()
+        supp_matrix = self._run_reachability()
 
         # 2. run simulation
+        simu_res = simulator.run_simulate(self._settings.simu.horizon,
+                                          self._settings.simu.model_name,
+                                          self._settings.simu.init_set)
 
         # 3. plotting
+        Plotter.make_plot(self._dim, self._settings.reach.directions, supp_matrix,
+                          self._settings.plot.model_name,
+                          self._settings.plot.poly_dir_path, simu_res)
 
     def _run_reachability(self):
+        # todo encapsulate into a timer
+        total_walltime = 0
+        start_walltime = time.time()
+
         # volume of reach tube
         cur_vol = sys.maxsize
         # True: in scaling mode; False: outside scaling mode
@@ -92,8 +106,6 @@ class ReachEngine:
                 break
 
             if self._domain_contains_tube():
-                print(self._post_operator.tube_supp)
-
                 self._post_operator.proceed_state(cur_input_lb, cur_input_ub, self._abs_dynamics.a_matrix)
                 self._cur_step += 1
 
@@ -102,11 +114,22 @@ class ReachEngine:
                 prev_vol = cur_vol
                 cur_vol = self._compute_vol()
 
+                # todo encapsulate into a timer
+                if self._cur_step % 100 == 0:
+                    now = time.time()
+                    walltime_elapsed = now - start_walltime
+                    total_walltime += walltime_elapsed
+                    print('{} / {} steps ({:.2f}%) completed in {:.2f} secs. '
+                          'Total time elapsed: {:.2f} secs'.format(self._cur_step, self._settings.reach.num_steps,
+                                                                   100 * self._cur_step / self._settings.reach.num_steps,
+                                                                   walltime_elapsed,
+                                                                   total_walltime))
+                    start_walltime = now
+
                 if not in_scaling_mode:
                     supp_matrix.append(self._post_operator.tube_supp)
 
                     if self._is_start_scaling():
-                        print('start at {}'.format(self._cur_step))
                         # entering scaling mode
                         scaled_dyn = self._make_scaling_dynamics()
                         # set scaled dynamics as the target dynamics within linearizer
@@ -122,10 +145,11 @@ class ReachEngine:
                         # we can see the num of extra steps we computed in scaling mode more clearly.
                         self._settings.reach.num_steps += 1
                     else:  # scaling is deemed as un-helpful
-                        print('stops at {}'.format(self._cur_step))
-
+                        # rolling-back to the previous state
                         self._post_operator.rollback()
+                        self._cur_step -= 1
 
+                        # set to original (un-scaled) dynamics in the curr mode
                         self._linearizer.set_target_dyn(self._cur_mode.dynamics)
                         self._linearizer.is_scaled = False
 
@@ -133,7 +157,7 @@ class ReachEngine:
 
                 eps /= 4
 
-        exit()
+        return supp_matrix
 
     def _is_finished(self):
         """
@@ -161,7 +185,7 @@ class ReachEngine:
         """
         Enlarge the domain by taking hull of current and next reachable sets.
         """
-        tube_lb,  tube_ub = self._post_operator.get_tube_bounds()
+        tube_lb, tube_ub = self._post_operator.get_tube_bounds()
         temp_tube_lb, temp_tube_ub = self._post_operator.get_temp_tube_bounds()
 
         bbox_lb = np.amin([tube_lb, temp_tube_lb], axis=0)

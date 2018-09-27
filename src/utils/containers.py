@@ -49,6 +49,23 @@ class VerificationSetting(Freezable):
         self.freeze_attrs()
 
 
+class PlotSetting(Freezable):
+    def __init__(self, poly_dir_path, model_name):
+        self.poly_dir_path = poly_dir_path
+        self.model_name = model_name
+
+        self.freeze_attrs()
+
+
+class SimuSetting(Freezable):
+    def __init__(self, model_name, horizon, init_set_bounds):
+        self.model_name = model_name
+        self.horizon = horizon
+        self.init_set = init_set_bounds
+
+        self.freeze_attrs()
+
+
 class ReachParams:
     def __init__(self, alpha=None, beta=None, delta=None, tau=None):
         self.alpha = alpha

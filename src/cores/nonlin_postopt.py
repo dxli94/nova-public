@@ -170,7 +170,7 @@ class NonlinPostOpt:
             if contains(self.abs_domain.bounds,
                         [self.handler.temp_tube_lb.get_val(), self.handler.temp_tube_ub.get_val()]):
 
-                print(sf_tube)
+                # print(sf_tube)
                 self.handler.tube_lb.set_val(self.handler.temp_tube_lb.get_val())
                 self.handler.tube_ub.set_val(self.handler.temp_tube_ub.get_val())
 
@@ -218,7 +218,6 @@ class NonlinPostOpt:
                     if scaled:
                         imprv_rate = (prev_vol - current_vol) / prev_vol
                         stop_scaling = imprv_rate < self._scaling_cutoff
-                        # print('{}%'.format(imprv_rate*100))
                         # stop_scaling = current_vol > prev_vol
                         if stop_scaling:
                             self.dyn_linearizer.set_target_dyn(self._nonlin_dyn)
@@ -228,7 +227,6 @@ class NonlinPostOpt:
                             # rollbacks to the previous state
                             self.handler.rollback()
 
-                            print('stopped at {} scaling steps'.format(i))
                             ct = 0
                             i -= 1
                         else:
@@ -241,7 +239,6 @@ class NonlinPostOpt:
                         scaling_stepsize = max(int(time_frames * self._scaling_per), 1)
                         start_scaling = (i-1) % scaling_stepsize == 0
                         if start_scaling:
-                            print('start scaling at {} steps'.format(i))
                             scaling_config = self.get_scaling_configs(self.handler.tube_lb.get_val(),
                                                                       self.handler.tube_ub.get_val())
                             # Timers.tic('self.scale_dynamics')
@@ -478,6 +475,7 @@ class NonlinPostOpt:
     @staticmethod
     def _compute_vol(tube_lb, tube_ub):
         widths = tube_ub - tube_lb
+
         return np.prod(widths)
         # return max(widths)
 

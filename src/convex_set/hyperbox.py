@@ -82,6 +82,9 @@ class HyperBox:
             for ub in upper_bounds:
                 self.vertices.append([lb, ub])
 
+    def get_vertices(self):
+        return self.vertices
+
     @staticmethod
     def get_vertices_from_constr(coeff, col):
         """Input is assumed to be a hyperbox. Otherwise behaviour undefined."""

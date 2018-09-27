@@ -6,12 +6,12 @@ import matplotlib.patches as patches
 
 import utils.ppl_helper as PPLHelper
 
+
 class Plotter:
     images = []
 
-    def __init__(self, images, opvars):
+    def __init__(self, images):
         self.images = images
-        self.opvars = opvars
         self.vertices_sorted = list(map(lambda im: self.sort_vertices(im), self.images))
 
     def sort_vertices(self, im):
@@ -57,7 +57,8 @@ class Plotter:
         ax.set_xlabel('$x_{}$'.format(xlabel))
         ax.set_ylabel('$x_{}$'.format(ylabel))
 
-        for ipfile_path, color, lw, ls in zip(filelist, colors[:len(filelist)], linewidths[:len(filelist)], linestyles[:len(filelist)]):
+        for ipfile_path, color, lw, ls in zip(filelist, colors[:len(filelist)], linewidths[:len(filelist)],
+                                              linestyles[:len(filelist)]):
             # print(ipfile_path)
             try:
                 with open(ipfile_path) as ipfile:
@@ -78,7 +79,7 @@ class Plotter:
                     mat = np.transpose(np.array([x, y]))
                     poly1patch = patches.Polygon(mat, fill=False, edgecolor=color, linewidth=lw, linestyle=ls)
                     ax.add_patch(poly1patch)
-                i+=1
+                i += 1
 
         plt.autoscale(enable=True)
 
@@ -98,7 +99,8 @@ class Plotter:
         ax.set_xlabel('$x_{}$'.format(xlabel))
         ax.set_ylabel('$x_{}$'.format(ylabel))
 
-        for ipfile_path, color, lw, ls in zip(filelist, colors[:len(filelist)], linewidths[:len(filelist)], linestyles[:len(filelist)]):
+        for ipfile_path, color, lw, ls in zip(filelist, colors[:len(filelist)], linewidths[:len(filelist)],
+                                              linestyles[:len(filelist)]):
             # print(ipfile_path)
             try:
                 with open(ipfile_path) as ipfile:
@@ -157,11 +159,89 @@ class Plotter:
         plt.plot(x, y, 'o', color=color, markersize=8, alpha=0.5)
         plt.autoscale(enable=True)
 
-
     @staticmethod
     def save_plt(opfile):
         # plt.savefig(opfile, format='eps', dpi=500)
         plt.savefig(opfile, format='png', dpi=500)
+
+    @staticmethod
+    def make_2Dproj_pplpoly(directions, opdims, sf_mat):
+        assert len(opdims) == 2, 'Support projection on 2d space only.'
+
+        donot_opdims = []
+        for i in range(directions.shape[1]):
+            if i not in opdims:
+                donot_opdims.append(i)
+        donot_opdims = tuple(donot_opdims)
+
+        ret = []
+
+        d_mat = []
+        d_mat_idx = []
+        close_list = {}
+        for i, d in enumerate(directions):
+            if any(d[list(opdims)]) and not any(d[list(donot_opdims)]):
+                projection_dir = d[list(opdims)]
+                projection_dir_tuple = tuple(projection_dir.tolist())
+
+                if projection_dir_tuple not in close_list:
+                    d_mat.append(projection_dir)
+                    d_mat_idx.append(i)
+                    close_list[projection_dir_tuple] = True
+
+        for sf_row in sf_mat:
+            sf_row_col = np.reshape(sf_row, (len(sf_row), 1))
+            sf_row_dir = sf_row_col[d_mat_idx]
+            ret.append(PPLHelper.create_polytope(np.array(d_mat), sf_row_dir, len(opdims)))
+
+        return ret
+
+    @staticmethod
+    def make_plot(dim, directions, sf_mat, model_name, poly_dir, simu_traj):
+        for i in range(dim):
+            for j in range(i, dim):
+                if i == j:
+                    continue
+                opdims = (i, j)
+                Plotter.config_plt(opdims)
+                ppl_polys = Plotter.make_2Dproj_pplpoly(directions=directions, opdims=opdims, sf_mat=sf_mat)
+
+                img_dir_path = os.path.join('../out/imgs', model_name)
+                if not os.path.exists(img_dir_path):
+                    os.mkdir(img_dir_path)
+                img_path = os.path.join(img_dir_path, '{}-{}.png'.format(*opdims))
+                plotman = Plotter(ppl_polys)
+
+                # plot simulation
+                for xs in simu_traj:
+                    x, y = xs[:, opdims[0]], xs[:, opdims[1]]
+                    Plotter.plot_points(x, y, xlabel=str(i), ylabel=str(j))
+
+                # plot polygons
+                poly_dir_path = os.path.join(poly_dir, model_name)
+                if not os.path.exists(poly_dir_path):
+                    os.mkdir(poly_dir_path)
+                poly_file_path = os.path.join(poly_dir_path, '{}-{}'.format(*opdims))
+                plotman.save_polygons_to_file(filename=poly_file_path)
+                plotman.plot_polygons(poly_file_path, xlabel=str(i), ylabel=str(j))
+
+                # plot scaling points
+                if None:  # has issue with transparency,
+                    if os.path.exists('../out/pivots.out'):
+                        plotman.plot_pivots('../out/pivots.out', opdims, 'green')
+                    if os.path.exists('../out/sca_cent.out'):
+                        plotman.plot_pivots('../out/sca_cent.out', opdims, 'yellow')
+
+                plotman.save_plt(opfile=img_path)
+
+    @staticmethod
+    def config_plt(opdims):
+        plt.clf()
+
+        fig = plt.figure(1, dpi=90)
+        ax = fig.add_subplot(111)
+        ax.set_xlabel('$x_{}$'.format(opdims[0]))
+        ax.set_ylabel('$x_{}$'.format(opdims[1]))
 
 if __name__ == '__main__':
     import argparse
