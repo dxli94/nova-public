@@ -1,19 +1,19 @@
 import numpy as np
 
+from cores.post_opt.abstract_post_opt import AbstractContinuousPostOpeartor
 from utils import suppfunc_utils
 from utils.containers import PostOptStateholder, ReachParams
 from utils import utils
 
 
-class FwdContinuousPostOpeartor:
+class FwdContinuousPostOpeartor(AbstractContinuousPostOpeartor):
     def __init__(self, init_state, directions):
         """
         :param init_state: a HyperBox
         """
+        super().__init__()
+
         self.init_state = init_state
-        # supp func vals for reachable set (discrete time)
-        self.set_supp = None
-        # supp func vals for reachable tube (dense time)
         self.tube_supp = None
 
         self._temp_tube_supp = None
@@ -22,15 +22,6 @@ class FwdContinuousPostOpeartor:
         self._dim = directions.shape[1]
         self._reach_params = ReachParams()
         self._canonical_direction_idx = utils.get_canno_dir_indices(directions)
-
-    def do_init_step(self):
-        self._update_phi_list()
-        self.do_gamma_step()
-
-    def proceed_state(self, cur_input_lb, cur_input_ub, a_matrix):
-        self._update_phi_list()
-        self._update_tube(self._temp_tube_supp)
-        self._update_inhomo_seq(cur_input_lb, cur_input_ub, a_matrix)
 
     def update_reach_params(self, vals):
         self._reach_params.alpha, self._reach_params.beta, self._reach_params.delta, self._reach_params.tau = vals
@@ -103,25 +94,6 @@ class FwdContinuousPostOpeartor:
         self._update_temp_supp_tube(tube_supp)
         self.tube_supp = tube_supp
 
-    def get_tube_bounds(self):
-        return self._handler.tube_lb.get_val(), \
-               self._handler.tube_ub.get_val()
-
-    def get_temp_tube_bounds(self):
-        return self._handler.temp_tube_lb.get_val(), \
-               self._handler.temp_tube_ub.get_val()
-
-    def get_cur_init_set(self):
-        return self._handler.cur_init_set_lb.get_val(), \
-               self._handler.cur_init_set_ub.get_val()
-
-    def has_lost_precision(self, max_tolerance):
-        return any(np.abs(self._handler.temp_tube_lb.get_val()) >= max_tolerance) or \
-               any(np.abs(self._handler.temp_tube_ub.get_val()) >= max_tolerance)
-
-    def rollback(self):
-        self._handler.rollback()
-
     def _update_inhomo_seq(self, next_lb, next_ub, a_matrix):
         """
          W_{i} = τV_{i} ⊕ τd ⊕ β_{i}·B, where d = (1/τ) * \int_{0}^{τ}[(e^(τ-s)A-I)c]ds.
@@ -156,19 +128,3 @@ class FwdContinuousPostOpeartor:
             temp_list = np.vstack((temp_list, [np.eye(self._dim)]))
 
         self._handler.phi_list.set_val(temp_list)
-
-    def _update_tube(self, supp_vals_tube):
-        lb, ub = utils.extract_bounds_from_sf(supp_vals_tube, self._canonical_direction_idx)
-        self._handler.tube_lb.set_val(lb)
-        self._handler.tube_ub.set_val(ub)
-
-    def _update_cur_init_set(self):
-        lb, ub = utils.extract_bounds_from_sf(self.set_supp, self._canonical_direction_idx)
-        self._handler.cur_init_set_lb.set_val(lb)
-        self._handler.cur_init_set_ub.set_val(ub)
-
-    def _update_temp_supp_tube(self, tube_supp):
-        alpha_bounds = utils.extract_bounds_from_sf(tube_supp, self._canonical_direction_idx)
-        self._temp_tube_supp = tube_supp
-        self._handler.temp_tube_lb.set_val(alpha_bounds[0])
-        self._handler.temp_tube_ub.set_val(alpha_bounds[1])

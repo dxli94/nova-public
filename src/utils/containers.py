@@ -10,6 +10,9 @@ from utils.utils import TrackedVar as tvar
 
 
 class AppSetting(Freezable):
+    """
+    All settings for NOVA.
+    """
     def __init__(self, reach_setting, verif_setting=None, simu_setting=None, plot_setting=None):
         self.reach = reach_setting
 
@@ -21,6 +24,9 @@ class AppSetting(Freezable):
 
 
 class ReachabilitySetting(Freezable):
+    """
+    Setting for reachability analysis.
+    """
     def __init__(self, horizon, stepsize, directions, error_model, scaling_freq, scaling_cutoff):
         assert horizon > 0
         assert stepsize > 0
@@ -39,6 +45,9 @@ class ReachabilitySetting(Freezable):
 
 
 class VerificationSetting(Freezable):
+    """
+    A container for verification setting.
+    """
     def __init__(self, a_matrix, b_col):
         """
         Unsafe region defined by Ax <= b
@@ -50,6 +59,9 @@ class VerificationSetting(Freezable):
 
 
 class PlotSetting(Freezable):
+    """
+    A container for plotting setting.
+    """
     def __init__(self, poly_dir_path, model_name):
         self.poly_dir_path = poly_dir_path
         self.model_name = model_name
@@ -58,6 +70,9 @@ class PlotSetting(Freezable):
 
 
 class SimuSetting(Freezable):
+    """
+    A container for simulation setting.
+    """
     def __init__(self, model_name, horizon, init_set_bounds):
         self.model_name = model_name
         self.horizon = horizon
@@ -67,6 +82,9 @@ class SimuSetting(Freezable):
 
 
 class ReachParams:
+    """
+    A container for bloating factors, matrix exp. and sampling time.
+    """
     def __init__(self, alpha=None, beta=None, delta=None, tau=None):
         self.alpha = alpha
         self.beta = beta
@@ -75,6 +93,9 @@ class ReachParams:
 
 
 class PostOptStateholder:
+    """
+    A container for continuous post state variables.
+    """
     def __init__(self, init_set_lb, init_set_ub):
         self.tvars_list = []
         self.init_set_lb = tvar()
@@ -114,10 +135,17 @@ class PostOptStateholder:
         self._reset(init_set_lb, init_set_ub)
 
     def rollback(self):
+        """
+        Set all state variables to the previous value.
+        """
         for tv in self.tvars_list:
             tv.rollback()
 
     def templify(self, init_set_lb, init_set_ub):
+        """
+        Bounding box the current init set. This could help
+        increase the running speed but will decrease the precision.
+        """
         self._reset(init_set_lb, init_set_ub)
 
     def _reset(self, init_set_lb, init_set_ub):

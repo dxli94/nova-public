@@ -1,21 +1,21 @@
-import numpy as np
 import sys
-
 import time
+
+import numpy as np
 
 from convex_set import hyperbox
 from convex_set.hyperbox import HyperBox
-from cores.fwd_continuous_opt import FwdContinuousPostOpeartor
 from cores.hybrid_automata import NonlinHybridAutomaton
 from cores.linearizer import Linearizer
+from cores.post_opt.fwd_continuous_opt import FwdContinuousPostOpeartor
 from cores.sys_dynamics import AffineDynamics, GeneralDynamics
 from utils import simulator
-from utils.plotter import Plotter
-from utils import suppfunc_utils, utils
+from utils import suppfunc_utils
 from utils.containers import AppSetting
+from utils.plotter import Plotter
 
 
-class ReachEngine:
+class NovaEngine:
     """
     main computation object, initialize and call run().
     """
@@ -74,6 +74,10 @@ class ReachEngine:
                           self._settings.plot.poly_dir_path, simu_res)
 
     def _run_reachability(self):
+        """
+        Main method for reachability analysis with time scaling.
+        """
+
         # todo encapsulate into a timer
         total_walltime = 0
         start_walltime = time.time()
@@ -120,10 +124,7 @@ class ReachEngine:
                     walltime_elapsed = now - start_walltime
                     total_walltime += walltime_elapsed
                     print('{} / {} steps ({:.2f}%) completed in {:.2f} secs. '
-                          'Total time elapsed: {:.2f} secs'.format(self._cur_step, self._settings.reach.num_steps,
-                                                                   100 * self._cur_step / self._settings.reach.num_steps,
-                                                                   walltime_elapsed,
-                                                                   total_walltime))
+                          'Total time elapsed: {:.2f} secs'.format(self._cur_step, self._settings.reach.num_steps, 100 * self._cur_step / self._settings.reach.num_steps, walltime_elapsed, total_walltime))
                     start_walltime = now
 
                 if not in_scaling_mode:
