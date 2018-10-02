@@ -5,11 +5,17 @@ from convex_set.polyhedron import Polyhedron
 from convex_set.transpoly import TransPoly
 
 
-def mat_exp(A, tau):
+def mat_exp(A, tau=1):
+    """
+    Compute matrix exponential e^{A \tau}.
+    """
     return expm(np.multiply(A, tau))
 
 
 def support_unitball_infnorm(direction):
+    """
+    Compute infinity norm of a unit ball on a direction.
+    """
     # unit ball for f
     return sum([abs(elem) for elem in direction])
 
@@ -26,6 +32,9 @@ def compute_log_2norm(A):
 
 
 def compute_alpha(sys_dynamics, tau, lp):
+    """
+    Compute bloating factor \alpha. See LGG paper for reference.
+    """
     dyn_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
 
     # if dyn_matrix_A is a zero-matrix, no need to perform bloating
@@ -57,6 +66,9 @@ def compute_alpha(sys_dynamics, tau, lp):
 
 
 def compute_beta(sys_dynamics, tau, lp):
+    """
+    Compute bloating factor \beta. See LGG paper for reference.
+    """
     dyn_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
 
     # if dyn_matrix_A is a zero-matrix, no need to perform bloating
@@ -68,12 +80,7 @@ def compute_beta(sys_dynamics, tau, lp):
     dyn_col_vec_U = sys_dynamics.get_dyn_col_vec_U()
 
     norm_a = np.linalg.norm(dyn_matrix_A, np.inf)
-    # two_norm_a = compute_log_2norm(dyn_matrix_A)
-    # log_norm_a = compute_log_infnorm(dyn_matrix_A)
-    # norm_a = log_norm_a
-    # norm_a = two_norm_a
 
-    # ========
     tt1 = np.exp(tau * norm_a)
 
     poly_U = TransPoly(trans_matrix_B=dyn_matrix_B,
@@ -86,6 +93,9 @@ def compute_beta(sys_dynamics, tau, lp):
 
 
 def compute_beta_no_offset(sys_dynamics, tau):
+    """
+    Compute bloating factor while offsetting the input set with a constant.
+    """
     dyn_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
 
     # if dyn_matrix_A is a zero-matrix, no need to perform bloating
@@ -122,6 +132,10 @@ def compute_beta_no_offset(sys_dynamics, tau):
 
 
 def compute_reach_params(sys_dynamics, tau):
+    """
+    Returns the reachability parameters, including bloating factors (\alpha, \beta)
+    and transposed matrix exponential and stepsize.
+    """
     dyn_matrix_A = sys_dynamics.get_dyn_coeff_matrix_A()
 
     # if dyn_matrix_A is a zero-matrix, no need to perform bloating
@@ -175,6 +189,13 @@ def compute_reach_params(sys_dynamics, tau):
 
 
 def generate_directions(direction_type, dim):
+    """
+    Generate template directions for a n-dimensional space.
+
+    direction_type = 0: Box
+    direction_type = 1: Octagon
+    n = dim
+    """
     direction_generator = []
 
     if direction_type == 0:  # box
@@ -236,10 +257,16 @@ def generate_directions(direction_type, dim):
 
 
 def compute_support_function_singular(c, l):
+    """
+    Compute support function on direction l for a singular point (vector) c.
+    """
     return np.dot(l, c)
 
 
 def mat_exp_int(A, t_min, t_max, nbins=5):
+    """
+    Compute integration of matrix exponential minus identity matrix using numerical method.
+    """
     iden = np.identity(A.shape[0])
     f = lambda x: expm(A*x)-iden
     xv = np.linspace(t_min, t_max, nbins)
@@ -247,20 +274,54 @@ def mat_exp_int(A, t_min, t_max, nbins=5):
     return np.trapz(result, xv)
 
 
+def compute_phi2(a_matrix, tau):
+    """
+    See SpaceEx CAV 11' (Goran. F. et al) Eq. (8) for Φ_{2}(|A|, τ).
+    """
+    assert len(a_matrix.shape) == 2
+    assert a_matrix.shape[0] == a_matrix.shape[1]
+
+    dim = a_matrix.shape[0]
+
+    phi_base_matrix = make_base_phi_matrix(a_matrix, tau)
+    phi_base_exp = mat_exp(phi_base_matrix)
+    phi2 = phi_base_exp[0:dim, 2*dim:3*dim]
+
+    return phi2
+
+
+def make_base_phi_matrix(a_matrix, tau):
+    """
+    base_phi_matrix = [ [A\tau, I\tau,     0],
+                        [    0,     0, I\tau],
+                        [    0,     0,     0]
+                      ]
+
+    See SpaceEx CAV 11' (Goran. F. et al).
+    """
+
+    dim = a_matrix.shape[0]
+
+    A_tau = a_matrix * tau
+    I_tau = np.identity(dim) * tau
+
+    base_matrix = np.zeros(shape=(3*dim, 3*dim))
+    base_matrix[0:dim, 0:dim] = A_tau
+    base_matrix[0:dim, dim:2*dim] = I_tau
+    base_matrix[dim:2*dim, 2*dim:3*dim] = I_tau
+
+    return base_matrix
+
+
 if __name__ == '__main__':
     # direction_type = 1
     # dim = 3
     #
     # print(len(generate_directions(direction_type, dim)))
-    A = np.array([[1, 0], [0, 1]])
-    T = 0.01
-    rv = mat_exp_int(A, T)
-    print(rv)
+    A = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    T = 0.1
 
-    inv_A = np.linalg.inv(A)
-
-    print(np.dot((mat_exp(A, T) - mat_exp(A, 0)), inv_A))
-
+    print(make_base_phi_matrix(A, T))
     # init_mat_X0 = np.array([[1, 0], [-1, 0], [0, 1], [0, -1]])
     # init_col_X0 = np.array([[1], [1], [1], [1]])
     #

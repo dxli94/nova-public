@@ -7,7 +7,8 @@ from convex_set import hyperbox
 from convex_set.hyperbox import HyperBox
 from cores.hybrid_automata import NonlinHybridAutomaton
 from cores.linearizer import Linearizer
-from cores.post_opt.fwd_continuous_opt import FwdContinuousPostOpeartor
+from cores.post_opt.fwd_continuous_opt import FwdContinuousPostOperator
+from cores.post_opt.fwd_symhull_continuous_post import FwdSymhullContinuousPostOperator
 from cores.sys_dynamics import AffineDynamics, GeneralDynamics
 from utils import simulator
 from utils import suppfunc_utils
@@ -42,7 +43,9 @@ class NovaEngine:
         self._reach_error = False
 
         if app_settings.reach.error_model == 1:
-            self._post_operator_factory = FwdContinuousPostOpeartor
+            self._post_operator_factory = FwdContinuousPostOperator
+        elif app_settings.reach.error_model == 2:
+            self._post_operator_factory = FwdSymhullContinuousPostOperator
         else:
             raise ValueError("Error model type {} not understood.".format(app_settings.reach.error_model))
 

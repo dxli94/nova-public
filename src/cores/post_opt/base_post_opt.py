@@ -1,25 +1,32 @@
 import numpy as np
 
 from utils import utils
+from utils.containers import PostOptStateholder, ReachParams
 
 
-class AbstractContinuousPostOpeartor:
+class BaseContinuousPostOperator:
     """
-    An abstract class providing definitions for basic operations
+    A base class providing definitions for basic operations
     that all continuous operators should implement.
     """
 
-    def __init__(self):
-        self._handler = None
-        self._canonical_direction_idx = None
-
+    def __init__(self, init_state, directions):
+        self.init_state = init_state
+        self.tube_supp = None
         self.set_supp = None
+
+        self._temp_tube_supp = None
+        self._handler = PostOptStateholder(init_state.lb, init_state.ub)
+        self._directions = directions
+        self._dim = directions.shape[1]
+        self._reach_params = ReachParams()
+        self._canonical_direction_idx = utils.get_canno_dir_indices(directions)
 
     def do_init_step(self):
         """
         Initial step before computing flowpipes.
         """
-        self._update_phi_list()
+        self._update_matexp_list()
         self.do_gamma_step()
 
     def update_reach_params(self, vals):
@@ -47,7 +54,7 @@ class AbstractContinuousPostOpeartor:
         """
         Update computation components to move computation one step ahead.
         """
-        self._update_phi_list()
+        self._update_matexp_list()
         self._update_tube(self._temp_tube_supp)
         self._update_inhomo_seq(cur_input_lb, cur_input_ub, a_matrix)
 
@@ -57,11 +64,23 @@ class AbstractContinuousPostOpeartor:
         """
         raise NotImplementedError
 
-    def _update_phi_list(self):
+    def _update_matexp_list(self):
         """
-        Update the sequence of the product of chained matrix exponential.
+        Update the sequence of the product of chained (transposed) matrix exponential.
+
+        phi_list contains the product of delta_transpose.
+        After n-times update, phi_list looks like this:
+        [ Φ_{n}^T Φ_{n-1}^T … Φ_{1}^T, Φ_{n-1}^T … Φ_{1}^T, ..., Φ_{1}^T]
         """
-        raise NotImplementedError
+        if len(self._handler.matexp_list.get_val()) == 0:
+            temp_list = np.array([np.eye(self._dim)])
+        else:
+            delta_T = self._reach_params.delta.T
+
+            temp_list = np.tensordot(self._handler.matexp_list.get_val(), delta_T, axes=(2, 0))
+            temp_list = np.vstack((temp_list, [np.eye(self._dim)]))
+
+        self._handler.matexp_list.set_val(temp_list)
 
     def _update_tube(self, supp_vals_tube):
         """

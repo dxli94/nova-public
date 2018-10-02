@@ -154,7 +154,7 @@ class NonlinPostOpt:
                                               self.handler.input_ub_seq.get_val(),
                                               current_input_lb,
                                               current_input_ub,
-                                              self.handler.phi_list.get_val(),
+                                              self.handler.matexp_list.get_val(),
                                               next_init_sf)
             Timers.toc('compute_alpha')
             alpha_bounds = extract_bounds_from_sf(sf_tube, self._canno_dir_indices)
@@ -177,7 +177,7 @@ class NonlinPostOpt:
                 prev_vol = current_vol
                 current_vol = self._compute_vol(self.handler.tube_lb.get_val(), self.handler.tube_ub.get_val())
 
-                self.handler.phi_list.set_val(self.update_phi_list(self.handler.phi_list.get_val()))
+                self.handler.matexp_list.set_val(self.update_phi_list(self.handler.matexp_list.get_val()))
                 # Timers.tic('update_wb_seq')
                 res_update_wb = self.update_wb_seq(self.handler.input_lb_seq.get_val(),
                                                    self.handler.input_ub_seq.get_val(),
@@ -191,7 +191,7 @@ class NonlinPostOpt:
                 # Timers.tic('compute gamma')
                 next_init_sf = self.compute_gamma_step(self.handler.input_lb_seq.get_val(),
                                                        self.handler.input_ub_seq.get_val(),
-                                                       self.handler.phi_list.get_val())
+                                                       self.handler.matexp_list.get_val())
                 # print(epsilon)
                 # exit()
 

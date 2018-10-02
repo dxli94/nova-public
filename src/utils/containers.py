@@ -129,8 +129,8 @@ class PostOptStateholder:
         self.tvars_list.append(self.input_ub_seq)
         # input_lb_seq, input_ub_seq = init_set_lb, init_set_ub
 
-        self.phi_list = tvar([])
-        self.tvars_list.append(self.phi_list)
+        self.matexp_list = tvar([])
+        self.tvars_list.append(self.matexp_list)
 
         self._reset(init_set_lb, init_set_ub)
 
@@ -164,4 +164,4 @@ class PostOptStateholder:
         self.input_lb_seq.reset(init_set_lb)
         self.input_ub_seq.reset(init_set_ub)
 
-        self.phi_list.reset([])
+        self.matexp_list.reset([])

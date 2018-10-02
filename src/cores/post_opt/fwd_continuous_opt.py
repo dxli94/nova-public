@@ -1,27 +1,15 @@
 import numpy as np
 
-from cores.post_opt.abstract_post_opt import AbstractContinuousPostOpeartor
+from cores.post_opt.base_post_opt import BaseContinuousPostOperator
 from utils import suppfunc_utils
-from utils.containers import PostOptStateholder, ReachParams
-from utils import utils
 
 
-class FwdContinuousPostOpeartor(AbstractContinuousPostOpeartor):
+class FwdContinuousPostOperator(BaseContinuousPostOperator):
     def __init__(self, init_state, directions):
         """
         :param init_state: a HyperBox
         """
-        super().__init__()
-
-        self.init_state = init_state
-        self.tube_supp = None
-
-        self._temp_tube_supp = None
-        self._handler = PostOptStateholder(init_state.lb, init_state.ub)
-        self._directions = directions
-        self._dim = directions.shape[1]
-        self._reach_params = ReachParams()
-        self._canonical_direction_idx = utils.get_canno_dir_indices(directions)
+        super().__init__(init_state, directions)
 
     def update_reach_params(self, vals):
         self._reach_params.alpha, self._reach_params.beta, self._reach_params.delta, self._reach_params.tau = vals
@@ -47,7 +35,7 @@ class FwdContinuousPostOpeartor(AbstractContinuousPostOpeartor):
         supp = np.empty(self._directions.shape[0])
 
         for idx, l in enumerate(self._directions):
-            delta_T_l = self._handler.phi_list.get_val().dot(l).reshape(1, -1)
+            delta_T_l = self._handler.matexp_list.get_val().dot(l).reshape(1, -1)
             pos_clip = np.clip(a=delta_T_l, a_min=0, a_max=np.inf)
             neg_clip = np.clip(a=delta_T_l, a_min=-np.inf, a_max=0)
 
@@ -70,17 +58,17 @@ class FwdContinuousPostOpeartor(AbstractContinuousPostOpeartor):
 
         delta_T = self._reach_params.delta.T
 
-        if len(self._handler.phi_list.get_val()) == 0:
-            phi_list = np.array([delta_T])
+        if len(self._handler.matexp_list.get_val()) == 0:
+            matexp_list = np.array([delta_T])
         else:
-            phi_list = np.tensordot(self._handler.phi_list.get_val(), delta_T, axes=(2, 0))
-        phi_list = np.vstack((phi_list, [np.eye(self._dim)]))
+            matexp_list = np.tensordot(self._handler.matexp_list.get_val(), delta_T, axes=(2, 0))
+        matexp_list = np.vstack((matexp_list, [np.eye(self._dim)]))
 
         # compute supp values at tau step
         supp = np.empty(self._directions.shape[0])
 
         for idx, l in enumerate(self._directions):
-            delta_T_l = phi_list.dot(l).reshape(1, -1)
+            delta_T_l = matexp_list.dot(l).reshape(1, -1)
             pos_clip = np.clip(a=delta_T_l, a_min=0, a_max=np.inf)
             neg_clip = np.clip(a=delta_T_l, a_min=-np.inf, a_max=0)
 
@@ -112,19 +100,3 @@ class FwdContinuousPostOpeartor(AbstractContinuousPostOpeartor):
 
         self._handler.input_lb_seq.set_val(lb)
         self._handler.input_ub_seq.set_val(ub)
-
-    def _update_phi_list(self):
-        """
-        phi_list contains the product of delta_transpose.
-        After n-times update, phi_list looks like this:
-        [ Φ_{n}^T Φ_{n-1}^T … Φ_{1}^T, Φ_{n-1}^T … Φ_{1}^T, ..., Φ_{1}^T]
-        """
-        if len(self._handler.phi_list.get_val()) == 0:
-            temp_list = np.array([np.eye(self._dim)])
-        else:
-            delta_T = self._reach_params.delta.T
-
-            temp_list = np.tensordot(self._handler.phi_list.get_val(), delta_T, axes=(2, 0))
-            temp_list = np.vstack((temp_list, [np.eye(self._dim)]))
-
-        self._handler.phi_list.set_val(temp_list)
