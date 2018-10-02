@@ -1,7 +1,7 @@
 import numpy as np
 
 from convex_set.hyperbox import HyperBox
-from cores.engine import ReachEngine
+from cores.engine import NovaEngine
 from cores.hybrid_automata import NonlinHybridAutomaton
 from utils import suppfunc_utils
 from utils.containers import ReachabilitySetting, VerificationSetting, AppSetting, PlotSetting, SimuSetting
@@ -35,7 +35,7 @@ def define_settings():
     dirs = suppfunc_utils.generate_directions(direction_type=1, dim=sys_dim)
 
     reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.01,
-                                        directions=dirs, error_model=1,
+                                        directions=dirs, error_model=2,
                                         scaling_freq=0.1, scaling_cutoff=0.01)
     # specify unsafe region
     verif_setting = VerificationSetting(a_matrix=np.array([0, -1]),
@@ -44,8 +44,10 @@ def define_settings():
     plot_setting = PlotSetting(poly_dir_path='../out/sfvals', model_name=model_name)
     simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.45], [1.70, 2.65]])
 
-    app_settings = AppSetting(reach_setting=reach_setting, verif_setting=verif_setting,
-                              plot_setting=plot_setting, simu_setting=simu_setting)
+    app_settings = AppSetting(reach_setting=reach_setting,
+                              verif_setting=verif_setting,
+                              plot_setting=plot_setting,
+                              simu_setting=simu_setting)
 
     return app_settings
 
@@ -54,10 +56,10 @@ def run_nova(settings):
     ha = define_ha()
     init = define_init_states(ha)
 
-    engine = ReachEngine(ha, settings)
+    engine = NovaEngine(ha, settings)
     engine.run(init)
 
-    return engine.result
+    # return engine.result
 
 
 if __name__ == '__main__':
