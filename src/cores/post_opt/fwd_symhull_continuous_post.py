@@ -16,14 +16,19 @@ class FwdSymhullContinuousPostOperator(BaseContinuousPostOperator):
          W_{i} = τV_{i} ⊕ ⊡(Φ_{2}(|A|, τ) ⊡(AU)),
         """
         c = (next_lb + next_ub) / 2
-        M = suppfunc_utils.mat_exp_int(a_matrix, t_min=0, t_max=self._reach_params.tau)
-        tau_d = np.dot(M, c)
+        next_w_lb = next_lb - c
+        next_w_ub = next_ub - c
 
-        E_U = self._compute_E_U(next_lb - c, next_ub - c, a_matrix)
-        # print(E_U)
+        a_abs_matrix = np.absolute(a_matrix)
+        # Φ_{1}(|A|, τ), Φ_{2}(|A|, τ)
+        phi1 = suppfunc_utils.compute_phi_1(a_matrix, self._reach_params.tau)
+        phi2 = suppfunc_utils.compute_phi_2(a_abs_matrix, self._reach_params.tau)
 
-        next_lb = next_lb * self._reach_params.tau - E_U + tau_d
-        next_ub = next_ub * self._reach_params.tau + E_U + tau_d
+        E_U = self._compute_E_U(next_w_lb, next_w_ub, a_abs_matrix, phi2)
+        phi1_c = phi1.dot(c)
+
+        next_lb = next_w_lb * self._reach_params.tau - E_U + phi1_c
+        next_ub = next_w_ub * self._reach_params.tau + E_U + phi1_c
 
         # print(next_lb, next_ub)
 
@@ -33,7 +38,7 @@ class FwdSymhullContinuousPostOperator(BaseContinuousPostOperator):
         self._handler.input_lb_seq.set_val(lb)
         self._handler.input_ub_seq.set_val(ub)
 
-    def _compute_E_U(self, next_lb, next_ub, a_matrix):
+    def _compute_E_U(self, next_lb, next_ub, a_matrix, phi2):
         """
         Compute ⊡(Φ_{2}(|A|, τ) ⊡ (AU))
         """
@@ -57,10 +62,6 @@ class FwdSymhullContinuousPostOperator(BaseContinuousPostOperator):
                 box_AU_lb[i] = -box_AU_ub[i]
             elif abs_ub < abs_lb:
                 box_AU_ub[i] = -box_AU_lb[i]
-
-        # Φ_{2}(|A|, τ)
-        a_matrix_abs = np.absolute(a_matrix)
-        phi2 = suppfunc_utils.compute_phi2(a_matrix=a_matrix_abs, tau=self._reach_params.tau)
 
         # phi2_box_AU = Φ_{2}(|A|, τ) ⊡ (AU)
         phi2_pos_clip = np.clip(a=phi2, a_min=0, a_max=np.inf)

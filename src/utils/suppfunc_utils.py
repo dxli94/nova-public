@@ -1,8 +1,8 @@
 import numpy as np
 from scipy.linalg import expm
 
-from convex_set.polyhedron import Polyhedron
-from convex_set.transpoly import TransPoly
+# from convex_set.polyhedron import Polyhedron
+# from convex_set.transpoly import TransPoly
 
 
 def mat_exp(A, tau=1):
@@ -273,19 +273,82 @@ def mat_exp_int(A, t_min, t_max, nbins=5):
     result = np.apply_along_axis(f, 0, xv.reshape(1, -1))
     return np.trapz(result, xv)
 
+#
+# def compute_phi_matrices(a_matrix, tau):
+#     """
+#     See SpaceEx CAV 11' (Goran. F. et al) Eq. (8) for Φ_{1}(|A|, τ) and Φ_{2}(|A|, τ).
+#     """
+#     assert len(a_matrix.shape) == 2
+#     assert a_matrix.shape[0] == a_matrix.shape[1]
+#
+#     dim = a_matrix.shape[0]
+#     a_matrix_abs = np.absolute(a_matrix)
+#
+#     try:
+#         inv_a = np.linalg.inv(a_matrix)
+#         inv_abs_a = np.linalg.inv(a_matrix_abs)
+#
+#         I = np.identity(dim)
+#         # Φ_{1}(A, τ) = A^-1 *(e^{tau*A}-I)
+#         phi1 = np.dot(inv_a, (mat_exp(a_matrix, tau)-I))
+#         # Φ_{2}(|A|, τ) = |A|^-2 *(e^{tau*|A|}-I-tau*|A|)
+#         term1 = np.dot(inv_abs_a, inv_abs_a)
+#         phi2 = np.dot(term1, (mat_exp(a_matrix_abs, tau)-I-tau*a_matrix_abs))
+#     except np.linalg.LinAlgError:  # A not invertible
+#         phi_base_matrix = make_base_phi_matrix(a_matrix, tau)
+#         phi_base_exp = mat_exp(phi_base_matrix)
+#
+#         phi1 = phi_base_exp[0:dim, 1*dim:2*dim]
+#         phi2 = phi_base_exp[0:dim, 2*dim:3*dim]
+#
+#     return phi1, phi2
 
-def compute_phi2(a_matrix, tau):
+
+def compute_phi_1(a_matrix, tau):
     """
-    See SpaceEx CAV 11' (Goran. F. et al) Eq. (8) for Φ_{2}(|A|, τ).
+    See SpaceEx CAV 11' (Goran. F. et al) Eq. (8) for Φ_{1}(|A|, τ) and Φ_{2}(|A|, τ).
     """
     assert len(a_matrix.shape) == 2
     assert a_matrix.shape[0] == a_matrix.shape[1]
 
     dim = a_matrix.shape[0]
 
-    phi_base_matrix = make_base_phi_matrix(a_matrix, tau)
-    phi_base_exp = mat_exp(phi_base_matrix)
-    phi2 = phi_base_exp[0:dim, 2*dim:3*dim]
+    try:
+        inv_a = np.linalg.inv(a_matrix)
+
+        I = np.identity(dim)
+        # Φ_{1}(A, τ) = A^-1 *(e^{tau*A}-I)
+        phi1 = np.dot(inv_a, (mat_exp(a_matrix, tau) - I))
+    except np.linalg.LinAlgError:  # A not invertible
+        phi_base_matrix = make_base_phi_matrix(a_matrix, tau)
+        phi_base_exp = mat_exp(phi_base_matrix)
+
+        phi1 = phi_base_exp[0:dim, 1 * dim:2 * dim]
+
+    return phi1
+
+
+def compute_phi_2(a_matrix, tau):
+    """
+    See SpaceEx CAV 11' (Goran. F. et al) Eq. (8) for Φ_{1}(|A|, τ) and Φ_{2}(|A|, τ).
+    """
+    assert len(a_matrix.shape) == 2
+    assert a_matrix.shape[0] == a_matrix.shape[1]
+
+    dim = a_matrix.shape[0]
+
+    try:
+        inv_a = np.linalg.inv(a_matrix)
+
+        I = np.identity(dim)
+        # Φ_{2}(|A|, τ) = |A|^-2 *(e^{tau*|A|}-I-tau*|A|)
+        term1 = np.dot(inv_a, inv_a)
+        phi2 = np.dot(term1, (mat_exp(a_matrix, tau)-I-tau*a_matrix))
+    except np.linalg.LinAlgError:  # A not invertible
+        phi_base_matrix = make_base_phi_matrix(a_matrix, tau)
+        phi_base_exp = mat_exp(phi_base_matrix)
+
+        phi2 = phi_base_exp[0:dim, 2*dim:3*dim]
 
     return phi2
 
@@ -314,14 +377,19 @@ def make_base_phi_matrix(a_matrix, tau):
 
 
 if __name__ == '__main__':
-    # direction_type = 1
-    # dim = 3
-    #
-    # print(len(generate_directions(direction_type, dim)))
     A = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-    T = 0.1
+    tau = 0.1
+    dim = A.shape[1]
 
-    print(make_base_phi_matrix(A, T))
+    I = np.identity(dim)
+    phi_base = make_base_phi_matrix(A, tau)
+    phi_base_exp = mat_exp(phi_base)
+    phi_1 = phi_base_exp[0:dim, 1*dim:2*dim]
+    res = phi_1 - tau * I
+
+    print(res)
+    print(mat_exp_int(A, t_min=0, t_max=tau, nbins=5000))
+
     # init_mat_X0 = np.array([[1, 0], [-1, 0], [0, 1], [0, -1]])
     # init_col_X0 = np.array([[1], [1], [1], [1]])
     #
