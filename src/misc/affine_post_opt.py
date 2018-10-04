@@ -3,6 +3,7 @@ import numpy as np
 import utils.ppl_helper as PPLHelper
 from convex_set.polyhedron import Polyhedron
 from convex_set.transpoly import TransPoly
+from utils import affine_utils
 from utils import suppfunc_utils
 
 
@@ -13,7 +14,7 @@ class PostOperator:
         sf_tp_X0 = poly_init.compute_support_function(np.dot(delta_tp, l), lp)
 
         sf_V = trans_poly_U.compute_support_function(l, lp)
-        sf_ball = suppfunc_utils.support_unitball_infnorm(l)
+        sf_ball = affine_utils.support_unitball_infnorm(l)
 
         sf_omega0 = max(sf_X0, sf_tp_X0 + tau * sf_V + alpha * sf_ball)
 
@@ -22,7 +23,7 @@ class PostOperator:
     @staticmethod
     def compute_sf_w(l, trans_poly_U, beta, tau, lp):
         sf_V = trans_poly_U.compute_support_function(l, lp)
-        sf_ball = suppfunc_utils.support_unitball_infnorm(l)
+        sf_ball = affine_utils.support_unitball_infnorm(l)
         sf_omega = tau * sf_V + beta * sf_ball
         return sf_omega
 
@@ -41,8 +42,8 @@ class PostOperator:
                                  col_vec_U=dyn_col_vec_U)
 
         delta_tp = np.transpose(suppfunc_utils.mat_exp(dyn_matrix_A, tau))
-        alpha = suppfunc_utils.compute_alpha(sys_dynamics, tau, lp)
-        beta = suppfunc_utils.compute_beta(sys_dynamics, tau, lp)
+        alpha = affine_utils.compute_alpha(sys_dynamics, tau, lp)
+        beta = affine_utils.compute_beta(sys_dynamics, tau, lp)
 
         sf_0 = [self.compute_initial_sf(delta_tp, poly_init, trans_poly_U, l, alpha, tau, lp) for l in directions]
 
