@@ -14,6 +14,5 @@ dependencies:
   - cysignals
   - pip:
     - pplpy==0.7
-    - ppl
 prefix: /anaconda3/envs/nova
 
