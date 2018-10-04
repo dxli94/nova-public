@@ -20,15 +20,16 @@ cd nova
 conda env create --name nova --file environment.yml
 ```
 
-Install gmpy2 seperatly,
-```
-pip install gmpy2==2.1.0a1 --ignore-installed --no-binary ":all:"
-```
 then activate the virtual environment by
 ```
 source activate nova
 ```
 You will see your prompt is now prefixed with "nova", which is the virtual environment with dependencies installed.
+
+install gmpy2 seperatly,
+```
+pip install gmpy2==2.1.0a1 --ignore-installed --no-binary ":all:"
+```
 
 #### Option 2
 In case Anaconda is not available or does not work as expected, you could install the following packages manually.
@@ -52,9 +53,11 @@ Choose the path to instance in nova/instance/single_mode_affine_instances; e.g.
  ../instances/single_mode_affine_instances/free_ball.json
 ```
 change time horizon, sampling time, direction type, initial states, etc. in the corresponding json file.
-Try
+Try 
 ```
-python affine_linear_analyzer.py
+cd src
+python affine_analyzer.py -h
+python affine_analyzer.py --path ../instances/single_mode_affine_instances/free_ball.txt --dt 0 --horizon 1 --sampling_time 0.01 --opvars 0 1
 ```
 Plot from outfile.out on dimension 0 and 1 (indexed from 0):
 ```
