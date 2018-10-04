@@ -52,7 +52,7 @@ def main():
     #         print('%.5f %.5f' % v)
     #     print('\n', end='')
 
-    plotter = Plotter(images, opvars)
+    plotter = Plotter(images)
     plotter.save_polygons_to_file()
 
 
