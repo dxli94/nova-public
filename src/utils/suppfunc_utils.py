@@ -273,35 +273,33 @@ def mat_exp_int(A, t_min, t_max, nbins=5):
     result = np.apply_along_axis(f, 0, xv.reshape(1, -1))
     return np.trapz(result, xv)
 
-#
-# def compute_phi_matrices(a_matrix, tau):
-#     """
-#     See SpaceEx CAV 11' (Goran. F. et al) Eq. (8) for Φ_{1}(|A|, τ) and Φ_{2}(|A|, τ).
-#     """
-#     assert len(a_matrix.shape) == 2
-#     assert a_matrix.shape[0] == a_matrix.shape[1]
-#
-#     dim = a_matrix.shape[0]
-#     a_matrix_abs = np.absolute(a_matrix)
-#
-#     try:
-#         inv_a = np.linalg.inv(a_matrix)
-#         inv_abs_a = np.linalg.inv(a_matrix_abs)
-#
-#         I = np.identity(dim)
-#         # Φ_{1}(A, τ) = A^-1 *(e^{tau*A}-I)
-#         phi1 = np.dot(inv_a, (mat_exp(a_matrix, tau)-I))
-#         # Φ_{2}(|A|, τ) = |A|^-2 *(e^{tau*|A|}-I-tau*|A|)
-#         term1 = np.dot(inv_abs_a, inv_abs_a)
-#         phi2 = np.dot(term1, (mat_exp(a_matrix_abs, tau)-I-tau*a_matrix_abs))
-#     except np.linalg.LinAlgError:  # A not invertible
-#         phi_base_matrix = make_base_phi_matrix(a_matrix, tau)
-#         phi_base_exp = mat_exp(phi_base_matrix)
-#
-#         phi1 = phi_base_exp[0:dim, 1*dim:2*dim]
-#         phi2 = phi_base_exp[0:dim, 2*dim:3*dim]
-#
-#     return phi1, phi2
+
+def compute_phi_matrices(a_matrix, tau):
+    """
+    See SpaceEx CAV 11' (Goran. F. et al) Eq. (8) for Φ_{1}(|A|, τ) and Φ_{2}(|A|, τ).
+    """
+    assert len(a_matrix.shape) == 2
+    assert a_matrix.shape[0] == a_matrix.shape[1]
+
+    dim = a_matrix.shape[0]
+
+    try:
+        inv_a = np.linalg.inv(a_matrix)
+
+        I = np.identity(dim)
+        # Φ_{1}(A, τ) = A^-1 *(e^{tau*A}-I)
+        phi1 = np.dot(inv_a, (mat_exp(a_matrix, tau)-I))
+        # Φ_{2}(|A|, τ) = |A|^-2 *(e^{tau*|A|}-I-tau*|A|)
+        term1 = np.dot(inv_a, inv_a)
+        phi2 = np.dot(term1, (mat_exp(a_matrix, tau)-I-tau*a_matrix))
+    except np.linalg.LinAlgError:  # A not invertible
+        phi_base_matrix = make_base_phi_matrix(a_matrix, tau)
+        phi_base_exp = mat_exp(phi_base_matrix)
+
+        phi1 = phi_base_exp[0:dim, 1*dim:2*dim]
+        phi2 = phi_base_exp[0:dim, 2*dim:3*dim]
+
+    return phi1, phi2
 
 
 def compute_phi_1(a_matrix, tau):
