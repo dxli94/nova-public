@@ -1,7 +1,7 @@
 import cvxopt as cvx
+import numpy as np
 
 import utils.ppl_helper as pplHelper
-from misc.basic_vector_operations import *
 
 
 class Polyhedron:
