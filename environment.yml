@@ -13,5 +13,7 @@ dependencies:
   - cvxopt=1.1.9
   - cysignals
   - pip:
-    - pycddlib==2.0.0
+    - pplpy==0.7
+    - ppl
 prefix: /anaconda3/envs/nova
+
