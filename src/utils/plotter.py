@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-import utils
+import utils.ppl_helper
 
 
 class Plotter:
@@ -192,7 +192,7 @@ class Plotter:
         for sf_row in sf_mat:
             sf_row_col = np.reshape(sf_row, (len(sf_row), 1))
             sf_row_dir = sf_row_col[d_mat_idx]
-            ret.append(PPLHelper.create_polytope(np.array(d_mat), sf_row_dir, len(opdims)))
+            ret.append(utils.ppl_helper.create_polytope(np.array(d_mat), sf_row_dir, len(opdims)))
 
         return ret
 
