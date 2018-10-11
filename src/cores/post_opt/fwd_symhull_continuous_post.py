@@ -126,10 +126,7 @@ class FwdSymhullContinuousPostOperator(BaseContinuousPostOperator):
 
         delta_T = self._reach_params.delta.T
 
-        if len(self._handler.matexp_list.get_val()) == 0:
-            matexp_list = np.array([delta_T])
-        else:
-            matexp_list = np.tensordot(self._handler.matexp_list.get_val(), delta_T, axes=(2, 0))
+        matexp_list = np.tensordot(self._handler.matexp_list.get_val(), delta_T, axes=(2, 0))
         matexp_list = np.vstack((matexp_list, [np.eye(self._dim)]))
 
         # compute supp values at tau step

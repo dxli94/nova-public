@@ -27,7 +27,19 @@ class BaseContinuousPostOperator:
         Initial step before computing flowpipes.
         """
         self._update_matexp_list()
-        self.do_gamma_step()
+        # self.do_gamma_step()
+        supp = np.empty(self._directions.shape[0])
+
+        for idx, l in enumerate(self._directions):
+            pos_clip = np.clip(a=l, a_min=0, a_max=np.inf)
+            neg_clip = np.clip(a=l, a_min=-np.inf, a_max=0)
+
+            maxval = pos_clip.dot(self._handler.input_ub_seq.get_val()) + \
+                     neg_clip.dot(self._handler.input_lb_seq.get_val())
+
+            supp[idx] = maxval
+
+        self.set_supp = supp
 
     def update_reach_params(self, vals):
         """
