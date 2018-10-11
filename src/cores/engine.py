@@ -2,6 +2,7 @@ import sys
 import time
 
 import numpy as np
+from copy import deepcopy
 
 from convex_set import hyperbox
 from convex_set.hyperbox import HyperBox
@@ -131,34 +132,43 @@ class NovaEngine:
                     start_walltime = now
 
                 if not in_scaling_mode:
-                    supp_matrix.append(self._post_operator.tube_supp)
-
-                    if self._is_start_scaling():
-                        # entering scaling mode
-                        scaled_dyn = self._make_scaling_dynamics()
-                        # set scaled dynamics as the target dynamics within linearizer
-                        self._linearizer.set_target_dyn(scaled_dyn)
-                        self._linearizer.is_scaled = True
-
-                        in_scaling_mode = True
-
-                else:  # staying in the scaling mode
-                    if self._is_scaling_helpful(prev_vol, cur_vol):
+                    if self._cur_step == 1:
                         supp_matrix.append(self._post_operator.tube_supp)
-                        # We can decrease self.cur_step instead. By increasing reach.num_steps,
-                        # we can see the num of extra steps we computed in scaling mode more clearly.
-                        self._settings.reach.num_steps += 1
-                    else:  # scaling is deemed as un-helpful
-                        # rolling-back to the previous state
+
+                    scaled_dyn = self._make_scaling_dynamics()
+                    # set scaled dynamics as the target dynamics within linearizer
+                    self._linearizer.set_target_dyn(scaled_dyn)
+                    self._linearizer.is_scaled = True
+                    #
+                    in_scaling_mode = True
+                    lookahead = True
+                else:  # staying in the scaling mode
+                    if lookahead:
+                        # print('lookahead by changing to original dynamics.')
+                        tmp_post_operator = deepcopy(self._post_operator)
+
                         self._post_operator.rollback()
                         self._cur_step -= 1
 
-                        # set to original (un-scaled) dynamics in the curr mode
                         self._linearizer.set_target_dyn(self._cur_mode.dynamics)
                         self._linearizer.is_scaled = False
+                        lookahead = False
 
+                    else:
+                        if self._is_scaling_helpful_heuristic(prev_vol, cur_vol):
+                            # print('scaling helps.')
+                            self._post_operator = deepcopy(tmp_post_operator)
+
+                            supp_matrix.append(self._post_operator.tube_supp)
+
+                            # We can decrease self.cur_step instead. By increasing reach.num_steps,
+                            # we can see the num of extra steps we computed in scaling mode more clearly.
+                            self._settings.reach.num_steps += 1
+                        else:  # scaling is deemed as un-helpful
+                            supp_matrix.append(self._post_operator.tube_supp)
+
+                        lookahead = True
                         in_scaling_mode = False
-
                 eps /= 4
 
         return supp_matrix
@@ -255,6 +265,14 @@ class NovaEngine:
         imprv_rate = (prev_vol - cur_vol) / prev_vol
         return imprv_rate >= self._settings.reach.scaling_cutoff
 
+    def _is_scaling_helpful_heuristic(self, scaled_vol, unscaled_vol):
+        # print(scaled_vol)
+        # print(unscaled_vol)
+        #
+        # print('\n')
+
+        return scaled_vol < unscaled_vol
+
     def _is_start_scaling(self):
         """
         Return true if can start scaling at the current step.
@@ -335,3 +353,59 @@ class NovaEngine:
         m = norm / dyn_with_dist_norm
 
         return m
+
+    # def _is_scaling_helpful_heuristic(self, cur_vol, dom):
+    #     """
+    #     Heuristically determine whether scaling helps.
+    #
+    #     Compare volume of the tube computed with/without scaling.
+    #     If with scaling produces smaller volume, we say it is helpful.
+    #
+    #     """
+    #     tmp_operator = deepcopy(self._post_operator)
+    #     err_lb, err_ub = self._heavy_hybridize(dom, tmp_operator)
+    #
+    #     print(err_lb, err_ub)
+    #
+    #     tmp_operator.do_alpha_step(err_lb, err_ub)
+    #
+    #     tube_lb, tube_ub = tmp_operator.get_tube_bounds()
+    #     widths = tube_ub - tube_lb
+    #     vol_without_scaling = np.prod(widths)
+    #
+    #     print('vol_without_scaling: {}'.format(vol_without_scaling))
+    #     print('vol_with_scaling: {}'.format(cur_vol))
+    #     print('\n')
+    #
+    #     return cur_vol < vol_without_scaling
+    #
+    # def _heavy_hybridize(self, dom, post_operator):
+    #     # linearize
+    #     linearizer = deepcopy(self._linearizer)
+    #     linearizer.set_target_dyn(self._cur_mode.dynamics)
+    #     linearizer.is_scaled = False
+    #
+    #     # construct a new dynamics
+    #     a_matrix, w_poly, c_col = linearizer.gen_abs_dynamics(dom.bounds)
+    #
+    #     u = w_poly[1]
+    #     b = np.dstack((c_col, -c_col)).reshape((self._dim * 2, -1))
+    #     w_poly = (w_poly[0], u + b)
+    #
+    #     lb, ub = self._post_operator.get_cur_init_set()
+    #
+    #     init_col = np.vstack((ub, -lb)).T.reshape(1, -1).flatten()
+    #
+    #     abs_dynamics = AffineDynamics(dim=self._dim, a_matrix=a_matrix,
+    #                                   u_coeff=w_poly[0], u_col=w_poly[1],
+    #                                   x0_col=init_col)
+    #
+    #     reach_params = suppfunc_utils.compute_reach_params(abs_dynamics, self._settings.reach.stepsize)
+    #     post_operator.update_reach_params(reach_params)
+    #
+    #     vertices = HyperBox.get_vertices_from_constr(abs_dynamics.u_coeff, abs_dynamics.u_col)
+    #
+    #     err_lb = np.amin(vertices, axis=0)
+    #     err_ub = np.amax(vertices, axis=0)
+    #
+    #     return err_lb, err_ub
