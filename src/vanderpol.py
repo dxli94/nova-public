@@ -24,7 +24,7 @@ def define_init_states(ha):
 
     # rv.append((ha.modes['1'], HyperBox([[1.25, 2.45], [1.70, 2.65]], opt=1)))
 
-    rv.append((ha.modes['1'], HyperBox([[1, 2], [1.5, 2.45]], opt=1)))
+    rv.append((ha.modes['1'], HyperBox([[1, 2], [1.6, 2.55]], opt=1)))
     # rv.append((ha.modes['1'], HyperBox([[1.25, 2.55], [1.30, 2.65]], opt=1)))
 
     return rv
@@ -46,7 +46,7 @@ def define_settings():
 
     plot_setting = PlotSetting(poly_dir_path='../out/sfvals', model_name=model_name)
     # simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.45], [1.70, 2.65]])
-    simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.05, 2.25], [1.70, 2.65]])
+    simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1, 2], [1.6, 2.55]])
     # simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.55], [1.30, 2.65]])
 
     app_settings = AppSetting(reach_setting=reach_setting,
