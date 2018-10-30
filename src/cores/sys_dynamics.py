@@ -68,12 +68,41 @@ class GeneralDynamics:
         # attrs for Kodiak
         self.sympy_ders = [parse_expr(d) for d in args]
         self._sympy_ders = deepcopy(self.sympy_ders)
+        self._sympy_ders_scaled_template = self.make_sympy_ders_scaled_template(args)
 
         self.kodiak_ders = [Kodiak.sympy_to_kodiak(d) for d in self.sympy_ders]
         self._kodiak_ders_copy = deepcopy(self.kodiak_ders)
 
     def __str__(self):
         return str(self.dyn_sp)
+
+    def make_sympy_ders_scaled_template(self, orig_dynamics):
+        """
+        Make a template for the scaled function.
+
+        Sympy.parse_expr() is very expensive. I avoid calling it upon each newly scaled dynamics
+        by creating such a template with parameter symbols a0, a1, ... an-1, b.
+        Then each time, we just need to replace these parameters with proper values, thus avoiding
+        constructing the parsing tree.
+        """
+
+        linear_term = ''
+        for idx in range(len(orig_dynamics)):
+            linear_term += 'a{}*x{}+'.format(idx, idx)
+        scaling_func_str = '{}b'.format(linear_term)
+
+        scaled_dynamics_str = []
+        for dyn in self.dyn_str:
+            scaled_dynamics_str.append('({})*({})'.format(scaling_func_str, dyn))
+
+        # print(scaled_dynamics_str)
+
+        # sp_strs = [parse_expr(d) for d in scaled_dynamics_str]
+        # for s in sp_strs:
+        #     print(s.subs({'a0': 11, 'a1':22, 'b': 33}))
+        # exit()
+
+        return [parse_expr(d) for d in scaled_dynamics_str]
 
     def eval(self, vals):
         """
@@ -133,24 +162,26 @@ class GeneralDynamics:
         self.scale_func_jac = elem1
         self.is_scaled = True
 
-        linear_term = ''
-        for idx, elem in enumerate(a):
-            linear_term += '{}*x{}+'.format(elem, idx)
-        scaling_func_str = '{}+{}'.format(linear_term, b)
+        subs_dict = self.build_subs_dict(a, b)
 
-        scaled_dynamics_str = []
-        for dyn in self.dyn_str:
-            scaled_dynamics_str.append('({})*({})'.format(scaling_func_str, dyn))
-
-        Timers.tic('parse_expr(d)')
-        self.sympy_ders = [parse_expr(d, evaluate=False) for d in scaled_dynamics_str]
-        # print(self.sympy_ders)
-        # exit()
-        Timers.toc('parse_expr(d)')
+        Timers.tic('subs(subs_dict)')
+        # self.sympy_ders = [parse_expr(d, evaluate=False) for d in scaled_dynamics_str]
+        self.sympy_ders = [d.subs(subs_dict) for d in self._sympy_ders_scaled_template]
+        Timers.toc('subs(subs_dict)')
 
         Timers.tic('Kodiak.sympy_to_kodiak(d)')
         self.kodiak_ders = [Kodiak.sympy_to_kodiak(d) for d in self.sympy_ders]
         Timers.toc('Kodiak.sympy_to_kodiak(d)')
+
+    def build_subs_dict(self, a, b):
+        rv = dict()
+
+        for idx, elem in enumerate(a):
+            key = 'a{}'.format(idx)
+            rv[key] = elem
+
+        rv['b'] = b
+        return rv
 
     def reset_dynamic(self):
         """
