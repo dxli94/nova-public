@@ -4,6 +4,8 @@ import numpy as np
 from pyibex import Function, IntervalVector
 from scipy.optimize import basinhopping
 
+from utils.timerutil import Timers
+
 
 def get_generator_matrix(dim):
     rv = np.zeros(shape=(2*dim, dim))
@@ -88,14 +90,11 @@ class Linearizer:
                 minimizer_kwargs_1 = dict(method='L-BFGS-B', bounds=bounds, args=args, jac=lambda *args: self.err_func_jac(args[0], args[1:]))
                 minimizer_kwargs_2 = dict(method='L-BFGS-B', bounds=bounds, args=args, jac=lambda *args: self.minus_err_func_jac(args[0], args[1:]))
 
-                # Timers.tic('basinhopping')
+                Timers.tic('basinhopping')
                 u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs_1, niter_success=3).fun
                 u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs_2, niter_success=3).fun
-                # Timers.toc('basinhopping')
+                Timers.toc('basinhopping')
             u_bounds.extend([u_max, u_min])
-
-            # if self.is_scaled:
-            #     print(u_bounds)
 
         col_vec = np.array(u_bounds)
 

@@ -5,6 +5,7 @@ from cores.engine import NovaEngine
 from cores.hybrid_automata import NonlinHybridAutomaton
 from utils import suppfunc_utils
 from utils.containers import ReachabilitySetting, VerificationSetting, AppSetting, PlotSetting, SimuSetting
+from utils.timerutil import Timers
 
 
 def define_ha():
@@ -22,9 +23,9 @@ def define_init_states(ha):
     """
     rv = list()
 
-    # rv.append((ha.modes['1'], HyperBox([[1.25, 2.45], [1.70, 2.65]], opt=1)))
+    rv.append((ha.modes['1'], HyperBox([[1.25, 2.28], [1.55, 2.32]], opt=1)))
 
-    rv.append((ha.modes['1'], HyperBox([[1, 2], [1.6, 2.55]], opt=1)))
+    # rv.append((ha.modes['1'], HyperBox([[1, 2], [1.6, 2.55]], opt=1)))
     # rv.append((ha.modes['1'], HyperBox([[1.25, 2.55], [1.30, 2.65]], opt=1)))
 
     return rv
@@ -46,7 +47,7 @@ def define_settings():
 
     plot_setting = PlotSetting(poly_dir_path='../out/sfvals', model_name=model_name)
     # simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.45], [1.70, 2.65]])
-    simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1, 2], [1.6, 2.55]])
+    simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.28], [1.55, 2.32]])
     # simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.55], [1.30, 2.65]])
 
     app_settings = AppSetting(reach_setting=reach_setting,
@@ -58,11 +59,13 @@ def define_settings():
 
 
 def run_nova(settings):
+    Timers.tic('total')
     ha = define_ha()
     init = define_init_states(ha)
 
     engine = NovaEngine(ha, settings)
     engine.run(init)
+    Timers.print_stats()
 
     # return engine.result
 

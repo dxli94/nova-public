@@ -15,6 +15,7 @@ from utils import simulator
 from utils import suppfunc_utils
 from utils.containers import AppSetting
 from utils.plotter import Plotter
+from utils.timerutil import Timers
 
 
 class NovaEngine:
@@ -66,6 +67,7 @@ class NovaEngine:
         self._post_operator = self._post_operator_factory(continuous_set, self._settings.reach.directions)
         self._linearizer = Linearizer(self._dim, self._cur_mode.dynamics, self._cur_mode.is_linear)
         supp_matrix = self._run_reachability()
+        Timers.toc('total')
 
         # 2. run simulation
         simu_res = simulator.run_simulate(self._settings.simu.horizon,
@@ -107,23 +109,29 @@ class NovaEngine:
             cur_input_lb, cur_input_ub = self._hybridize(dom)
             eps *= 2
 
+            Timers.tic('_post_operator.do_alpha_step')
             self._post_operator.do_alpha_step(cur_input_lb, cur_input_ub)
+            Timers.toc('_post_operator.do_alpha_step')
 
             if self._has_lost_precision():
                 print('Computation not completed after {} iterations. Abort now.'.format(self._cur_step))
                 break
 
             if self._domain_contains_tube():
+                Timers.tic('_post_operator.proceed_state')
                 self._post_operator.proceed_state(cur_input_lb, cur_input_ub, self._abs_dynamics.a_matrix)
+                Timers.toc('_post_operator.proceed_state')
                 self._cur_step += 1
 
+                Timers.tic('_post_operator.do_gamma_step')
                 self._post_operator.do_gamma_step()
+                Timers.toc('_post_operator.do_gamma_step')
 
                 prev_vol = cur_vol
                 cur_vol = self._compute_vol()
 
                 # todo encapsulate into a timer
-                if self._cur_step % 100 == 0:
+                if self._cur_step % 100 == 0 and not lookahead:
                     now = time.time()
                     walltime_elapsed = now - start_walltime
                     total_walltime += walltime_elapsed
@@ -135,9 +143,13 @@ class NovaEngine:
                     if self._cur_step == 1:
                         supp_matrix.append(self._post_operator.tube_supp)
 
-                    scaled_dyn = self._make_scaling_dynamics()
+                    # Timers.tic('_make_scaling_dynamics')
+                    # scaled_dyn = self._make_scaling_dynamics()
                     # set scaled dynamics as the target dynamics within linearizer
-                    self._linearizer.set_target_dyn(scaled_dyn)
+                    # self._linearizer.set_target_dyn(scaled_dyn)
+                    # Timers.toc('_make_scaling_dynamics')
+
+                    self._make_scaling_dynamics()
                     self._linearizer.is_scaled = True
                     #
                     in_scaling_mode = True
@@ -150,7 +162,9 @@ class NovaEngine:
                         self._post_operator.rollback()
                         self._cur_step -= 1
 
-                        self._linearizer.set_target_dyn(self._cur_mode.dynamics)
+                        # todo remove or not?
+                        self._linearizer.target_dyn.reset_dynamic()
+                        # self._linearizer.set_target_dyn(self._cur_mode.dynamics)
                         self._linearizer.is_scaled = False
                         lookahead = False
 
@@ -266,11 +280,6 @@ class NovaEngine:
         return imprv_rate >= self._settings.reach.scaling_cutoff
 
     def _is_scaling_helpful_heuristic(self, scaled_vol, unscaled_vol):
-        # print(scaled_vol)
-        # print(unscaled_vol)
-        #
-        # print('\n')
-
         return scaled_vol < unscaled_vol
 
     def _is_start_scaling(self):
@@ -292,19 +301,13 @@ class NovaEngine:
 
         Scaling function has two terms: 1) distance function; 2) scaling factor.
         """
-        dist_func_str = self._make_dist_func_str()
-        m = self._make_scaling_factor(dist_func_str)
+        a, b, dist_func_str = self._make_dist_func_str()
+        m = self._make_scaling_factor(a, b, dist_func_str)
 
-        scaled_dynamics_str = []
-        for dyn in self._cur_mode.dynamics.sp_dynamics:
-            scaled_dynamics_str.append('{}*({})*({})'.format(m, dist_func_str, dyn))
-
-        scaled_dynamics = GeneralDynamics(self._cur_mode.id_to_vars, *scaled_dynamics_str)
-        return scaled_dynamics
+        self._linearizer.target_dyn.apply_dynamic_scaling(np.multiply(a, m), np.multiply(b, m))
 
     def _make_dist_func_str(self):
         """
-        Return a string representation of the scaling function.
         """
         lb, ub = self._post_operator.get_tube_bounds()
 
@@ -332,80 +335,23 @@ class NovaEngine:
 
         scaling_func_str = '{}+{}'.format(linear_term, b)
 
-        return scaling_func_str
+        return a_prime, b, scaling_func_str
 
-    def _make_scaling_factor(self, dist_func_str):
+    def _make_scaling_factor(self, a, b, dist_func_str):
         """
-        Return scaling factor, a rationale number.
-        """
-        dyn_with_dist_str = []
-        for dyn in self._cur_mode.dynamics.sp_dynamics:
-            dyn_with_dist_str.append('({})*({})'.format(dist_func_str, dyn))
+        Return scaling factor m, a rationale number.
 
-        # domain center
+        The scaling factor m is calculated as the quotient of the
+        norm of the linearized original dynamics and the norm of the
+        linearized scaled dynamics.
+        """
         c = np.sum(self._abs_domain.bounds, axis=0) / 2
-        # compute the norm of the dynamics scaled by multiply distance
-        dyn_with_dist = GeneralDynamics(self._cur_mode.id_to_vars, *dyn_with_dist_str)
-        dyn_with_dist_norm = np.linalg.norm(dyn_with_dist.eval_jacobian(c), np.inf)
-        # compute the norm of the original linearized dynamics
-        norm = np.linalg.norm(self._abs_dynamics.a_matrix, np.inf)
-        # compute scaling factor m
-        m = norm / dyn_with_dist_norm
+
+        self._linearizer.target_dyn.apply_dynamic_scaling(a, b)
+        norm_scaled_dynamics = np.linalg.norm(self._linearizer.target_dyn.eval_jacobian(c), np.inf)
+        self._linearizer.target_dyn.reset_dynamic()
+
+        norm_orig_dynamics = np.linalg.norm(self._abs_dynamics.a_matrix, np.inf)
+        m = norm_orig_dynamics / norm_scaled_dynamics
 
         return m
-
-    # def _is_scaling_helpful_heuristic(self, cur_vol, dom):
-    #     """
-    #     Heuristically determine whether scaling helps.
-    #
-    #     Compare volume of the tube computed with/without scaling.
-    #     If with scaling produces smaller volume, we say it is helpful.
-    #
-    #     """
-    #     tmp_operator = deepcopy(self._post_operator)
-    #     err_lb, err_ub = self._heavy_hybridize(dom, tmp_operator)
-    #
-    #     print(err_lb, err_ub)
-    #
-    #     tmp_operator.do_alpha_step(err_lb, err_ub)
-    #
-    #     tube_lb, tube_ub = tmp_operator.get_tube_bounds()
-    #     widths = tube_ub - tube_lb
-    #     vol_without_scaling = np.prod(widths)
-    #
-    #     print('vol_without_scaling: {}'.format(vol_without_scaling))
-    #     print('vol_with_scaling: {}'.format(cur_vol))
-    #     print('\n')
-    #
-    #     return cur_vol < vol_without_scaling
-    #
-    # def _heavy_hybridize(self, dom, post_operator):
-    #     # linearize
-    #     linearizer = deepcopy(self._linearizer)
-    #     linearizer.set_target_dyn(self._cur_mode.dynamics)
-    #     linearizer.is_scaled = False
-    #
-    #     # construct a new dynamics
-    #     a_matrix, w_poly, c_col = linearizer.gen_abs_dynamics(dom.bounds)
-    #
-    #     u = w_poly[1]
-    #     b = np.dstack((c_col, -c_col)).reshape((self._dim * 2, -1))
-    #     w_poly = (w_poly[0], u + b)
-    #
-    #     lb, ub = self._post_operator.get_cur_init_set()
-    #
-    #     init_col = np.vstack((ub, -lb)).T.reshape(1, -1).flatten()
-    #
-    #     abs_dynamics = AffineDynamics(dim=self._dim, a_matrix=a_matrix,
-    #                                   u_coeff=w_poly[0], u_col=w_poly[1],
-    #                                   x0_col=init_col)
-    #
-    #     reach_params = suppfunc_utils.compute_reach_params(abs_dynamics, self._settings.reach.stepsize)
-    #     post_operator.update_reach_params(reach_params)
-    #
-    #     vertices = HyperBox.get_vertices_from_constr(abs_dynamics.u_coeff, abs_dynamics.u_col)
-    #
-    #     err_lb = np.amin(vertices, axis=0)
-    #     err_ub = np.amax(vertices, axis=0)
-    #
-    #     return err_lb, err_ub

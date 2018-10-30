@@ -55,65 +55,70 @@ class GeneralDynamics:
 
         self.str_rep = args
 
+        self.scale_func = None, None
+        self.scale_func_jac = None
+        self.is_scaled = False
+
     def eval(self, vals):
-        return self.lamdafied_dynamics(*vals)
+        """
+        Evaluate the dynamics given a specific point (vals).
+
+        If the dynamic is unscaled, return the result from the lamdafication.
+        Otherwise, multiply the lamdafication result by the distance.
+
+        eval(dyn, vals) = eval(dist_func, vals) * eval(orig_func, vals)
+        """
+
+        orig_eval = self.lamdafied_dynamics(*vals)
+        if self.is_scaled:
+            dist_val = self.scale_func[0].dot(vals) + self.scale_func[1]
+            return np.multiply(dist_val, orig_eval)
+        else:
+            return orig_eval
 
     def eval_jacobian(self, vals):
-        return self.jacobian_mat(*vals)
+        """
+        Evaluate the Jacobian matrix given a specific point (vals).
+
+        If the dynamic is unscaled, return the result from the lamdafication.
+        Otherwise, use the product rule of the partial derivative to compute
+        the Jacobian of the scaled dynamics. The rule is as follows.
+
+        h(x) = f(x)g(x)
+        h'(x) = f'(x)g(x) + f(x)g'(x)
+
+        Here, h(x) is the (scaled) dynamics, f(x) is the distance function, g(x) is the original dynamics.
+        """
+
+        if self.is_scaled:  # the dynamics is scaled
+            f = self.scale_func[0].dot(vals) + self.scale_func[1]
+            f_deriv = self.scale_func_jac
+            g = self.lamdafied_dynamics(*vals)
+            g_deriv = self.jacobian_mat(*vals)
+
+            # product rule of computing partial derivatives
+            rv = np.einsum('i,ij->ij', g, f_deriv) + np.einsum('i,ij->ij', f, g_deriv)
+            return rv
+        else:  # the dynamics is unscaled
+            return self.jacobian_mat(*vals)
 
     def __str__(self):
         return str(self.sp_dynamics)
 
-    # def update_dynamics(self, *args):
-    #     # todo does not work yet
-    #     self.dynamics = [sympy.sympify(arg) for arg in args]
-    #     self.lamdafied_dynamics = sympy.lambdify(self.state_vars, self.dynamics)
-    #     self.jacobian_mat = sympy.lambdify(self.state_vars, sympy.Matrix(self.dynamics).jacobian(self.state_vars))
+    def apply_dynamic_scaling(self, a, b):
+        """
+        Apply dynamic-scaling.
 
+        The scaling function is in the form ax + b, which represents the distance to a hyper-plane.
+        We multiply the distance function to each dynamic to acquire the so-called "scaled dynamics".
 
-if __name__ == '__main__':
-    # id_to_vars = {0: 'x0',
-    #               1: 'x1',
-    #               2: 'x2'}
-    # gd = GeneralDynamics(id_to_vars, 'x0/x1', 'x1+x2')
-    #
-    # for i in range(0, 500000):
-    #     if i % 10000 == 0:
-    #         print(i)
-    #     gd.eval_jacobian([1, 2, 3])
-    #
-    # pass
+        The Jacobian of the scaled dynamics is [a, a, ..., a], (n rows, n = dimension).
+        """
+        elem1 = np.array([a for _ in range(len(a))])
+        elem2 = np.repeat(b, len(a))
+        self.scale_func = elem1, elem2
+        self.scale_func_jac = elem1
+        self.is_scaled = True
 
-    from multiprocessing import Pool
-    import dill
-
-    dill.settings['recurse'] = True
-    # from pathos.multiprocessing import Pool
-
-    x = sympy.symbols('x')
-    expr = sympy.sympify('x*x')
-
-    import time
-
-    def basinhopping_wrapper(expr, x, vals):
-        jacobian_lambda = sympy.lambdify(x, sympy.Matrix([expr]).jacobian([x]))
-        return jacobian_lambda(*vals)
-
-
-    # for i in range(10000):
-    jacobian_lambda = sympy.lambdify(x, sympy.Matrix([expr]).jacobian([x]))
-
-    pool = Pool()
-
-    start = time.time()
-    # for i in range(1000):
-    #     res1 = pool.apply_async(basinhopping_wrapper, [expr, x, [1]])
-    #     res2 = pool.apply_async(basinhopping_wrapper, [expr, x, [2]])
-    #
-    #     a = [res1.get(), res2.get()]
-
-    for i in range(1000):
-        basinhopping_wrapper(expr, x, [1])
-        basinhopping_wrapper(expr, x, [2])
-
-    print(time.time()-start)
+    def reset_dynamic(self):
+        self.is_scaled = False
