@@ -37,7 +37,7 @@ def define_init_states(ha):
 
 def define_settings():
     sys_dim = 2
-    horizon = 2
+    horizon = 7
     model_name = 'vanderpol'
 
     dirs = suppfunc_utils.generate_directions(direction_type=1, dim=sys_dim)
