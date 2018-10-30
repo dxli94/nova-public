@@ -38,8 +38,8 @@ def define_init_states(ha):
 
 def define_settings():
     sys_dim = 4
-    horizon = 2
-    model_name = 'vanderpol_4d'
+    horizon = 0.02
+    model_name = 'coupled_vanderpol'
 
     dirs = suppfunc_utils.generate_directions(direction_type=1, dim=sys_dim)
 

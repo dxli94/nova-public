@@ -71,16 +71,8 @@ class HyperBox:
         self.update_vertices()
 
     def update_vertices(self):
-        self.vertices = []
-
         bounds = self.bounds.T
-
-        lower_bounds = bounds[0]
-        upper_bounds = bounds[1]
-
-        for lb in lower_bounds:
-            for ub in upper_bounds:
-                self.vertices.append([lb, ub])
+        self.vertices = list(itertools.product(*bounds))
 
     def get_vertices(self):
         return self.vertices
