@@ -143,13 +143,9 @@ class NovaEngine:
                     if self._cur_step == 1:
                         supp_matrix.append(self._post_operator.tube_supp)
 
-                    # Timers.tic('_make_scaling_dynamics')
-                    # scaled_dyn = self._make_scaling_dynamics()
-                    # set scaled dynamics as the target dynamics within linearizer
-                    # self._linearizer.set_target_dyn(scaled_dyn)
-                    # Timers.toc('_make_scaling_dynamics')
-
-                    self._make_scaling_dynamics()
+                    Timers.tic('_apply_dynamic_scaling()')
+                    self._apply_dynamic_scaling()
+                    Timers.toc('_apply_dynamic_scaling()')
                     self._linearizer.is_scaled = True
                     #
                     in_scaling_mode = True
@@ -157,14 +153,16 @@ class NovaEngine:
                 else:  # staying in the scaling mode
                     if lookahead:
                         # print('lookahead by changing to original dynamics.')
+                        Timers.tic('deepcopy(self._post_operator)')
                         tmp_post_operator = deepcopy(self._post_operator)
+                        Timers.toc('deepcopy(self._post_operator)')
 
+                        Timers.tic('rollback()')
                         self._post_operator.rollback()
+                        Timers.toc('rollback()')
                         self._cur_step -= 1
 
-                        # todo remove or not?
                         self._linearizer.target_dyn.reset_dynamic()
-                        # self._linearizer.set_target_dyn(self._cur_mode.dynamics)
                         self._linearizer.is_scaled = False
                         lookahead = False
 
@@ -295,18 +293,23 @@ class NovaEngine:
 
         return self._cur_step % stepsize == 0
 
-    def _make_scaling_dynamics(self):
+    def _apply_dynamic_scaling(self):
         """
         Return dynamics scaled by scaling function.
 
         Scaling function has two terms: 1) distance function; 2) scaling factor.
         """
-        a, b, dist_func_str = self._make_dist_func_str()
-        m = self._make_scaling_factor(a, b, dist_func_str)
+        Timers.tic('_make_scaling_func()')
+        a, b = self._make_scaling_func()
+        Timers.toc('_make_scaling_func()')
+
+        Timers.tic('_make_scaling_factor()')
+        m = self._make_scaling_factor(a, b)
+        Timers.toc('_make_scaling_factor()')
 
         self._linearizer.target_dyn.apply_dynamic_scaling(np.multiply(a, m), np.multiply(b, m))
 
-    def _make_dist_func_str(self):
+    def _make_scaling_func(self):
         """
         """
         lb, ub = self._post_operator.get_tube_bounds()
@@ -329,15 +332,9 @@ class NovaEngine:
         b = np.dot(norm_vec, p)
         a_prime = [-elem for elem in norm_vec]
 
-        linear_term = ''
-        for idx, elem in enumerate(a_prime):
-            linear_term += '{}*x{}+'.format(elem, idx)
+        return a_prime, b
 
-        scaling_func_str = '{}+{}'.format(linear_term, b)
-
-        return a_prime, b, scaling_func_str
-
-    def _make_scaling_factor(self, a, b, dist_func_str):
+    def _make_scaling_factor(self, a, b):
         """
         Return scaling factor m, a rationale number.
 
@@ -347,11 +344,18 @@ class NovaEngine:
         """
         c = np.sum(self._abs_domain.bounds, axis=0) / 2
 
+        Timers.tic('target_dyn.apply_dynamic_scaling')
         self._linearizer.target_dyn.apply_dynamic_scaling(a, b)
+        Timers.toc('target_dyn.apply_dynamic_scaling')
+
+        Timers.tic('np.linalg.norm')
         norm_scaled_dynamics = np.linalg.norm(self._linearizer.target_dyn.eval_jacobian(c), np.inf)
+        Timers.toc('np.linalg.norm')
         self._linearizer.target_dyn.reset_dynamic()
 
+        Timers.tic('np.linalg.norm')
         norm_orig_dynamics = np.linalg.norm(self._abs_dynamics.a_matrix, np.inf)
+        Timers.toc('np.linalg.norm')
         m = norm_orig_dynamics / norm_scaled_dynamics
 
         return m

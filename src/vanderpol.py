@@ -5,6 +5,7 @@ from cores.engine import NovaEngine
 from cores.hybrid_automata import NonlinHybridAutomaton
 from utils import suppfunc_utils
 from utils.containers import ReachabilitySetting, VerificationSetting, AppSetting, PlotSetting, SimuSetting
+from utils.pykodiak.pykodiak_interface import Kodiak
 from utils.timerutil import Timers
 
 
@@ -12,8 +13,11 @@ def define_ha():
     ha = NonlinHybridAutomaton()
     ha.variables = ["x0", "x1"]
 
+    for var in ha.variables:
+        Kodiak.add_variable(var)
+
     mode1 = ha.new_mode('1')
-    mode1.set_dynamics(["x1", "(1-x0^2)*x1-x0"], is_linear=(True, False))
+    mode1.set_dynamics(["x1", "(1-x0**2)*x1-x0"], is_linear=(True, False))
 
     return ha
 
@@ -33,7 +37,7 @@ def define_init_states(ha):
 
 def define_settings():
     sys_dim = 2
-    horizon = 7
+    horizon = 2
     model_name = 'vanderpol'
 
     dirs = suppfunc_utils.generate_directions(direction_type=1, dim=sys_dim)
