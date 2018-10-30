@@ -143,9 +143,13 @@ class NovaEngine:
                     if self._cur_step == 1:
                         supp_matrix.append(self._post_operator.tube_supp)
 
-                    Timers.tic('_apply_dynamic_scaling()')
-                    self._apply_dynamic_scaling()
-                    Timers.toc('_apply_dynamic_scaling()')
+                    # Timers.tic('_apply_dynamic_scaling()')
+                    # self._apply_dynamic_scaling()
+                    # Timers.toc('_apply_dynamic_scaling()')
+
+                    scaled_dyn = self._make_scaling_dynamics()
+                    # set scaled dynamics as the target dynamics within linearizer
+                    self._linearizer.set_target_dyn(scaled_dyn)
                     self._linearizer.is_scaled = True
                     #
                     in_scaling_mode = True
@@ -162,8 +166,10 @@ class NovaEngine:
                         Timers.toc('rollback()')
                         self._cur_step -= 1
 
-                        self._linearizer.target_dyn.reset_dynamic()
+                        self._linearizer.set_target_dyn(self._cur_mode.dynamics)
                         self._linearizer.is_scaled = False
+                        # self._linearizer.target_dyn.reset_dynamic()
+                        # self._linearizer.is_scaled = False
                         lookahead = False
 
                     else:
@@ -178,9 +184,9 @@ class NovaEngine:
                             self._settings.reach.num_steps += 1
                         else:  # scaling is deemed as un-helpful
                             supp_matrix.append(self._post_operator.tube_supp)
+                            in_scaling_mode = False
 
                         lookahead = True
-                        in_scaling_mode = False
                 eps /= 4
 
         return supp_matrix
@@ -357,5 +363,73 @@ class NovaEngine:
         norm_orig_dynamics = np.linalg.norm(self._abs_dynamics.a_matrix, np.inf)
         Timers.toc('np.linalg.norm')
         m = norm_orig_dynamics / norm_scaled_dynamics
+
+        return m
+
+    def _make_scaling_dynamics(self):
+        """
+        Return dynamics scaled by scaling function.
+
+        Scaling function has two terms: 1) distance function; 2) scaling factor.
+        """
+        dist_func_str = self._make_dist_func_str()
+        m = self._make_scaling_factor_old(dist_func_str)
+
+        scaled_dynamics_str = []
+        for dyn in self._cur_mode.dynamics.dyn_sp:
+            scaled_dynamics_str.append('{}*({})*({})'.format(m, dist_func_str, dyn))
+
+        scaled_dynamics = GeneralDynamics(self._cur_mode.id_to_vars, *scaled_dynamics_str)
+        return scaled_dynamics
+
+    def _make_dist_func_str(self):
+        """
+        Return a string representation of the scaling function.
+        """
+        lb, ub = self._post_operator.get_tube_bounds()
+
+        # domain center
+        c = np.sum(self._abs_domain.bounds, axis=0) / 2
+        # compute derivative
+        deriv = self._cur_mode.dynamics.eval(c)
+        # get norm vector
+        norm_vec = deriv / (np.dot(deriv, deriv) ** 0.5)
+
+        # get the minimal distance between the domain center and the reachable set boundary
+        # along the normal vector direction.
+        pos_clip = np.where(norm_vec >= 0, 1, 0)
+        neg_clip = np.where(norm_vec < 0, 1, 0)
+        # the corner which maximizes the distance
+        p = pos_clip * ub + neg_clip * lb
+
+        # distance function -(a/||a||) \cdot x + b, we denote a' = a/||a||
+        b = np.dot(norm_vec, p)
+        a_prime = [-elem for elem in norm_vec]
+
+        linear_term = ''
+        for idx, elem in enumerate(a_prime):
+            linear_term += '{}*x{}+'.format(elem, idx)
+
+        scaling_func_str = '{}+{}'.format(linear_term, b)
+
+        return scaling_func_str
+
+    def _make_scaling_factor_old(self, dist_func_str):
+        """
+        Return scaling factor, a rationale number.
+        """
+        dyn_with_dist_str = []
+        for dyn in self._cur_mode.dynamics.dyn_sp:
+            dyn_with_dist_str.append('({})*({})'.format(dist_func_str, dyn))
+
+        # domain center
+        c = np.sum(self._abs_domain.bounds, axis=0) / 2
+        # compute the norm of the dynamics scaled by multiply distance
+        dyn_with_dist = GeneralDynamics(self._cur_mode.id_to_vars, *dyn_with_dist_str)
+        dyn_with_dist_norm = np.linalg.norm(dyn_with_dist.eval_jacobian(c), np.inf)
+        # compute the norm of the original linearized dynamics
+        norm = np.linalg.norm(self._abs_dynamics.a_matrix, np.inf)
+        # compute scaling factor m
+        m = norm / dyn_with_dist_norm
 
         return m
