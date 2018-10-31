@@ -17,7 +17,7 @@ def define_ha():
         Kodiak.add_variable(var)
 
     mode1 = ha.new_mode('1')
-    mode1.set_dynamics(["x1", "(1-x0**2)*x1-x0", "x3", "(1-x2**2)*x3-x2+(x0-x2)"],
+    mode1.set_dynamics(["x1", "(1-x0**2)*x1-x0 + (x2 - x0)", "x3", "(1-x2**2)*x3-x2+(x0-x2)"],
                        is_linear=(True, False, True, False))
 
     return ha
