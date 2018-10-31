@@ -114,12 +114,16 @@ class Kodiak:
         if not isinstance(bounds, np.ndarray):
             bounds = np.array(bounds, dtype=float)
 
-        rv = np.array([0, 0], dtype=float)
+        # rv = np.array([0, 0], dtype=float)
+
+        rv = np.array([0, 0, 0, 0], dtype=float)
 
         cls._minmax(nonlinear_exp_index, linear_approx, len(linear_approx), linear_bias,
                     bounds, bounds.shape[0], bounds.shape[1], rv, rv.shape[0])
 
-        return rv[0], rv[1]
+        #todo change back
+        # return rv[0], rv[1]
+        return rv[0], rv[1], rv[2], rv[3]
 
     @classmethod
     def use_bernstein(cls, use_bernstein):

@@ -85,26 +85,28 @@ class Linearizer:
 
                 bounds = [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)]
 
-                # Timers.tic('minmax')
-                # kodiak_res = Kodiak.minmax(self.target_dyn.kodiak_ders[i], coeff, bias, bounds)
-                # u_min, u_max = -kodiak_res[0], kodiak_res[1]
-                # Timers.toc('minmax')
+                Timers.tic('minmax')
+                kodiak_res = Kodiak.minmax(self.target_dyn.kodiak_ders[i], coeff, bias, bounds)
+                u_min, u_max = -kodiak_res[0], kodiak_res[1]
+                Timers.toc('minmax')
 
                 # print(u_min, u_max)
-                #
-                args = (coeff, bias, i)
-                x0 = abs_domain_centre
-
-                minimizer_kwargs_1 = dict(method='L-BFGS-B', bounds=bounds, args=args, jac=lambda *args: self.err_func_jac(args[0], args[1:]))
-                minimizer_kwargs_2 = dict(method='L-BFGS-B', bounds=bounds, args=args, jac=lambda *args: self.minus_err_func_jac(args[0], args[1:]))
-
-                Timers.tic('basinhopping')
-                u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs_1, niter_success=3).fun
-                u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs_2, niter_success=3).fun
-                Timers.toc('basinhopping')
-                # print(u_min, u_max)
-                # # exit()
                 # print('\n')
+                # args = (coeff, bias, i)
+                # x0 = abs_domain_centre
+                #
+                # minimizer_kwargs_1 = dict(method='L-BFGS-B', bounds=bounds, args=args, jac=lambda *args: self.err_func_jac(args[0], args[1:]))
+                # minimizer_kwargs_2 = dict(method='L-BFGS-B', bounds=bounds, args=args, jac=lambda *args: self.minus_err_func_jac(args[0], args[1:]))
+
+                # Timers.tic('basinhopping')
+                # u_min = -basinhopping(self.err_func, x0, minimizer_kwargs=minimizer_kwargs_1, niter_success=3).fun
+                # u_max = -basinhopping(self.minus_err_func, x0, minimizer_kwargs=minimizer_kwargs_2, niter_success=3).fun
+                # Timers.toc('basinhopping')
+                # print(u_min, u_max)
+                # exit()
+                # print('\n')
+
+                # exit()
 
             u_bounds.extend([u_max, u_min])
 

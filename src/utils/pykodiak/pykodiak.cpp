@@ -192,12 +192,12 @@ extern "C"
             throw runtime_error(msg);
         }
 
-        if (rvSize != 2)
+        if (rvSize != 4)
         {
             char msg[256];
-            snprintf(msg, sizeof(msg), "minmax() called with rv array of size %d (expected 2)",
+            snprintf(msg, sizeof(msg), "minmax() called with rv array of size %d (expected 4)",
                      rvSize);
-                
+
             throw runtime_error(msg);
         }
 
@@ -222,8 +222,8 @@ extern "C"
 
             // sys.var("x", 1.25, 1.55);
             const char* var = it->first.c_str();
-            
-            sys.var(var, approx(bounds[row * numVars]), approx(bounds[row * numVars + 1]));
+
+            sys.var(var, approx(bounds[row * 2]), approx(bounds[row * 2 + 1]));
         }
 
         sys.minmax(diff);
@@ -231,5 +231,8 @@ extern "C"
         MinMax answer = sys.answer();
         rv[0] = answer.lb_of_min();
         rv[1] = answer.ub_of_max();
+
+        rv[2] = answer.ub_of_min();
+        rv[3] = answer.lb_of_max();
     }
 }
