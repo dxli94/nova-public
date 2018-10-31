@@ -44,7 +44,7 @@ def define_settings():
 
     reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.01,
                                         directions=dirs, error_model=2,
-                                        scaling_freq=0.1, scaling_cutoff=0.05)
+                                        scaling_freq=0.1, scaling_cutoff=0.01)
     # specify unsafe region
     verif_setting = VerificationSetting(a_matrix=np.array([0, -1]),
                                         b_col=np.array([-3]))
