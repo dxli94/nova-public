@@ -2,7 +2,6 @@ import sys
 import time
 
 import numpy as np
-from copy import deepcopy
 
 from convex_set import hyperbox
 from convex_set.hyperbox import HyperBox
@@ -10,7 +9,7 @@ from cores.hybrid_automata import NonlinHybridAutomaton
 from cores.linearizer import Linearizer
 from cores.post_opt.fwd_continuous_opt import FwdContinuousPostOperator
 from cores.post_opt.fwd_symhull_continuous_post import FwdSymhullContinuousPostOperator
-from cores.sys_dynamics import AffineDynamics, GeneralDynamics
+from cores.sys_dynamics import AffineDynamics
 from utils import simulator
 from utils import suppfunc_utils
 from utils.containers import AppSetting
@@ -66,7 +65,9 @@ class NovaEngine:
         # for now assuming we have a single initial set
         self._post_operator = self._post_operator_factory(continuous_set, self._settings.reach.directions)
         self._linearizer = Linearizer(self._dim, self._cur_mode.dynamics, self._cur_mode.is_linear)
+        Timers.tic('_run_reachability')
         supp_matrix = self._run_reachability()
+        Timers.toc('_run_reachability')
         Timers.toc('total')
 
         # 2. run simulation
