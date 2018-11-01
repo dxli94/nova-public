@@ -70,15 +70,20 @@ class NovaEngine:
         Timers.toc('_run_reachability')
         Timers.toc('total')
 
+        print('Reachability finished.')
+        print('Simulations start...')
         # 2. run simulation
         simu_res = simulator.run_simulate(self._settings.simu.horizon,
                                           self._settings.simu.model_name,
                                           self._settings.simu.init_set)
+        print('Simulations finished.')
 
+        print('Plotting starts...')
         # 3. plotting
         Plotter.make_plot(self._dim, self._settings.reach.directions, supp_matrix,
                           self._settings.plot.model_name,
                           self._settings.plot.poly_dir_path, simu_res)
+        print('Plotting finished.')
 
     def _run_reachability(self):
         """
@@ -119,6 +124,7 @@ class NovaEngine:
                 break
 
             if self._domain_contains_tube():
+
                 Timers.tic('_post_operator.proceed_state')
                 self._post_operator.proceed_state(cur_input_lb, cur_input_ub, self._abs_dynamics.a_matrix)
                 Timers.toc('_post_operator.proceed_state')

@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 from convex_set.hyperbox import HyperBox
 from cores.engine import NovaEngine
@@ -28,10 +29,10 @@ def define_init_states(ha):
     """
     rv = list()
 
-    rv.append((ha.modes['1'], HyperBox([[1.25, 2.28, 1.25, 2.28], [1.55, 2.32, 1.55, 2.32]], opt=1)))
-
-    # rv.append((ha.modes['1'], HyperBox([[1, 2], [1.6, 2.55]], opt=1)))
-    # rv.append((ha.modes['1'], HyperBox([[1.25, 2.55], [1.30, 2.65]], opt=1)))
+    # HSCC 16'
+    # rv.append((ha.modes['1'], HyperBox([[1.25, 2.28, 1.25, 2.28], [1.55, 2.32, 1.55, 2.32]], opt=1)))
+    # ARCH 19'
+    rv.append((ha.modes['1'], HyperBox([[1.25, 2.35, 1.25, 2.35], [1.55, 2.45, 1.55, 2.45]], opt=1)))
 
     return rv
 
@@ -51,9 +52,11 @@ def define_settings():
                                         b_col=np.array([-3]))
 
     plot_setting = PlotSetting(poly_dir_path='../out/sfvals', model_name=model_name)
-    # simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.45], [1.70, 2.65]])
-    simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.28, 1.25, 2.28], [1.55, 2.32, 1.55, 2.32]])
-    # simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.55], [1.30, 2.65]])
+    # HSCC 16'
+    # simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.28, 1.25, 2.28], [1.55, 2.32, 1.55, 2.32]])
+    # ARCH 19'
+    simu_setting = SimuSetting(model_name=model_name, horizon=horizon,
+                               init_set_bounds=[[1.25, 2.35, 1.25, 2.35], [1.55, 2.45, 1.55, 2.45]])
 
     app_settings = AppSetting(reach_setting=reach_setting,
                               verif_setting=verif_setting,
