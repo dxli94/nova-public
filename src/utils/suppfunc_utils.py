@@ -1,3 +1,4 @@
+import numba
 import numpy as np
 from scipy.linalg import expm
 
@@ -240,6 +241,10 @@ def compute_phi_1(a_matrix, tau):
     dim = a_matrix.shape[0]
 
     try:
+        # numpy uses LU decomposition, which gives result even when the matrix is ill-conditioned
+        if np.linalg.det(a_matrix) < 1e-10:
+            raise np.linalg.LinAlgError
+
         inv_a = np.linalg.inv(a_matrix)
 
         I = np.identity(dim)
@@ -264,6 +269,10 @@ def compute_phi_2(a_matrix, tau):
     dim = a_matrix.shape[0]
 
     try:
+        # numpy uses LU decomposition, which gives result even when the matrix is ill-conditioned
+        if np.linalg.det(a_matrix) < 1e-10:
+            raise np.linalg.LinAlgError
+
         inv_a = np.linalg.inv(a_matrix)
 
         I = np.identity(dim)
