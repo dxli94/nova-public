@@ -70,7 +70,6 @@ class Plotter:
             # print('Finished. \nStart plotting...')
 
             i = 0
-            # stepsize = max(len(vertices_sorted) // 50, 1)
             stepsize = 1
 
             for vertices in vertices_sorted:
@@ -132,20 +131,11 @@ class Plotter:
         ax.set_xlabel('$x_{}$'.format(xlabel))
         ax.set_ylabel('$x_{}$'.format(ylabel))
 
-        # print('plot points')
         plt.plot(x, y, color=color, ls=linestyles, lw=linewidths, alpha=0.8)
-        # print('plot points finished')
-        # print('autoscale')
         plt.autoscale(enable=True)
-        # print('autoscale')
 
     @staticmethod
     def plot_pivots(ipfile_path, opdims, color):
-        # fig = plt.figure(1, dpi=90)
-        # ax = fig.add_subplot(111)
-        # ax.set_xlabel('$x_{1}$')
-        # ax.set_ylabel('$x_{2}$')
-
         try:
             with open(ipfile_path) as ipfile:
                 content = ipfile.read().strip('\n')
@@ -165,7 +155,6 @@ class Plotter:
 
     @staticmethod
     def save_plt(opfile):
-        # plt.savefig(opfile, format='eps', dpi=500)
         plt.savefig(opfile, format='png', dpi=500)
 
     @staticmethod
@@ -255,8 +244,6 @@ if __name__ == '__main__':
     parser.add_argument('--opdims', type=int, nargs=2, help='2 dimensions to output.')
     parser.add_argument('--type', type=int, help='0 for points, 1 for polygons. If 2, polygon from first; points from '
                                                  'second.')
-    # parser.
-    # directions = SuppFuncUtils.generate_directions(direction_type, 2)
     args = parser.parse_args()
 
     ipfile = args.path
@@ -285,10 +272,6 @@ if __name__ == '__main__':
         # plot simulation
         simu_path = os.path.join('../out/simu_traj', '{}.simu'.format(model_name))
         Plotter.plot_points_from_file(simu_path, opdims, xlabel=str(opdims[0]), ylabel=str(opdims[1]))
-
-        # plot scaling points
-        # Plotter.plot_pivots('../out/pivots.out', opdims, 'green')
-        # Plotter.plot_pivots('../out/sca_cent.out', opdims, 'yellow')
 
         print('Showing plot now.')
     plt.show()

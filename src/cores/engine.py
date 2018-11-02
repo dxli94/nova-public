@@ -138,7 +138,7 @@ class NovaEngine:
                 cur_vol = self._compute_vol()
 
                 # todo encapsulate into a timer
-                if self._cur_step % 100 == 0:
+                if self._cur_step % 10 == 0:
                     now = time.time()
                     walltime_elapsed = now - start_walltime
                     total_walltime += walltime_elapsed
@@ -220,12 +220,6 @@ class NovaEngine:
 
         err_lb = np.amin(vertices, axis=0)
         err_ub = np.amax(vertices, axis=0)
-
-        # with open('/home/dxli/Desktop/offset-beta.dat', 'a') as opfile:
-        #     opfile.write(str(self.reach_params.beta) + '\n')
-        # lp = GlpkWrapper(2)
-        # with open('/home/dxli/Desktop/no-offset-beta.dat', 'a') as opfile:
-        #     opfile.write(str(SuppFuncUtils.compute_beta(self.abs_dynamics, self._tau, lp)) + '\n')
 
         return err_lb, err_ub
 
