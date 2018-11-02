@@ -132,8 +132,12 @@ class Plotter:
         ax.set_xlabel('$x_{}$'.format(xlabel))
         ax.set_ylabel('$x_{}$'.format(ylabel))
 
+        # print('plot points')
         plt.plot(x, y, color=color, ls=linestyles, lw=linewidths, alpha=0.8)
+        # print('plot points finished')
+        # print('autoscale')
         plt.autoscale(enable=True)
+        # print('autoscale')
 
     @staticmethod
     def plot_pivots(ipfile_path, opdims, color):
@@ -212,7 +216,7 @@ class Plotter:
                 img_path = os.path.join(img_dir_path, '{}-{}.png'.format(*opdims))
                 plotman = Plotter(ppl_polys)
 
-                # plot simulation
+                # plot simulation\
                 for xs in simu_traj:
                     x, y = xs[:, opdims[0]], xs[:, opdims[1]]
                     Plotter.plot_points(x, y, xlabel=str(i), ylabel=str(j))
