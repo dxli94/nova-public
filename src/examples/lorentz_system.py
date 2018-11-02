@@ -11,27 +11,14 @@ from utils.timerutil import Timers
 
 def define_ha():
     ha = NonlinHybridAutomaton()
-    ha.variables = ["x0", "x1", "x2", "x3", "x4", "x5", "x6"]
+    ha.variables = ["x0", "x1", "x2"]
 
     for var in ha.variables:
         Kodiak.add_variable(var)
 
     mode1 = ha.new_mode('1')
-    mode1.set_dynamics(["-0.4 * x0 + 5 * x2 * x3",
-                        "0.4 * x0 - x1",
-                        "x1 - 5 * x2 * x3",
-                        "5 * x4 * x5 - 5 * x2 * x3",
-                        "-5 * x4 * x5 + 5 * x2 * x3",
-                        "0.5 * x6 - 5 * x4 * x5",
-                        "-0.5 * x6 + 5 * x4 * x5"
-                        ],
-                       is_linear=(False,
-                                  True,
-                                  False,
-                                  False,
-                                  False,
-                                  False,
-                                  False))
+    mode1.set_dynamics(["10*(x1-x0)", "x0*(28-x2)-x1", "x0*x1-2.6667*x2"],
+                       is_linear=(True, False, False))
 
     return ha
 
@@ -41,30 +28,30 @@ def define_init_states(ha):
     """
     rv = list()
 
-    rv.append((ha.modes['1'], HyperBox([[0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99],
-                                        [1.01, 1.01, 1.01, 1.01, 1.01, 1.01, 1.01]], opt=1)))
+    rv.append((ha.modes['1'], HyperBox([[14.99, 14.99, 14.99], [15.01, 15.01, 15.01]], opt=1)))
 
     return rv
 
 
 def define_settings():
-    sys_dim = 7
-    horizon = 2
-    model_name = 'biology_1'
+    sys_dim = 3
+    horizon = 2.3
+    model_name = 'lorentz_system'
 
     dirs = suppfunc_utils.generate_directions(direction_type=1, dim=sys_dim)
 
-    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.003,
+    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.002,
                                         directions=dirs, error_model=2,
-                                        scaling_freq=1, scaling_cutoff=0.005)
+                                        scaling_freq=0.01, scaling_cutoff=0.01)
     # specify unsafe region
     verif_setting = VerificationSetting(a_matrix=np.array([0, -1]),
                                         b_col=np.array([-3]))
 
     plot_setting = PlotSetting(poly_dir_path='../out/sfvals', model_name=model_name)
-    simu_setting = SimuSetting(model_name=model_name, horizon=horizon,
-                               init_set_bounds=[[0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99],
-                                                [1.01, 1.01, 1.01, 1.01, 1.01, 1.01, 1.01]])
+    # simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.45], [1.70, 2.65]])
+    simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[14.99, 14.99, 14.99],
+                                                                                        [15.01, 15.01, 15.01]])
+    # simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.55], [1.30, 2.65]])
 
     app_settings = AppSetting(reach_setting=reach_setting,
                               verif_setting=verif_setting,
@@ -78,6 +65,7 @@ def run_nova(settings):
     Timers.tic('total')
     ha = define_ha()
     init = define_init_states(ha)
+
     engine = NovaEngine(ha, settings)
     engine.run(init)
     Timers.print_stats()
