@@ -45,7 +45,7 @@ class Linearizer:
         u_bounds = []
         for i in range(self.dim):
             # if some dynamics is linear, we don't need to linearize it.
-            if not self.is_scaled and self.is_linear[i]:
+            if not self.target_dyn.is_scaled and self.is_linear[i]:
                 u_min = u_max = 0
             else:
                 coeff = matrix_A[i]
