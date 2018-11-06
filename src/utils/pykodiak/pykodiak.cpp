@@ -11,7 +11,7 @@ using namespace kodiak;
 
 // persistant variables
 static bool bernstein = true;
-static int precision = -9;
+static int precision = -6;
 
 static vector<Real> reals;
 static map<string, int> varToRealIndex;

@@ -25,11 +25,13 @@ np.warnings.filterwarnings('ignore')
 # example = predator_prey
 # example = bio1
 # example = bio2
-# example = vanderpol2d
+example = vanderpol2d
+# example = vanderpol4d
+# example = vanderpol6d
 # example = coupled_osc_5d
 # example = coupled_osc_10d
 # example = coupled_osc_15d
-example = lorentz_system
+# example = lorentz_system
 
 settings = example.define_settings()
 example.run_nova(settings)

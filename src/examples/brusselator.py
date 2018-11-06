@@ -44,7 +44,7 @@ def define_settings():
                                         scaling_freq=0.1, scaling_cutoff=0.01)
     # specify unsafe region
     verif_setting = VerificationSetting(a_matrix=np.array([0, -1]),
-                                        b_col=np.array([-3]))
+                                        b_col=np.array([-1.9]))
 
     plot_setting = PlotSetting(poly_dir_path='../out/sfvals', model_name=model_name)
     # simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.45], [1.70, 2.65]])

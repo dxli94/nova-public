@@ -15,6 +15,7 @@ from utils import suppfunc_utils
 from utils.containers import AppSetting
 from utils.plotter import Plotter
 from utils.timerutil import Timers
+from utils.verifier import Verifier
 
 
 class NovaEngine:
@@ -71,15 +72,24 @@ class NovaEngine:
         Timers.toc('total')
 
         print('Reachability finished.')
+        # 2. verification
+        verifier = Verifier((self._settings.verif.a_matrix, self._settings.verif.b_col))
+        verifier.set_support_func_mat(self._settings.reach.directions, supp_matrix)
+        is_safe = verifier.verify_prop()
+        if is_safe:
+            print('Verification result: Safe.')
+        else:
+            print('Verification result: Unknown.')
+
         print('Simulations start...')
-        # 2. run simulation
+        # 3. run simulation
         simu_res = simulator.run_simulate(self._settings.simu.horizon,
                                           self._settings.simu.model_name,
                                           self._settings.simu.init_set)
         print('Simulations finished.')
 
         print('Plotting starts...')
-        # 3. plotting
+        # 2. plotting
         Plotter.make_plot(self._dim, self._settings.reach.directions, supp_matrix,
                           self._settings.plot.model_name,
                           self._settings.plot.poly_dir_path, simu_res)
@@ -111,7 +121,6 @@ class NovaEngine:
         while not self._is_finished():
             dom = self._refine_domain()
             dom.bloat(eps)
-
             cur_input_lb, cur_input_ub = self._hybridize(dom)
             eps *= 2
 
