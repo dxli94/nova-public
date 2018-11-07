@@ -1,0 +1,11 @@
+<sspaceex xmlns="http://www-verimag.imag.fr/xml-namespaces/sspaceex" math="SpaceEx" version="0.2">
+  <component id="main">
+    <param d1="1" d2="1" dynamics="any" local="false" name="x0" type="real" /><param d1="1" d2="1" dynamics="any" local="false" name="x1" type="real" /><param d1="1" d2="1" dynamics="any" local="false" name="x2" type="real" /><location height="140.0" id="1" name="running" width="146.0" x="164.0" y="194.0">
+      <flow>x0' == 10*(x1-x0) &amp;x1' == x0*(28-x2)-x1 &amp;x2' == x0*x1-2.6667*x2</flow>
+    </location>
+  </component>
+  <component id="sys">
+    <param controlled="true" d1="1" d2="1" dynamics="any" local="false" name="x0" type="real" /><param controlled="true" d1="1" d2="1" dynamics="any" local="false" name="x1" type="real" /><param controlled="true" d1="1" d2="1" dynamics="any" local="false" name="x2" type="real" /><bind as="main_1" component="main" x="228.0" y="118.0">
+      <map key="x1">x1</map><map key="x2">x2</map><map key="x0">x0</map></bind>
+  </component>
+</sspaceex>
