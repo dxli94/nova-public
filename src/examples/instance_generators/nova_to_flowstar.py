@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 from collections import OrderedDict
 
 import examples.nova_examples.vanderpol_2d as vanderpol_2d
+import examples.nova_examples.vanderpol_8d as vanderpol_8d
 import examples.nova_examples.biology_2 as biology_2
 import examples.nova_examples.lorentz_system as lorenzt_system
 
@@ -108,9 +109,10 @@ def make_init_str(init):
 
 
 def main():
-    model = vanderpol_2d
+    # model = vanderpol_2d
     # model = vanderpol_4d
     # model = vanderpol_6d
+    model = vanderpol_8d
     # model = brusselator
     # model = buckling_column
     # model = coupled_oscillators_5d
