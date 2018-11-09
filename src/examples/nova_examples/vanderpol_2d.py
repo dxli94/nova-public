@@ -45,12 +45,12 @@ def define_settings():
 
     dirs = suppfunc_utils.generate_directions(direction_type=1, dim=sys_dim)
 
-    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.02,
+    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.04,
                                         directions=dirs, error_model=2,
                                         scaling_freq=0.1, scaling_cutoff=1e-3)
     # specify unsafe region
     verif_setting = VerificationSetting(a_matrix=np.array([0, -1]),
-                                        b_col=np.array([-2.72]))
+                                        b_col=np.array([-3]))
 
     plot_setting = PlotSetting(poly_dir_path='../out/sfvals', model_name=model_name)
     # HSCC 16'

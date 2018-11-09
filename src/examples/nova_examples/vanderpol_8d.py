@@ -54,13 +54,13 @@ def define_settings():
     horizon = 7
     model_name = 'coupled_vanderpol_8d'
 
-    dirs = suppfunc_utils.generate_directions(direction_type=1, dim=sys_dim)
+    dirs = suppfunc_utils.generate_directions(direction_type=0, dim=sys_dim)
 
-    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.001,
+    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.005,
                                         directions=dirs, error_model=2,
-                                        scaling_freq=0.02, scaling_cutoff=0.00)
+                                        scaling_freq=0.1, scaling_cutoff=1e-3)
     # specify unsafe region
-    verif_setting = VerificationSetting(a_matrix=np.array([0, -1]),
+    verif_setting = VerificationSetting(a_matrix=np.array([0, -1, 0, 0, 0, 0, 0, 0]),
                                         b_col=np.array([-3]))
 
     plot_setting = PlotSetting(poly_dir_path='../out/sfvals', model_name=model_name)

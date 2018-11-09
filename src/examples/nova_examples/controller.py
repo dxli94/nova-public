@@ -34,12 +34,12 @@ def define_init_states(ha):
 
 def define_settings():
     sys_dim = 3
-    horizon = 0.5
+    horizon = 0.4
     model_name = '3d_controller'
 
     dirs = suppfunc_utils.generate_directions(direction_type=1, dim=sys_dim)
 
-    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.001,
+    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.003,
                                         directions=dirs, error_model=2,
                                         scaling_freq=0.1, scaling_cutoff=1e-3)
     # specify unsafe region

@@ -2,6 +2,7 @@ import os
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
 
+import examples.nova_examples.predator_prey as predator_prey
 import examples.nova_examples.vanderpol_2d as vanderpol_2d
 import examples.nova_examples.vanderpol_8d as vanderpol_8d
 import examples.nova_examples.biology_2 as biology_2
@@ -112,7 +113,7 @@ def main():
     # model = vanderpol_2d
     # model = vanderpol_4d
     # model = vanderpol_6d
-    model = vanderpol_8d
+    # model = vanderpol_8d
     # model = brusselator
     # model = buckling_column
     # model = coupled_oscillators_5d
@@ -121,6 +122,7 @@ def main():
     # model = biology_1
     # model = biology_2
     # model = lorenzt_system
+    model = predator_prey
     flow, init, model_name = read_model(model)
 
     dim = len(flow)

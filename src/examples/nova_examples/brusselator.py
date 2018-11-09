@@ -34,17 +34,17 @@ def define_init_states(ha):
 
 def define_settings():
     sys_dim = 2
-    horizon = 12
+    horizon = 25
     model_name = 'brusselator'
 
     dirs = suppfunc_utils.generate_directions(direction_type=1, dim=sys_dim)
 
     reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.01,
                                         directions=dirs, error_model=2,
-                                        scaling_freq=0.1, scaling_cutoff=0.01)
+                                        scaling_freq=0.1, scaling_cutoff=1e-3)
     # specify unsafe region
     verif_setting = VerificationSetting(a_matrix=np.array([0, -1]),
-                                        b_col=np.array([-1.91]))
+                                        b_col=np.array([-2]))
 
     plot_setting = PlotSetting(poly_dir_path='../out/sfvals', model_name=model_name)
     # simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.45], [1.70, 2.65]])
