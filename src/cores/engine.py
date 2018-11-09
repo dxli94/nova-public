@@ -121,7 +121,9 @@ class NovaEngine:
         while not self._is_finished():
             dom = self._refine_domain()
             dom.bloat(eps)
+            Timers.tic('_hybridize')
             cur_input_lb, cur_input_ub = self._hybridize(dom)
+            Timers.toc('_hybridize')
             eps *= 2
 
             Timers.tic('_post_operator.do_alpha_step')
@@ -165,13 +167,17 @@ class NovaEngine:
                         self.undo_dynamic_scaling()
                         in_scaling_mode = False
 
+                        Timers.tic('rollback')
                         self._post_operator.rollback()
+                        Timers.toc('rollback')
                         self._cur_step -= 1
                         cur_vol = prev_vol
                 else:
                     supp_matrix.append(self._post_operator.tube_supp)
                     if self._is_start_scaling():
+                        Timers.tic('apply_dynamic_scaling')
                         self._apply_dynamic_scaling()
+                        Timers.toc('apply_dynamic_scaling')
                         in_scaling_mode = True
 
                 eps /= 4
@@ -217,18 +223,19 @@ class NovaEngine:
         """
         Compute linearized dynamics and returns the linearization errors.
         """
+        Timers.tic('gen_abs_dynamics')
         a_matrix, w_poly, c_col = self._linearizer.gen_abs_dynamics(dom.bounds)
+        Timers.toc('gen_abs_dynamics')
 
         self._set_abs_dynamics(a_matrix, w_poly, c_col)
+        Timers.tic('compute_reach_params')
         reach_params = suppfunc_utils.compute_reach_params(self._abs_dynamics, self._settings.reach.stepsize)
+        Timers.toc('compute_reach_params')
         self._post_operator.update_reach_params(reach_params)
 
         self._abs_domain = dom
 
-        vertices = HyperBox.get_vertices_from_constr(self._abs_dynamics.u_coeff, self._abs_dynamics.u_col)
-
-        err_lb = np.amin(vertices, axis=0)
-        err_ub = np.amax(vertices, axis=0)
+        err_lb, err_ub = HyperBox.get_bounds_from_constr(self._abs_dynamics.u_coeff, self._abs_dynamics.u_col)
 
         return err_lb, err_ub
 

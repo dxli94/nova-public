@@ -72,14 +72,10 @@ def compute_reach_params(sys_dynamics, tau):
         return 0, 0
 
     norm_a = np.linalg.norm(dyn_matrix_A, np.inf)
-    dyn_coeff_matrix_U = sys_dynamics.get_dyn_coeff_matrix_U()
-    dyn_col_vec_U = sys_dynamics.get_dyn_col_vec_U()
     dyn_col_init_X0 = sys_dynamics.get_dyn_init_X0()[1]
 
     # === e^(\norm{A} tau)
     tt1 = np.exp(tau * norm_a)
-
-    lb, ub = [], []
 
     I_max_norm = -1
     v_max_norm = -1
@@ -88,31 +84,11 @@ def compute_reach_params(sys_dynamics, tau):
     for col_val in dyn_col_init_X0:
         I_max_norm = max(I_max_norm, abs(col_val))
 
-    # ==== v_max_norm  & D_v =====
-    for i in range(dyn_coeff_matrix_U.shape[0]):
-        coeff_row = dyn_coeff_matrix_U[i]
-        col_val = dyn_col_vec_U[i][0]
-        v_max_norm = max(v_max_norm, abs(col_val))
-
-        if sum(coeff_row) == 1:
-            ub.append(col_val)
-        else:
-            lb.append(-col_val)
-
-    diff_lb, diff_ub = [], []
-
-    for l, u in zip(lb, ub):
-        diff_lb.append(l - u)
-        diff_ub.append(u - l)
-
-    D_v = max(np.amax(np.abs(diff_lb), axis=0), np.amax(np.abs(diff_ub), axis=0))
-    R_w = D_v / 2
-
     tt2 = tt1 - 1 - tau * norm_a
 
     alpha = tt2 * (I_max_norm + (v_max_norm / norm_a))
-    beta = tt2 * (R_w / norm_a)
     delta = mat_exp(dyn_matrix_A, tau)
+    beta = 0
 
     return alpha, beta, delta, tau
 

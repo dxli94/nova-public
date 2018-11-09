@@ -97,23 +97,32 @@ class HyperBox:
         rv = list(itertools.product(*bounds))
         return rv
 
+    @staticmethod
+    def get_bounds_from_constr(coeff, col):
+        """
+        Be cautious. For efficiency reason,
+        this makes assumption on the ordering of constraints.
+
+        Requires a refactoring later on.
+        """
+        sum_coeff = np.sum(coeff, axis=1)
+        col = np.reshape(col, (1, -1))[0]
+
+        pos_clip = np.clip(sum_coeff, 0, np.inf)
+        pos_index = pos_clip.nonzero()
+        neg_clip = np.clip(sum_coeff, -np.inf, 0)
+        neg_index = neg_clip.nonzero()
+
+        lb_with_zero = np.multiply(neg_clip, col)
+        ub_with_zero = np.multiply(pos_clip, col)
+
+        lb = lb_with_zero[neg_index]
+        ub = ub_with_zero[pos_index]
+
+        return lb, ub
 
 if __name__ == '__main__':
-    bd1 = [[0, 1], [2, 3]]
-    bd2 = [[1, 2], [1, 2]]
+    coeff = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+    col = [[2], [-1], [3], [-2]]
 
-    vertices = [[2, 2], [2, -3], [-2, -3], [-2, 2]]
-    hb = HyperBox(vertices)
-
-    print(hb.bounds)
-
-    hb.bloat(0.01)
-
-    print(hb.bounds)
-
-    # lb1, ub1 = bd1
-    # lb2, ub2 = bd2
-    #
-    # print(np.less(lb1, lb2).all())
-    # print(np.less(ub2, ub1).all())
-    # print(hyperbox_contain_by_bounds(bd1, bd2))
+    print(HyperBox.get_bounds_from_constr(coeff, col))

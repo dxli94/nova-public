@@ -54,8 +54,8 @@ class Plotter:
 
         fig = plt.figure(1, dpi=90)
         ax = fig.add_subplot(111)
-        ax.set_xlabel('$x_{}$'.format(xlabel))
-        ax.set_ylabel('$x_{}$'.format(ylabel))
+        # ax.set_xlabel('$x_{}$'.format(xlabel))
+        # ax.set_ylabel('$x_{}$'.format(ylabel))
 
         for ipfile_path, color, lw, ls in zip(filelist, colors[:len(filelist)], linewidths[:len(filelist)],
                                               linestyles[:len(filelist)]):
@@ -128,8 +128,8 @@ class Plotter:
 
         fig = plt.figure(1, dpi=90)
         ax = fig.add_subplot(111)
-        ax.set_xlabel('$x_{}$'.format(xlabel))
-        ax.set_ylabel('$x_{}$'.format(ylabel))
+        # ax.set_xlabel('$x_{}$'.format(xlabel))
+        # ax.set_ylabel('$x_{}$'.format(ylabel))
 
         plt.plot(x, y, color=color, ls=linestyles, lw=linewidths, alpha=0.8)
         plt.autoscale(enable=True)
@@ -155,7 +155,7 @@ class Plotter:
 
     @staticmethod
     def save_plt(opfile):
-        plt.savefig(opfile, format='png', dpi=500)
+        plt.savefig(opfile, format='png', dpi=500, bbox_inches='tight')
 
     @staticmethod
     def make_2Dproj_pplpoly(directions, opdims, sf_mat):
@@ -233,8 +233,9 @@ class Plotter:
 
         fig = plt.figure(1, dpi=90)
         ax = fig.add_subplot(111)
-        ax.set_xlabel('$x_{}$'.format(opdims[0]))
-        ax.set_ylabel('$x_{}$'.format(opdims[1]))
+        ax.set_xlabel('$x_{}$'.format(opdims[0]), fontsize=20)
+        ax.set_ylabel('$x_{}$'.format(opdims[1]), fontsize=20)
+        ax.tick_params(labelsize=20)
 
 if __name__ == '__main__':
     import argparse

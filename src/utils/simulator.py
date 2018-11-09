@@ -314,6 +314,38 @@ def coupled_osc_15d(x, t):
     return res
 
 
+def coupled_osc_20d(x, t):
+    nx0 = 0.1*x[4]-3*x[0]+3.33*(x[3] + x[8] + x[13])
+    nx1 = 10*x[0]-2.2*x[1]
+    nx2 = 10*x[1]-1.5*x[2]
+    nx3 = 2*x[0]-20*x[3]
+    nx4 = -5*x[4]**2*x[2]**4*(10*x[1]-1.5*x[2])
+
+    nx5 = 0.1*x[9]-3*x[5]+3.33*(x[3] + x[8] + x[13])
+    nx6 = 10*x[5]-2.2*x[6]
+    nx7 = 10*x[6]-1.5*x[7]
+    nx8 = 2*x[5]-20*x[8]
+    nx9 = -5*x[9]**2*x[7]**4*(10*x[6]-1.5*x[7])
+
+    nx10 = 0.1*x[14]-3*x[10]+3.33*(x[3]+x[8]+x[13])
+    nx11 = 10*x[10]-2.2*x[11]
+    nx12 = 10*x[11]-1.5*x[12]
+    nx13 = 2*x[10]-20*x[13]
+    nx14 = -5*x[14]**2*x[12]**4*(10*x[11]-1.5*x[12])
+
+    nx15 = 0.1*x[19]-3*x[15]+2.5*(x[3]+x[8]+x[13]+x[18])
+    nx16 = 10*x[15]-2.2*x[16]
+    nx17 = 10*x[16]-1.5*x[17]
+    nx18 = 2*x[15]-20*x[18]
+    nx19 = -5*x[19]**2*x[17]**4*(10*x[16]-1.5*x[17])
+
+    res = np.array([nx0, nx1, nx2, nx3, nx4,
+                    nx5, nx6, nx7, nx8, nx9,
+                    nx10, nx11, nx12, nx13, nx14,
+                    nx15, nx16, nx17, nx18, nx19])
+    return res
+
+
 def _simulate_one_run(horizon, model, init_point):
     ts = np.linspace(0, horizon, horizon*500)
 
@@ -365,6 +397,8 @@ def _simulate_one_run(horizon, model, init_point):
         xs = odeint(coupled_osc_10d, init_point, ts)
     elif model == 'coupled_osc_15d':
         xs = odeint(coupled_osc_15d, init_point, ts)
+    elif model == 'coupled_osc_20d':
+        xs = odeint(coupled_osc_20d, init_point, ts)
     else:
         raise ValueError('Simulate eigen: invalid model name!')
     return xs
