@@ -62,9 +62,10 @@ class PlotSetting(Freezable):
     """
     A container for plotting setting.
     """
-    def __init__(self, poly_dir_path, model_name):
+    def __init__(self, poly_dir_path, model_name, opdims=None):
         self.poly_dir_path = poly_dir_path
         self.model_name = model_name
+        self.opdims = opdims
 
         self.freeze_attrs()
 

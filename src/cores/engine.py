@@ -91,7 +91,7 @@ class NovaEngine:
         print('Plotting starts...')
         # 2. plotting
         Plotter.make_plot(self._dim, self._settings.reach.directions, supp_matrix,
-                          self._settings.plot.model_name,
+                          self._settings.plot.model_name, self._settings.plot.opdims,
                           self._settings.plot.poly_dir_path, simu_res)
         print('Plotting finished.')
 

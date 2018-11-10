@@ -115,7 +115,7 @@ def make_init():
 
     return [lb, ub]
 
-N = 4
+N = 6
 print(make_dyn())
 print(make_init())
 #

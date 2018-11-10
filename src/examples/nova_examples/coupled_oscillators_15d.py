@@ -57,14 +57,14 @@ def define_settings():
 
     dirs = suppfunc_utils.generate_directions(direction_type=0, dim=sys_dim)
 
-    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.001,
+    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.005,
                                         directions=dirs, error_model=2,
                                         scaling_freq=1, scaling_cutoff=1e-3)
     # specify unsafe region
     verif_setting = VerificationSetting(a_matrix=np.array([0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
                                         b_col=np.array([0.08]))
 
-    plot_setting = PlotSetting(poly_dir_path='../out/sfvals', model_name=model_name)
+    plot_setting = PlotSetting(poly_dir_path='../out/sfvals', model_name=model_name, opdims=(0, 1))
     simu_setting = SimuSetting(model_name=model_name, horizon=horizon,
                                init_set_bounds=[
                                    [-0.003, 0.197, 0.997, -0.003, 0.497, -0.001,

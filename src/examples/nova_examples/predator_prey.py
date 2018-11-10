@@ -37,11 +37,11 @@ def define_settings():
     horizon = 10
     model_name = 'predator_prev'
 
-    dirs = suppfunc_utils.generate_directions(direction_type=1, dim=sys_dim)
+    dirs = suppfunc_utils.generate_directions(direction_type=0, dim=sys_dim)
 
-    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.005,
+    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.001,
                                         directions=dirs, error_model=2,
-                                        scaling_freq=0.1, scaling_cutoff=0)
+                                        scaling_freq=0.1, scaling_cutoff=1e-3)
     # specify unsafe region
     verif_setting = VerificationSetting(a_matrix=np.array([0, -1]),
                                         b_col=np.array([-3]))

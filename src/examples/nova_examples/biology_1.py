@@ -54,9 +54,9 @@ def define_settings():
 
     dirs = suppfunc_utils.generate_directions(direction_type=0, dim=sys_dim)
 
-    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.005,
+    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.002,
                                         directions=dirs, error_model=2,
-                                        scaling_freq=0.1, scaling_cutoff=1e-3)
+                                        scaling_freq=1, scaling_cutoff=1e-3)
     # specify unsafe region
     verif_setting = VerificationSetting(a_matrix=np.array([0, 0, 0, 1, 0, 0, 0]),
                                         b_col=np.array([0.9]))

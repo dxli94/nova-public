@@ -190,12 +190,15 @@ class Plotter:
         return ret
 
     @staticmethod
-    def make_plot(dim, directions, sf_mat, model_name, poly_dir, simu_traj):
+    def make_plot(dim, directions, sf_mat, model_name, opdims_arg, poly_dir, simu_traj):
         for i in range(dim):
             for j in range(i, dim):
                 if i == j:
                     continue
-                opdims = (i, j)
+                if opdims_arg is None:
+                    opdims = (i, j)
+                else:
+                    opdims = opdims_arg
                 Plotter.config_plt(opdims)
                 ppl_polys = Plotter.make_2Dproj_pplpoly(directions=directions, opdims=opdims, sf_mat=sf_mat)
 
@@ -226,6 +229,9 @@ class Plotter:
                         plotman.plot_pivots('../out/sca_cent.out', opdims, 'yellow')
 
                 plotman.save_plt(opfile=img_path)
+
+                if opdims_arg:
+                    return
 
     @staticmethod
     def config_plt(opdims):
