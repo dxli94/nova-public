@@ -8,8 +8,8 @@ import examples.nova_examples.vanderpol_8d as vanderpol_8d
 import examples.nova_examples.biology_2 as biology_2
 import examples.nova_examples.lorentz_system as lorenzt_system
 
-xml_path = "/home/dxli/workspace/model-checkers/nova/resources/hyst/doc/hypy/autotune_flowstar/vanderpol.xml"
-cfg_path = "/home/dxli/workspace/model-checkers/nova/resources/hyst/doc/hypy/autotune_flowstar/vanderpol.cfg"
+xml_path = "/home/dxli/workspace/model-checkers/nova/src/examples/spaceex_examples/vanderpol_2d.xml"
+cfg_path = "/home/dxli/workspace/model-checkers/nova/src/examples/spaceex_examples/vanderpol_2d.cfg"
 opfile_root = "../spaceex_examples"
 namespace = '{http://www-verimag.imag.fr/xml-namespaces/sspaceex}'
 

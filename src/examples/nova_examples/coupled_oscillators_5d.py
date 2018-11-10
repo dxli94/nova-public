@@ -34,10 +34,6 @@ def define_init_states(ha):
     """Return a list of (mode, HyperBox).
     """
     rv = list()
-
-    # HSCC 16'
-    # rv.append((ha.modes['1'], HyperBox([[1.25, 2.28, 1.25, 2.28], [1.55, 2.32, 1.55, 2.32]], opt=1)))
-    # ARCH 19'
     rv.append((ha.modes['1'], HyperBox([[-0.003, 0.197, 0.997, -0.003, 0.497],
                                         [-0.001, 0.199, 0.999, -0.001, 0.499]], opt=1)))
 
@@ -51,17 +47,14 @@ def define_settings():
 
     dirs = suppfunc_utils.generate_directions(direction_type=0, dim=sys_dim)
 
-    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.005,
+    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.0015,
                                         directions=dirs, error_model=2,
                                         scaling_freq=1, scaling_cutoff=1e-3)
     # specify unsafe region
     verif_setting = VerificationSetting(a_matrix=np.array([0, 1, 0, 0, 0]),
-                                        b_col=np.array([0.08]))
+                                        b_col=np.array([0.085]))
 
-    plot_setting = PlotSetting(poly_dir_path='../out/sfvals', model_name=model_name)
-    # HSCC 16'
-    # simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.28, 1.25, 2.28], [1.55, 2.32, 1.55, 2.32]])
-    # ARCH 19'
+    plot_setting = PlotSetting(poly_dir_path='../out/sfvals', model_name=model_name, opdims=(0, 1))
     simu_setting = SimuSetting(model_name=model_name, horizon=horizon,
                                init_set_bounds=[[-0.003, 0.197, 0.997, -0.003, 0.497],
                                                 [-0.001, 0.199, 0.999, -0.001, 0.499]])

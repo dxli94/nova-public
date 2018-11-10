@@ -17,7 +17,8 @@ def define_ha():
         Kodiak.add_variable(var)
 
     mode1 = ha.new_mode('1')
-    mode1.set_dynamics(["x0-x0*x1", "-x1+x0*x1"], is_linear=(False, False))
+    # mode1.set_dynamics(["x0-x0*x1", "-x1+x0*x1"], is_linear=(False, False))
+    mode1.set_dynamics(["1.5*x0-x0*x1", "-3*x1+x0*x1"], is_linear=(False, False))
 
     return ha
 
@@ -34,21 +35,21 @@ def define_init_states(ha):
 
 def define_settings():
     sys_dim = 2
-    horizon = 10
+    horizon = 3
     model_name = 'predator_prev'
 
-    dirs = suppfunc_utils.generate_directions(direction_type=0, dim=sys_dim)
+    dirs = suppfunc_utils.generate_directions(direction_type=1, dim=sys_dim)
 
-    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.001,
+    reach_setting = ReachabilitySetting(horizon=horizon, stepsize=0.02,
                                         directions=dirs, error_model=2,
                                         scaling_freq=0.1, scaling_cutoff=1e-3)
     # specify unsafe region
     verif_setting = VerificationSetting(a_matrix=np.array([0, -1]),
-                                        b_col=np.array([-3]))
+                                        b_col=np.array([-6]))
 
     plot_setting = PlotSetting(poly_dir_path='../out/sfvals', model_name=model_name)
     # simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.45], [1.70, 2.65]])
-    simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[4.8, 1.8], [5.2, 2.2]])
+    simu_setting = SimuSetting(model_name=model_name, horizon=5, init_set_bounds=[[4.8, 1.8], [5.2, 2.2]])
     # simu_setting = SimuSetting(model_name=model_name, horizon=horizon, init_set_bounds=[[1.25, 2.55], [1.30, 2.65]])
 
     app_settings = AppSetting(reach_setting=reach_setting,
