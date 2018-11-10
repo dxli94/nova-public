@@ -119,8 +119,12 @@ class NovaEngine:
         supp_matrix = []
 
         while not self._is_finished():
+            Timers.tic('_refine_domain()')
             dom = self._refine_domain()
+            Timers.toc('_refine_domain()')
+            Timers.tic('bloat')
             dom.bloat(eps)
+            Timers.toc('bloat')
             Timers.tic('_hybridize')
             cur_input_lb, cur_input_ub = self._hybridize(dom)
             Timers.toc('_hybridize')
@@ -146,7 +150,9 @@ class NovaEngine:
                 Timers.toc('_post_operator.do_gamma_step')
 
                 prev_vol = cur_vol
+                Timers.tic('compute_vol')
                 cur_vol = self._compute_vol()
+                Timers.toc('compute_vol')
 
                 # todo encapsulate into a timer
                 if self._cur_step % 10 == 0:
@@ -162,9 +168,13 @@ class NovaEngine:
                         # We can decrease self.cur_step instead. By increasing reach.num_steps,
                         # we can see the num of extra steps we computed in scaling mode more clearly.
                         self._settings.reach.num_steps += 1
+                        Timers.tic('append')
                         supp_matrix.append(self._post_operator.tube_supp)
+                        Timers.toc('append')
                     else:  # scaling is not helpful
+                        Timers.tic('undo_dynamic_scaling')
                         self.undo_dynamic_scaling()
+                        Timers.toc('undo_dynamic_scaling')
                         in_scaling_mode = False
 
                         Timers.tic('rollback')
@@ -173,7 +183,9 @@ class NovaEngine:
                         self._cur_step -= 1
                         cur_vol = prev_vol
                 else:
+                    Timers.tic('append')
                     supp_matrix.append(self._post_operator.tube_supp)
+                    Timers.toc('append')
                     if self._is_start_scaling():
                         Timers.tic('apply_dynamic_scaling')
                         self._apply_dynamic_scaling()

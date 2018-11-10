@@ -7,9 +7,6 @@ def hyperbox_contain(sf_1, sf_2):
         abs_domain_sf = elem[0][0]
         image_sf = elem[1]
 
-        # print(abs_domain_sf, image_sf)
-        # exit()
-
         if abs_domain_sf < image_sf:
             return False
     return True
@@ -24,6 +21,12 @@ def contains(bd1, bd2):
 
 class HyperBox:
     def __init__(self, arg, opt=0):
+        """
+        Create a hyperbox instance.
+
+        Opt=0: create a hyperbox from vertices. This is useful in low-dimensional scenarios.
+        Opt=1: create a hyperbox from bounds.
+        """
         self.vertices = []
 
         if opt == 0:
@@ -46,7 +49,6 @@ class HyperBox:
             self.bounds = np.array([lb, ub])
             self.lb = np.array(lb)
             self.ub = np.array(ub)
-            self.update_vertices()
 
         if opt == 1:
             # constructor with bounds
@@ -56,7 +58,6 @@ class HyperBox:
             self.bounds = np.array([lb, ub])
             self.lb = np.array(lb)
             self.ub = np.array(ub)
-            self.update_vertices()
 
     def __str__(self):
         str_repr = ''
@@ -67,14 +68,23 @@ class HyperBox:
         return str_repr
 
     def bloat(self, epsilon):
+        """
+        Push bounds on each dimension "outwards" for epsilon distance.
+        """
         self.bounds = np.array([np.subtract(self.bounds[0], epsilon, dtype=float), np.add(self.bounds[1], epsilon)])
-        self.update_vertices()
 
     def update_vertices(self):
+        """
+        Vertices of a hyperbox is the cartesian product of bounds on each dimension.
+        """
         bounds = self.bounds.T
         self.vertices = list(itertools.product(*bounds))
 
     def get_vertices(self):
+        """
+        Lazy evaluation: update vertices only when vertices is required.
+        """
+        self.update_vertices()
         return self.vertices
 
     @staticmethod
