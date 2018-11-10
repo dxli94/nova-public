@@ -21,7 +21,8 @@ def run(input_model_file, unsafe_condition, order, step_size, timeout):
 
     # we will add an error condition, and then find parameters in Flow* that prove safety with the error condition
     output_model_file = 'out_flowstar.model'
-    flowstar_hyst_param = '-orders {} -step {} -unsafe "{}" -cutoff 1e-9 -nooutput'.format(order, step_size, unsafe_condition)
+    flowstar_hyst_param = '-orders {} -step {} -unsafe "{}" -cutoff 1e-9 -nooutput'.format(order, step_size,
+                                                                                           unsafe_condition)
 
     e = hypy.Engine('flowstar', flowstar_hyst_param)
 
@@ -31,7 +32,8 @@ def run(input_model_file, unsafe_condition, order, step_size, timeout):
     image_path = None
 
     #### enable these for debugging ####
-    e.set_output('flowstar_models/' + input_model_file.split('/')[-1].split('.')[0] + '.model')  # output the generated Flow* model to this path
+    e.set_output('flowstar_models/' + input_model_file.split('/')[-1].split('.')[
+        0] + '.model')  # output the generated Flow* model to this path
     # e.set_verbose(True) # print hyst verbose output
     # print_stdout=True # print hyst/tool output
     # image_path='out.png' # output image path (requires GIMP is setup according to Hyst README)
@@ -71,92 +73,71 @@ def run(input_model_file, unsafe_condition, order, step_size, timeout):
     return is_safe, runtime, result['code']
 
 
-def autotune(input_model_file, min_step_size, unsafe_conditions, order, timeout):
+def autotune(input_model_file, start_stepsize, incre_stepsize, unsafe_conditions, orders, timeout):
     # for a fixed order, find the maximum step size possible that still ensures safety
     res_path_root = 'autotune_results'
     filename = input_model_file.split('/')[-1].split('.')[0] + '.res'
     res_path = os.path.join(res_path_root, filename)
+
     with open(res_path, 'w') as opfile:
         for unsafe_condition in unsafe_conditions:
-            for od in order:
-                safe_runtime = None
-                num_steps = 1
+            min_runtime = 1e9
+            optimal_setting = None
+            min_num_incre_without_timeout = 0
 
-                msg = "Finding maximum safe Flow* step size for condition '{}' with TM order {}".format(unsafe_condition, od)
-                print msg
-                opfile.write(msg)
+            opfile.write("===== Start tuning for condition {} =====\n".format(unsafe_condition))
+            for order in orders:
+                num_incre = min_num_incre_without_timeout
 
                 while True:
-                    try:
-                        safe, runtime, result_code = run(input_model_file, unsafe_condition, od, num_steps * min_step_size, timeout)
-                    except RuntimeError as e:
-                        opfile.write(str(e) + '\n')
+                    safe, runtime, result_code = run(input_model_file, unsafe_condition, order, start_stepsize + num_incre * incre_stepsize,
+                                                     timeout)
 
                     if result_code == hypy.Engine.TIMEOUT_TOOL:
-                        # if times out, increase the step size.
-                        num_steps *= 2
+                        # timed out,
+                        # increase the step-size.
+                        opfile.write("Step size {} for TM {} timed out. Trying larger steps.\n".format(start_stepsize + num_incre * incre_stepsize, order))
+                        num_incre += 1
+                        min_num_incre_without_timeout = num_incre
                         continue
+                    else:  # didn't time out. Finished within time limit.
+                        if not safe:
+                            # case 1: unsafe time step, try higher TM orders
+                            opfile.write("Step size {} for TM {} is too large. Trying higher TM orders.\n".format(start_stepsize + num_incre * incre_stepsize, order))
+                            break
+                        else:
+                            # case 2: safe time step
+                            # update optimal setting
+                            safe_runtime = runtime
+                            if safe_runtime < min_runtime:
+                                min_runtime = safe_runtime
+                                max_stepsize = start_stepsize + num_incre * incre_stepsize
+                                optimal_setting = max_stepsize, order
 
-                    elif not safe:
-                        # didn't time out, found unsafe step size. Then decrease the step size.
-                        low = num_steps / 2
-                        high = num_steps
+                            opfile.write("@ Great! Found a safe step size {} for TM orders={}, runtime={}. Trying larger steps.\n".format(start_stepsize + num_incre * incre_stepsize,
+                                                                                                         order, safe_runtime))
+                            # increase num steps
+                            num_incre += 1
 
-                        break
+                if optimal_setting is None:
+                    opfile.write('Didn\'t find safe step size for TM order {}.\n\n'.format(order))
+                else:
+                    opfile.write("Optimal setting for condition {} is TM order={}, "
+                                 "stepsize={}, runtime={}.\n\n".format(unsafe_condition,
+                                                                       optimal_setting[1],
+                                                                       optimal_setting[0],
+                                                                       min_runtime))
 
-                    # found a safe step size, try larger step size.
-                    safe_runtime = runtime
-                    num_steps *= 2
-
-                if safe_runtime is None:
-                    msg = "Condition '{}' with order {} was unsafe even at minimum step size: {}\n".format(
-                        unsafe_condition, od, min_step_size)
-                    print msg
-                    opfile.write(msg)
-                    continue
-
-                # binary search between high and low to find the boundary of safety
-                # low is always safe, high is always unsafe
-                msg = "Found unsafe step size. Doing binary search between {} and {}.".format(
-                    low * min_step_size, high * min_step_size)
-                print msg
-                opfile.write(msg)
-                while (high - low) > 1:
-                    mid = (high + low) / 2
-
-                    try:
-                        safe, runtime, result_code = run(input_model_file, unsafe_condition, od, mid * min_step_size, timeout)
-                    except RuntimeError as e:
-                        opfile.write(str(e) + '\n')
-                        break
-
-                    if safe:
-                        low = mid
-                        safe_runtime = runtime
-                    elif result_code == hypy.Engine.TIMEOUT_TOOL:
-                        low = mid
-                    else:
-                        high = mid
-
-                print ""
-                msg = "Completed Analaysis for condition '{}' with order {}:".format(unsafe_condition, od)
-                print msg
-                opfile.write(msg)
-
-                msg = "Largest safe step size was {} (runtime {} sec). Step size of {} was unsafe.\n".format(
-                    low * min_step_size, safe_runtime, high * min_step_size)
-                print msg
-                opfile.write(msg)
 
 def main():
     """main entry point"""
     input_model_path = '../src/examples/spaceex_examples/'
     evaluation_configs = hypy_config.config_hypy()
-    timeout = 3
+    timeout = 4
 
     for key, val in evaluation_configs.items():
         input_model_file = os.path.join(input_model_path, val['input_model_file'])
-        autotune(input_model_file, val['min_step_size'], val['unsafe_condition'], val['order'], timeout)
+        autotune(input_model_file, val['start_step_size'], val['incre_step_size'], val['unsafe_condition'], val['order'], timeout)
 
 
 if __name__ == '__main__':
