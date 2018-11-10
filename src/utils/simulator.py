@@ -14,8 +14,8 @@ def _vanderpol_oscillator_deriv(x, t):
 
 
 def _predator_prey_deriv(x, t):
-    nx0 = x[0] - x[0] * x[1]
-    nx1 = -x[1] + x[0] * x[1]
+    nx0 = 1.5*x[0] - x[0] * x[1]
+    nx1 = -3*x[1] + x[0] * x[1]
     # nx1 = -x[0] - x[1]
     res = np.array([nx0, nx1])
     return res
