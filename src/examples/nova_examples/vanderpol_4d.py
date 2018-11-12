@@ -49,7 +49,7 @@ def define_settings():
                                         scaling_freq=0.1, scaling_cutoff=1e-3)
     # specify unsafe region
     verif_setting = VerificationSetting(a_matrix=np.array([0, -1, 0, 0]),
-                                        b_col=np.array([-2.75]))
+                                        b_col=np.array([-2.74]))
 
     plot_setting = PlotSetting(poly_dir_path='../out/sfvals', model_name=model_name)
     # HSCC 16'

@@ -1,0 +1,42 @@
+# Created by Hyst v1.5
+# Hybrid Automaton in Flow*
+# Converted from file: spaceex_examples/vanderpol_2d.xml
+# Command Line arguments: -i spaceex_examples/vanderpol_2d.xml -o flowstar_examples/vanderpol_2d.model -tool flowstar "-orders 14 -step 0.002 -unsafe "x1 >= 2.7" -cutoff 1e-9 -nooutput -printoff"
+
+
+continuous reachability
+{
+    # Vars
+    state var x0, x1
+
+    setting
+    {
+        fixed steps 0.002
+        time 7
+        remainder estimation 1e-4
+        QR precondition
+        gnuplot octagon x0,x1
+        fixed orders 14
+        cutoff 1e-9
+        precision 53
+        no output
+        print off
+    }
+
+    nonpoly ode
+    {
+        x0' = x1
+        x1' = (1.0 - x0 ^ 2.0) * x1 - x0
+    }
+
+    init
+    {
+        x0 in [1.25, 1.55]
+        x1 in [2.28, 2.32]
+    }
+}
+
+unsafe
+{
+    x1 >= 2.7
+}

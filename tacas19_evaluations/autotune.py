@@ -21,8 +21,8 @@ def run(input_model_file, unsafe_condition, order, step_size, timeout):
 
     # we will add an error condition, and then find parameters in Flow* that prove safety with the error condition
     output_model_file = 'out_flowstar.model'
-    flowstar_hyst_param = '-orders {} -step {} -unsafe "{}" -cutoff 1e-9 -nooutput'.format(order, step_size,
-                                                                                           unsafe_condition)
+    flowstar_hyst_param = '-orders {} -step {} -unsafe "{}" -cutoff 1e-9 -nooutput -printoff'.format(order, step_size,
+                                                                                                      unsafe_condition)
 
     e = hypy.Engine('flowstar', flowstar_hyst_param)
 
@@ -32,8 +32,8 @@ def run(input_model_file, unsafe_condition, order, step_size, timeout):
     image_path = None
 
     #### enable these for debugging ####
-    e.set_output('flowstar_models/' + input_model_file.split('/')[-1].split('.')[
-        0] + '.model')  # output the generated Flow* model to this path
+    model_name = input_model_file.split('/')[-1].split('.')[0]
+    e.set_output('flowstar_examples/' + model_name + '.model')  # output the generated Flow* model to this path
     # e.set_verbose(True) # print hyst verbose output
     # print_stdout=True # print hyst/tool output
     # image_path='out.png' # output image path (requires GIMP is setup according to Hyst README)
@@ -90,20 +90,29 @@ def autotune(input_model_file, start_stepsize, incre_stepsize, unsafe_conditions
                 num_incre = min_num_incre_without_timeout
 
                 while True:
-                    safe, runtime, result_code = run(input_model_file, unsafe_condition, order, start_stepsize + num_incre * incre_stepsize,
+                    safe, runtime, result_code = run(input_model_file, unsafe_condition, order,
+                                                     start_stepsize + num_incre * incre_stepsize,
                                                      timeout)
 
                     if result_code == hypy.Engine.TIMEOUT_TOOL:
                         # timed out,
                         # increase the step-size.
-                        opfile.write("Step size {} for TM {} timed out. Trying larger steps.\n".format(start_stepsize + num_incre * incre_stepsize, order))
+                        msg = "Step size {} for TM {} timed out. Trying larger steps.\n".format(
+                            start_stepsize + num_incre * incre_stepsize, order)
+                        opfile.write(msg)
+                        print(msg)
+
                         num_incre += 1
                         min_num_incre_without_timeout = num_incre
                         continue
                     else:  # didn't time out. Finished within time limit.
                         if not safe:
                             # case 1: unsafe time step, try higher TM orders
-                            opfile.write("Step size {} for TM {} is too large. Trying higher TM orders.\n".format(start_stepsize + num_incre * incre_stepsize, order))
+                            msg = "Step size {} for TM {} is too large. Trying higher TM orders.\n".format(
+                                start_stepsize + num_incre * incre_stepsize, order)
+                            opfile.write(msg)
+                            print(msg)
+
                             break
                         else:
                             # case 2: safe time step
@@ -111,33 +120,39 @@ def autotune(input_model_file, start_stepsize, incre_stepsize, unsafe_conditions
                             safe_runtime = runtime
                             if safe_runtime < min_runtime:
                                 min_runtime = safe_runtime
+                                timeout = safe_runtime
                                 max_stepsize = start_stepsize + num_incre * incre_stepsize
                                 optimal_setting = max_stepsize, order
 
-                            opfile.write("@ Great! Found a safe step size {} for TM orders={}, runtime={}. Trying larger steps.\n".format(start_stepsize + num_incre * incre_stepsize,
-                                                                                                         order, safe_runtime))
+                            msg = "@ Great! Found a safe step size {} for TM orders={}, runtime={}. Trying larger " \
+                                  "steps.\n".format(start_stepsize + num_incre * incre_stepsize, order, safe_runtime)
+                            opfile.write(msg)
+                            print(msg)
+
                             # increase num steps
                             num_incre += 1
 
                 if optimal_setting is None:
-                    opfile.write('Didn\'t find safe step size for TM order {}.\n\n'.format(order))
+                    msg = 'Didn\'t find safe step size for TM order {}.\n\n'.format(order)
+                    opfile.write(msg)
+                    print(msg)
                 else:
-                    opfile.write("Optimal setting for condition {} is TM order={}, "
-                                 "stepsize={}, runtime={}.\n\n".format(unsafe_condition,
-                                                                       optimal_setting[1],
-                                                                       optimal_setting[0],
-                                                                       min_runtime))
+                    msg = "Optimal setting for condition {} is TM order={}, stepsize={}, runtime={}.\n\n".\
+                        format(unsafe_condition, optimal_setting[1], optimal_setting[0], min_runtime)
+                    opfile.write(msg)
+                    print(msg)
 
 
 def main():
     """main entry point"""
-    input_model_path = '../src/examples/spaceex_examples/'
+    input_model_path = 'spaceex_examples/'
     evaluation_configs = hypy_config.config_hypy()
-    timeout = 4
+    timeout = 900
 
     for key, val in evaluation_configs.items():
         input_model_file = os.path.join(input_model_path, val['input_model_file'])
-        autotune(input_model_file, val['start_step_size'], val['incre_step_size'], val['unsafe_condition'], val['order'], timeout)
+        autotune(input_model_file, val['start_step_size'], val['incre_step_size'], val['unsafe_condition'],
+                 val['order'], timeout)
 
 
 if __name__ == '__main__':

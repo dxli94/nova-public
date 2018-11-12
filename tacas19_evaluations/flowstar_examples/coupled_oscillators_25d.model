@@ -1,0 +1,88 @@
+# Created by Hyst v1.5
+# Hybrid Automaton in Flow*
+# Converted from file: spaceex_examples/coupled_oscillators_25d.xml
+# Command Line arguments: -i spaceex_examples/coupled_oscillators_25d.xml -o flowstar_examples/coupled_oscillators_25d.model -tool flowstar "-orders 6 -step 0.045 -unsafe "x1 <= 0.08" -cutoff 1e-9 -nooutput -printoff"
+
+
+continuous reachability
+{
+    # Vars
+    state var x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24
+
+    setting
+    {
+        fixed steps 0.045
+        time 3
+        remainder estimation 1e-4
+        identity precondition
+        gnuplot octagon x0,x1
+        fixed orders 6
+        cutoff 1e-9
+        precision 53
+        no output
+        print off
+    }
+
+    nonpoly ode
+    {
+        x0' = 0.1 * x4 - 3.0 * x0 + 2.0 * (x3 + x8 + x13 + x18 + x23)
+        x1' = 10.0 * x0 - 2.2 * x1
+        x2' = 10.0 * x1 - 1.5 * x2
+        x3' = 2.0 * x0 - 20.0 * x3
+        x4' = -5.0 * x4 ^ 2.0 * x2 ^ 4.0 * (10.0 * x1 - 1.5 * x2)
+        x5' = 0.1 * x9 - 3.0 * x5 + 2.0 * (x3 + x8 + x13 + x18 + x23)
+        x6' = 10.0 * x5 - 2.2 * x6
+        x7' = 10.0 * x6 - 1.5 * x7
+        x8' = 2.0 * x5 - 20.0 * x8
+        x9' = -5.0 * x9 ^ 2.0 * x7 ^ 4.0 * (10.0 * x6 - 1.5 * x7)
+        x10' = 0.1 * x14 - 3.0 * x10 + 2.0 * (x3 + x8 + x13 + x18 + x23)
+        x11' = 10.0 * x10 - 2.2 * x11
+        x12' = 10.0 * x11 - 1.5 * x12
+        x13' = 2.0 * x10 - 20.0 * x13
+        x14' = -5.0 * x14 ^ 2.0 * x12 ^ 4.0 * (10.0 * x11 - 1.5 * x12)
+        x15' = 0.1 * x19 - 3.0 * x15 + 2.0 * (x3 + x8 + x13 + x18 + x23)
+        x16' = 10.0 * x15 - 2.2 * x16
+        x17' = 10.0 * x16 - 1.5 * x17
+        x18' = 2.0 * x15 - 20.0 * x18
+        x19' = -5.0 * x19 ^ 2.0 * x17 ^ 4.0 * (10.0 * x16 - 1.5 * x17)
+        x20' = 0.1 * x24 - 3.0 * x20 + 2.0 * (x3 + x8 + x13 + x18 + x23)
+        x21' = 10.0 * x20 - 2.2 * x21
+        x22' = 10.0 * x21 - 1.5 * x22
+        x23' = 2.0 * x20 - 20.0 * x23
+        x24' = -5.0 * x24 ^ 2.0 * x22 ^ 4.0 * (10.0 * x21 - 1.5 * x22)
+    }
+
+    init
+    {
+        x8 in [-0.001, 0.001]
+        x9 in [0.499, 0.501]
+        x10 in [0.001, 0.003]
+        x12 in [1.001, 1.003]
+        x11 in [0.201, 0.203]
+        x14 in [0.501, 0.503]
+        x13 in [0.001, 0.003]
+        x16 in [0.203, 0.205]
+        x15 in [0.003, 0.005]
+        x18 in [0.003, 0.005]
+        x17 in [1.003, 1.005]
+        x19 in [0.503, 0.505]
+        x21 in [0.205, 0.207]
+        x20 in [0.005, 0.007]
+        x0 in [-0.003, -0.001]
+        x23 in [0.005, 0.007]
+        x1 in [0.197, 0.199]
+        x22 in [1.005, 1.007]
+        x2 in [0.997, 0.999]
+        x3 in [-0.003, -0.001]
+        x24 in [0.505, 0.507]
+        x4 in [0.497, 0.499]
+        x5 in [-0.001, 0.001]
+        x6 in [0.199, 0.201]
+        x7 in [0.999, 1.001]
+    }
+}
+
+unsafe
+{
+    x1 <= 0.08
+}

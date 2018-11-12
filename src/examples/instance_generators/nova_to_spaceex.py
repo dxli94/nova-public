@@ -7,6 +7,11 @@ import examples.nova_examples.vanderpol_2d as vanderpol_2d
 import examples.nova_examples.vanderpol_8d as vanderpol_8d
 import examples.nova_examples.biology_2 as biology_2
 import examples.nova_examples.lorentz_system as lorenzt_system
+from examples.nova_examples import coupled_oscillators_10d
+from examples.nova_examples import coupled_oscillators_15d
+from examples.nova_examples import coupled_oscillators_20d
+from examples.nova_examples import coupled_oscillators_25d
+from examples.nova_examples import coupled_oscillators_30d
 
 xml_path = "/home/dxli/workspace/model-checkers/nova/src/examples/spaceex_examples/vanderpol_2d.xml"
 cfg_path = "/home/dxli/workspace/model-checkers/nova/src/examples/spaceex_examples/vanderpol_2d.cfg"
@@ -21,7 +26,7 @@ cfg_dict = {
     'directions': 'oct',
     'set-aggregation': 'chull',
     'sampling-time': '0.01',
-    'time-horizon': '7',
+    'time-horizon': '3',
     'iter-max': '100',
     'output-variables': '\"x0, x1\"',
     'output-format': 'INTV',
@@ -122,7 +127,11 @@ def main():
     # model = biology_1
     # model = biology_2
     # model = lorenzt_system
-    model = predator_prey
+    # model = predator_prey
+    # model = coupled_oscillators_15d
+    # model = coupled_oscillators_20d
+    # model = coupled_oscillators_25d
+    model = coupled_oscillators_30d
     flow, init, model_name = read_model(model)
 
     dim = len(flow)
