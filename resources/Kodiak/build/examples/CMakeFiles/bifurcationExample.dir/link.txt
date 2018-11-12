@@ -1,0 +1,1 @@
+/usr/bin/c++    -std=c++14   CMakeFiles/bifurcationExample.dir/bifurcation.cpp.o  -o bifurcationExample ../libkodiak.a -lprim -lboost_serialization 

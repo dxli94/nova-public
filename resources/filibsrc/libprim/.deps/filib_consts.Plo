@@ -1,0 +1,6 @@
+filib_consts.lo: ../interval/stdfun/filib_consts.cpp \
+ /usr/include/stdc-predef.h ../interval/stdfun/filib_consts.hpp
+
+/usr/include/stdc-predef.h:
+
+../interval/stdfun/filib_consts.hpp:

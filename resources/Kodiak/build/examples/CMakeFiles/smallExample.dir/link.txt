@@ -1,0 +1,1 @@
+/usr/bin/c++    -std=c++14   CMakeFiles/smallExample.dir/small.cpp.o  -o smallExample ../libkodiak.a -lprim -lboost_serialization 
