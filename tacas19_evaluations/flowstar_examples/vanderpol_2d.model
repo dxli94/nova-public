@@ -1,7 +1,7 @@
 # Created by Hyst v1.5
 # Hybrid Automaton in Flow*
 # Converted from file: spaceex_examples/vanderpol_2d.xml
-# Command Line arguments: -i spaceex_examples/vanderpol_2d.xml -o flowstar_examples/vanderpol_2d.model -tool flowstar "-orders 14 -step 0.002 -unsafe "x1 >= 2.7" -cutoff 1e-9 -nooutput -printoff"
+# Command Line arguments: -i spaceex_examples/vanderpol_2d.xml -o flowstar_examples/vanderpol_2d.model -tool flowstar "-orders 14 -step 0.003 -unsafe "x1 >= 2.7" -cutoff 1e-9 -nooutput -printoff"
 
 
 continuous reachability
@@ -11,7 +11,7 @@ continuous reachability
 
     setting
     {
-        fixed steps 0.002
+        fixed steps 0.003
         time 7
         remainder estimation 1e-4
         QR precondition
