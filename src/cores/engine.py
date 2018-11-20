@@ -66,12 +66,9 @@ class NovaEngine:
         # for now assuming we have a single initial set
         self._post_operator = self._post_operator_factory(continuous_set, self._settings.reach.directions)
         self._linearizer = Linearizer(self._dim, self._cur_mode.dynamics, self._cur_mode.is_linear)
-        Timers.tic('_run_reachability')
         supp_matrix = self._run_reachability()
-        Timers.toc('_run_reachability')
         Timers.toc('total')
 
-        print('Reachability finished.')
         # 2. verification
         verifier = Verifier((self._settings.verif.a_matrix, self._settings.verif.b_col))
         verifier.set_support_func_mat(self._settings.reach.directions, supp_matrix)
@@ -119,20 +116,13 @@ class NovaEngine:
         supp_matrix = []
 
         while not self._is_finished():
-            Timers.tic('_refine_domain()')
             dom = self._refine_domain()
-            Timers.toc('_refine_domain()')
-            Timers.tic('bloat')
             dom.bloat(eps)
-            Timers.toc('bloat')
-            Timers.tic('_hybridize')
+
             cur_input_lb, cur_input_ub = self._hybridize(dom)
-            Timers.toc('_hybridize')
             eps *= 2
 
-            Timers.tic('_post_operator.do_alpha_step')
             self._post_operator.do_alpha_step(cur_input_lb, cur_input_ub)
-            Timers.toc('_post_operator.do_alpha_step')
 
             if self._has_lost_precision():
                 print('Computation not completed after {} iterations. Abort now.'.format(self._cur_step))
@@ -140,19 +130,13 @@ class NovaEngine:
 
             if self._domain_contains_tube():
 
-                Timers.tic('_post_operator.proceed_state')
                 self._post_operator.proceed_state(cur_input_lb, cur_input_ub, self._abs_dynamics.a_matrix)
-                Timers.toc('_post_operator.proceed_state')
                 self._cur_step += 1
 
-                Timers.tic('_post_operator.do_gamma_step')
                 self._post_operator.do_gamma_step()
-                Timers.toc('_post_operator.do_gamma_step')
 
                 prev_vol = cur_vol
-                Timers.tic('compute_vol')
                 cur_vol = self._compute_vol()
-                Timers.toc('compute_vol')
 
                 # todo encapsulate into a timer
                 if self._cur_step % 10 == 0:
@@ -168,28 +152,18 @@ class NovaEngine:
                         # We can decrease self.cur_step instead. By increasing reach.num_steps,
                         # we can see the num of extra steps we computed in scaling mode more clearly.
                         self._settings.reach.num_steps += 1
-                        Timers.tic('append')
                         supp_matrix.append(self._post_operator.tube_supp)
-                        Timers.toc('append')
                     else:  # scaling is not helpful
-                        Timers.tic('undo_dynamic_scaling')
                         self.undo_dynamic_scaling()
-                        Timers.toc('undo_dynamic_scaling')
                         in_scaling_mode = False
 
-                        Timers.tic('rollback')
                         self._post_operator.rollback()
-                        Timers.toc('rollback')
                         self._cur_step -= 1
                         cur_vol = prev_vol
                 else:
-                    Timers.tic('append')
                     supp_matrix.append(self._post_operator.tube_supp)
-                    Timers.toc('append')
                     if self._is_start_scaling():
-                        Timers.tic('apply_dynamic_scaling')
                         self._apply_dynamic_scaling()
-                        Timers.toc('apply_dynamic_scaling')
                         in_scaling_mode = True
 
                 eps /= 4
@@ -235,14 +209,10 @@ class NovaEngine:
         """
         Compute linearized dynamics and returns the linearization errors.
         """
-        Timers.tic('gen_abs_dynamics')
         a_matrix, w_poly, c_col = self._linearizer.gen_abs_dynamics(dom.bounds)
-        Timers.toc('gen_abs_dynamics')
 
         self._set_abs_dynamics(a_matrix, w_poly, c_col)
-        Timers.tic('compute_reach_params')
         reach_params = suppfunc_utils.compute_reach_params(self._abs_dynamics, self._settings.reach.stepsize)
-        Timers.toc('compute_reach_params')
         self._post_operator.update_reach_params(reach_params)
 
         self._abs_domain = dom
@@ -305,18 +275,15 @@ class NovaEngine:
 
         Scaling function has two terms: 1) distance function; 2) scaling factor.
         """
-        Timers.tic('_make_scaling_func()')
-        a, b = self._make_scaling_func()
-        Timers.toc('_make_scaling_func()')
-
-        Timers.tic('_make_scaling_factor()')
+        a, b = self._make_distance_func()
         m = self._make_scaling_factor(a, b)
-        Timers.toc('_make_scaling_factor()')
 
         self._linearizer.target_dyn.apply_dynamic_scaling(np.multiply(a, m), np.multiply(b, m))
 
-    def _make_scaling_func(self):
+    def _make_distance_func(self):
         """
+        Returns the coefficient and bias of the hyperplane, which is used to
+        construct to distance function for dynamics scaling.
         """
         lb, ub = self._post_operator.get_tube_bounds()
 
@@ -350,18 +317,12 @@ class NovaEngine:
         """
         c = np.sum(self._abs_domain.bounds, axis=0) / 2
 
-        Timers.tic('target_dyn.apply_dynamic_scaling')
         self._linearizer.target_dyn.apply_dynamic_scaling(a, b)
-        Timers.toc('target_dyn.apply_dynamic_scaling')
 
-        Timers.tic('np.linalg.norm')
         norm_scaled_dynamics = np.linalg.norm(self._linearizer.target_dyn.eval_jacobian(c), np.inf)
-        Timers.toc('np.linalg.norm')
         self._linearizer.target_dyn.reset_dynamic()
 
-        Timers.tic('np.linalg.norm')
         norm_orig_dynamics = np.linalg.norm(self._abs_dynamics.a_matrix, np.inf)
-        Timers.toc('np.linalg.norm')
         m = norm_orig_dynamics / norm_scaled_dynamics
 
         return m

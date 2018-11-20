@@ -1,12 +1,11 @@
-import sympy
+from copy import deepcopy
 from functools import reduce
 
 import numpy as np
-from copy import deepcopy
+import sympy
 from sympy.parsing.sympy_parser import parse_expr
 
 from utils.pykodiak.pykodiak_interface import Kodiak
-from utils.timerutil import Timers
 
 
 class AffineDynamics:
@@ -161,14 +160,9 @@ class GeneralDynamics:
         self.scale_func_jac = elem1
         self.is_scaled = True
 
-        Timers.tic('subs(subs_dict)')
-        # todo can we further optimize??
         self.sympy_ders = [d(*a, b) for d in self._sympy_ders_scaled_template]
-        Timers.toc('subs(subs_dict)')
 
-        Timers.tic('Kodiak.sympy_to_kodiak(d)')
         self.kodiak_ders = [Kodiak.sympy_to_kodiak(d) for d in self.sympy_ders]
-        Timers.toc('Kodiak.sympy_to_kodiak(d)')
 
     def reset_dynamic(self):
         """

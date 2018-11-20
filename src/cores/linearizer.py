@@ -1,7 +1,6 @@
 import numpy as np
 
 from utils.pykodiak.pykodiak_interface import Kodiak
-from utils.timerutil import Timers
 
 
 def get_generator_matrix(dim):
@@ -53,10 +52,8 @@ class Linearizer:
 
                 bounds = [[abs_domain_lower_bounds[i], abs_domain_upper_bounds[i]] for i in range(self.dim)]
 
-                Timers.tic('minmax')
                 kodiak_res = Kodiak.minmax(self.target_dyn.kodiak_ders[i], coeff, bias, bounds)
                 u_min, u_max = -kodiak_res[0], kodiak_res[1]
-                Timers.toc('minmax')
 
             u_bounds.extend([u_max, u_min])
 
