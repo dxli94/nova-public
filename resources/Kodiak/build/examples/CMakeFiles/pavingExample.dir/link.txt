@@ -1,1 +1,0 @@
-/usr/bin/c++    -std=c++14   CMakeFiles/pavingExample.dir/paving.cpp.o  -o pavingExample ../libkodiak.a -lprim -lboost_serialization 

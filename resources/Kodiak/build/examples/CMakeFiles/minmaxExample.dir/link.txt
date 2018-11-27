@@ -1,1 +1,0 @@
-/usr/bin/c++    -std=c++14   CMakeFiles/minmaxExample.dir/minmax.cpp.o  -o minmaxExample ../libkodiak.a -lprim -lboost_serialization 
