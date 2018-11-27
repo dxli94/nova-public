@@ -1,0 +1,4 @@
+At least the following people are/were involved in the development of nova:
+- Dongxu Li - dongxuli1005@gmail.com, 2018.2 - present
+- Stanley Bak - stanleybak@gmail.com, 2018.2 - present
+- Sergiy Bogomolov - bogom.s@gmail.com, 2018.2 - present
