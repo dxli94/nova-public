@@ -37,7 +37,9 @@ This will produce `pykodiak.so`.
     source activate nova
     ```
     You will see your prompt is now prefixed with "nova", which is the virtual environment with packages installed.
-
+    (This can be automated by installing [autoenv](https://github.com/zpm-zsh/autoenv) plugin into your terminal and providing a `.env` file
+    in the root directory).
+    
     You can deactivate the current virtual environment by
     ```angular2html
     source deactivate
