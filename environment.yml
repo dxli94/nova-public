@@ -12,7 +12,5 @@ dependencies:
   - cython
   - cvxopt=1.1.9
   - cysignals
-  - pip:
-    - pplpy==0.7
 prefix: /anaconda3/envs/nova
 
