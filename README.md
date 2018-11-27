@@ -29,7 +29,7 @@ This will produce `pykodiak.so`.
     ```
     cd nova-public
     sudo chmod +x ./install_nova.sh
-    conda env create --name nova --file environment.yml
+    ./install_nova.sh
     ```
     
     then activate the virtual environment by
@@ -61,6 +61,7 @@ This will produce `pykodiak.so`.
 Models in NOVA are defined in Python code.
 To try some examples, first go to `nova-public/src/nova_runner`, select and import the model in `src/examples/`. Then run
 ```angular2html
+cd nova-public/src
 python nova_runner.py
 ```
 After the computation finishes, the projection of the flowpipe can be found in the corresponding directory under
