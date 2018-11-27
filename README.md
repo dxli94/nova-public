@@ -47,13 +47,13 @@ They should all be available if you are using pip.
 ### Running
 
 Try affine analyzer,
- 
-Choose the path to instance in nova/instance/single_mode_affine_instances; e.g. 
+
+Choose the path to instance in nova/instance/single_mode_affine_instances; e.g.
 ```
  ../instances/single_mode_affine_instances/free_ball.json
 ```
 change time horizon, sampling time, direction type, initial states, etc. in the corresponding json file.
-Try 
+Try
 ```
 cd src
 python affine_analyzer.py -h
@@ -63,6 +63,6 @@ Plot from outfile.out on dimension 0 and 1 (indexed from 0):
 ```
 ./plot_polygon.sh ../out/outfile.out 0 1  
 ```
- 
+
 
 Tested on Ubuntu 16.04.2 LTS Xenial and macOS High Sierra (10.13.3).
