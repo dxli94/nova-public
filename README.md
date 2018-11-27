@@ -63,5 +63,5 @@ To try some examples, first go to `nova-public/src/nova_runner`, select and impo
 ```angular2html
 python nova_runner.py
 ```
-After the computation finished, the projection of the flowpipe can be found in the corresponding directory under
+After the computation finishes, the projection of the flowpipe can be found in the corresponding directory under
 `out/imgs`.
