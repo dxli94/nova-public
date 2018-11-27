@@ -1,6 +1,6 @@
 # NOVA
 
-A tool for **NO**linear System **V**erification and **A**nalysis, developed by:
+A tool for **NO**nlinear System **V**erification and **A**nalysis, developed by:
 - [Dongxu Li](https://dxli94.github.io/) - dongxuli1005 at gmail dot com
 - [Stanley Bak](http://stanleybak.com/) - stanleybak at gmail dot com
 - [Sergiy Bogomolov](https://www.sergiybogomolov.com/) - bogom dot s at gmail dot com
