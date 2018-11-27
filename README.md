@@ -52,12 +52,16 @@ This will produce `pykodiak.so`.
     - [matplotlib](https://matplotlib.org/) (2.2.0)
     - [CVXOPT](http://cvxopt.org/install/index.html) (1.1.9)
     - [sympy](http://docs.sympy.org/latest/install.html) (1.1.1)
-    - [gmpy2](https://gmpy2.readthedocs.io/en/latest/) (2.1.0a1) 
-        ```angular2html
-      pip install gmpy2==2.1.0a1 --ignore-installed --no-binary ":all:"
-        ```
+    - [gmpy2](https://gmpy2.readthedocs.io/en/latest/) (2.1.0a1) by `pip install gmpy2==2.1.0a1 --ignore-installed --no-binary ":all:"`
     - [pplpy](https://gitlab.com/videlec/pplpy) (0.7)
     
     They should all be available if you are using pip.
     
 ## Getting Started
+Models in NOVA are defined in Python code.
+To try some examples, first go to `nova-public/src/nova_runner`, select and import the model in `src/examples/`. Then run
+```angular2html
+python nova_runner.py
+```
+After the computation finished, the projection of the flowpipe can be found in the corresponding directory under
+`out/imgs`.
