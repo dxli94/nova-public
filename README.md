@@ -1,6 +1,5 @@
 # NOVA
-![](docs/logo_text_small.png)
-<img src="/docs/logo_text_small.png"  width="120" height="120">
+<img src="/docs/logo_text_medium.png"  width="479" height="144">
 
 
 A tool for **NO**nlinear System **V**erification and **A**nalysis, developed by:
